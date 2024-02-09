@@ -35,7 +35,12 @@ ch_multiqc_custom_methods_description = params.multiqc_methods_description ? fil
 //
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
 //
-include { INPUT_CHECK } from '../subworkflows/local/input_check'
+include { INPUT_CHECK  } from '../subworkflows/local/input_check'
+include { RNA_SEQ      } from '../subworkflows/local/rna_seq.nf'
+include { METHYLATION  } from '../subworkflows/local/methylation.nf'
+include { TUMOR_NORMAL } from '../subworkflows/local/tumor_normal.nf'
+include { GERMLINE_WGS } from '../subworkflows/local/germline_wgs.nf'
+
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -60,27 +65,42 @@ include { CUSTOM_DUMPSOFTWAREVERSIONS } from '../modules/nf-core/custom/dumpsoft
 def multiqc_report = []
 
 workflow DRAGENMULTIWORKFLOW {
+    ch_versions     = Channel.empty()
 
-    ch_versions = Channel.empty()
+    mgi_samplesheet    = params.mgi_samplesheet    ?: null
+    input_dir          = params.input_dir          ?: null
+    master_samplesheet = params.master_samplesheet ?: null
 
-    //
-    // SUBWORKFLOW: Read in samplesheet, validate and stage input files
-    //
-    INPUT_CHECK (
-        file(params.input)
-    )
-    ch_versions = ch_versions.mix(INPUT_CHECK.out.versions)
-    // TODO: OPTIONAL, you can use nf-validation plugin to create an input channel from the samplesheet with Channel.fromSamplesheet("input")
-    // See the documentation https://nextflow-io.github.io/nf-validation/samplesheets/fromSamplesheet/
-    // ! There is currently no tooling to help you write a sample sheet schema
 
-    //
-    // MODULE: Run FastQC
-    //
-    FASTQC (
-        INPUT_CHECK.out.reads
-    )
-    ch_versions = ch_versions.mix(FASTQC.out.versions.first())
+    INPUT_CHECK(master_samplesheet, input_dir, mgi_samplesheet)
+
+    done       = INPUT_CHECK.out.done
+    mgi_fastqs = INPUT_CHECK.out.ch_mgi_fastqs
+    fastqs     = INPUT_CHECK.out.ch_reads_info
+    fastq_list = INPUT_CHECK.out.ch_fastq_list
+    cram       = INPUT_CHECK.out.ch_cram
+    bam        = INPUT_CHECK.out.ch_bam
+
+    if (params.workflow == 'rna') {
+        RNA_SEQ(done, mgi_fastqs, fastqs, fastq_list, cram, bam)
+        ch_versions = ch_versions.mix(RNA_SEQ.out.ch_versions)
+    }
+
+    if (params.workflow == '5mc') {
+        METHYLATION(done, mgi_fastqs, fastqs, fastq_list, cram, bam)
+        ch_versions = ch_versions.mix(METHYLATION.out.ch_versions)
+    }
+
+    if (params.workflow == 'germline_wgs') {
+        GERMLINE_WGS(done, mgi_fastqs, fastqs, fastq_list, cram, bam)
+        ch_versions = ch_versions.mix(GERMLINE_WGS.out.ch_versions)
+    }
+
+    
+    if (params.workflow == 'tumor_normal') {
+        TUMOR_NORMAL(done, mgi_fastqs, fastqs, fastq_list, cram, bam)
+        ch_versions = ch_versions.mix(TUMOR_NORMAL.out.ch_versions)
+    }
 
     CUSTOM_DUMPSOFTWAREVERSIONS (
         ch_versions.unique().collectFile(name: 'collated_versions.yml')
@@ -99,7 +119,6 @@ workflow DRAGENMULTIWORKFLOW {
     ch_multiqc_files = ch_multiqc_files.mix(ch_workflow_summary.collectFile(name: 'workflow_summary_mqc.yaml'))
     ch_multiqc_files = ch_multiqc_files.mix(ch_methods_description.collectFile(name: 'methods_description_mqc.yaml'))
     ch_multiqc_files = ch_multiqc_files.mix(CUSTOM_DUMPSOFTWAREVERSIONS.out.mqc_yml.collect())
-    ch_multiqc_files = ch_multiqc_files.mix(FASTQC.out.zip.collect{it[1]}.ifEmpty([]))
 
     MULTIQC (
         ch_multiqc_files.collect(),
@@ -131,4 +150,33 @@ workflow.onComplete {
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     THE END
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
+
+
+/*
+questions:
+- can fastqlist be input for germline + tumor normal?
+
+to-do:
+- samplesheet should look like rna seq samplesheet
+- get rgid, rgsm, rglb from gastqs using prepare_fastqs
+- test with cram, bam, fastqfile
+- test tumor normal..............
+- add versions to all
+- get custom dump and multiqc to work
+- figure out a way to only emit one versions
+
+
+doing:
+- germline subworkflow
+
+done:
+- add bams
+
+notes:
+- split with _R1 i think
+- get rgid, rgsm, rglb from fastqs (prepare_fastqs.py)
+- add bams
+- fastqlist can be input????? or there should also be mgi samplesheet lowk
+
 */
