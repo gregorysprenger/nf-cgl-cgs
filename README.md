@@ -52,15 +52,22 @@ Each row represents a fastq file (single-end) or a pair of fastq files (paired e
 
 -->
 
+mgi samplesheet should be updated version, mastersheet should have the following columns:
+sample_id,read1,read2,fastq_list,cram,bam
+where sample_id is library name 
+
 Now, you can run the pipeline using:
 
 <!-- TODO nf-core: update the following command to include all required parameters for a minimal example -->
 
 ```bash
 nextflow run nf-core/dragenmultiworkflow \
-   -profile <docker/singularity/.../institute> \
-   --input samplesheet.csv \
-   --outdir <OUTDIR>
+   -profile ris,<dragen2/dragen4> \
+   --mgi_samplesheet /path/to/mgi_samplesheet \
+   --input_dir /path/to/input_dir \ 
+   --master_sheet /path/to/master_sheet \ 
+   --outdir <OUTDIR> \ 
+   --workflow <rna/5mc/germline_wgs/tumor_normal>
 ```
 
 :::warning
