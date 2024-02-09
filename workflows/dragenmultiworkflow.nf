@@ -151,32 +151,3 @@ workflow.onComplete {
     THE END
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
-
-
-/*
-questions:
-- can fastqlist be input for germline + tumor normal?
-
-to-do:
-- samplesheet should look like rna seq samplesheet
-- get rgid, rgsm, rglb from gastqs using prepare_fastqs
-- test with cram, bam, fastqfile
-- test tumor normal..............
-- add versions to all
-- get custom dump and multiqc to work
-- figure out a way to only emit one versions
-
-
-doing:
-- germline subworkflow
-
-done:
-- add bams
-
-notes:
-- split with _R1 i think
-- get rgid, rgsm, rglb from fastqs (prepare_fastqs.py)
-- add bams
-- fastqlist can be input????? or there should also be mgi samplesheet lowk
-
-*/
