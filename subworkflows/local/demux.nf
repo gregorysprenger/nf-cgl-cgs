@@ -17,8 +17,7 @@ workflow DEMUX {
 
     DRAGEN_DEMUX.out.fastqlist
     .splitCsv ( header:true, sep:',', quote:'"' )
-    .map { row -> [row.RGSM, [row.RGID, row.RGLB, row.Lane, file(row.Read1File), file(row.Read2File) ]]
-    }
+    .map { row -> [ row.RGSM, [ row.RGID, row.RGLB, row.Lane, file(row.Read1File), file(row.Read2File) ] ] }
     .set { ch_fastqs }
 
     ch_fastqs
@@ -68,6 +67,7 @@ process MAKE_DEMUX_SAMPLESHEET {
 }
 
 process DRAGEN_DEMUX {
+    tag "$params.batch"
     label 'dragen'
     container "${params.dragen_container}"
 
@@ -85,10 +85,11 @@ process DRAGEN_DEMUX {
     """
     /opt/edico/bin/dragen --bcl-conversion-only true --bcl-only-matched-reads true --strict-mode true${first_tile} \\
     --sample-sheet ${samplesheet} --bcl-input-directory ${rundir} \\
-    --output-directory \$(realpath ${demuxdir}) > ./demux_log.txt && \\
-    cp demux_log.txt ${demuxdir}/Reports/ && \\
-    cp ${rundir}/RunParameters.xml ${demuxdir}/Reports/ && \\
-    cp ${demuxdir}/Reports/fastq_list.csv fastq_list.csv
+    --output-directory \$(realpath ${demuxdir})
+
+    cp ${rundir}/RunParameters.xml ${demuxdir}/Reports/
+    FLOWCELL=`grep Flowcell ${rundir}/RunInfo.xml | head -n 1 | cut -d '>' -f 2 | cut -d '<' -f 1`
+    awk -v FC=\$FLOWCELL -v FS=',' -v OFS=',' '{ if (NR==1){ print \$0; } else { print FC"."\$1,\$2,\$2"."substr(\$1,1,length(\$1)-2),\$4,\$5,\$6; } }' ${demuxdir}/Reports/fastq_list.csv > fastq_list.csv
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
