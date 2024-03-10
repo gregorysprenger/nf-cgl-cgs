@@ -39,34 +39,58 @@ def parse_runinfo(rundir):
     root = tree.getroot()
     runinfo = {}
     runinfo['RunID'] = root.find('RunId').text
-    for el in root.findall('.//PlannedReads')[0].findall('Read'):
-        runinfo[el.attrib['ReadName'] + 'Cycles'] = int(el.attrib['Cycles'])
 
-    runinfo['FlowCellType'] = root.find('FlowCellType').text
-    runinfo['InstrumentType'] = root.find('InstrumentType').text
-    runinfo['Instrument'] = root.find('InstrumentSerialNumber').text
-    runinfo['Side'] = root.find('Side').text
-    # fine the serial number of the flowcell:
-    for el in root.findall('ConsumableInfo')[0].findall('ConsumableInfo'):
-        el2 = el.find('Type')
-        if el2 is not None:
-            if el2.text == 'FlowCell':
-                runinfo['FlowCellType'] = el.find('Mode').text
-                runinfo['Flowcell'] = el.find('SerialNumber').text
-                runinfo['FlowCellLotNumber'] = el.find('LotNumber').text
-            elif el2.text == 'Reagent':
-                runinfo['ReagentLotNumber'] = el.find('LotNumber').text
+    # this checks for NovaSeq Xplus run parameters and obtains them
+    plannedReads = root.findall('.//PlannedReads')
+    if len(plannedReads) > 0: # if >0 then we know its Xplus data
+        for el in plannedReads[0].findall('Read'):
+            runinfo[el.attrib['ReadName'] + 'Cycles'] = int(el.attrib['Cycles'])
 
-    tree = ET.parse(runinfo_path)
-    root = tree.getroot()
-    runinfo_reads = root.findall('.//Read')
-    runinfo['Index1Reverse'] = 'N'
-    runinfo['Index2Reverse'] = 'N'
-    if runinfo_reads[1].attrib['IsReverseComplement'] == 'Y':
-        runinfo['Index1Reverse'] = 'Y'
-    if runinfo_reads[2].attrib['IsReverseComplement'] == 'Y':
+        runinfo['FlowCellType'] = root.find('FlowCellType').text
+        runinfo['InstrumentType'] = root.find('InstrumentType').text
+        runinfo['Instrument'] = root.find('InstrumentSerialNumber').text
+        runinfo['Side'] = root.find('Side').text
+
+            # fine the serial number of the flowcell:
+        consumInfo = root.findall('ConsumableInfo')
+        if len(consumInfo) > 0:
+            for el in root.findall('ConsumableInfo')[0].findall('ConsumableInfo'):
+                el2 = el.find('Type')
+                if el2 is not None:
+                    if el2.text == 'FlowCell':
+                        runinfo['FlowCellType'] = el.find('Mode').text
+                        runinfo['Flowcell'] = el.find('SerialNumber').text
+                        runinfo['FlowCellLotNumber'] = el.find('LotNumber').text
+                    elif el2.text == 'Reagent':
+                        runinfo['ReagentLotNumber'] = el.find('LotNumber').text
+
+        tree = ET.parse(runinfo_path)
+        root = tree.getroot()
+        runinfo_reads = root.findall('.//Read')
+        runinfo['Index1Reverse'] = 'N'
+        runinfo['Index2Reverse'] = 'N'
+        if runinfo_reads[1].attrib['IsReverseComplement'] == 'Y':
+            runinfo['Index1Reverse'] = 'Y'
+        if runinfo_reads[2].attrib['IsReverseComplement'] == 'Y':
+            runinfo['Index2Reverse'] = 'Y'
+
+    # in case we're processing older NovaSeq 6000 data
+    else: 
+        runinfo['Read1Cycles'] = int(root.find('.//Read1NumberOfCycles').text)
+        runinfo['Read2Cycles'] = int(root.find('.//Read2NumberOfCycles').text)
+        runinfo['Index1Cycles'] = int(root.find('.//IndexRead1NumberOfCycles').text)
+        runinfo['Index2Cycles'] = int(root.find('.//IndexRead2NumberOfCycles').text)
+        runinfo['Flowcell'] = root.find('.//FlowCellSerialBarcode').text
+
+        runinfo['FlowCellType'] = 'UNKNOWN'
+        runinfo['FlowCellType'] = 'UNKNOWN'
+        runinfo['InstrumentType'] = 'UNKNOWN'
+        runinfo['Instrument'] = 'UNKNOWN'
+        runinfo['Side'] = 'UNKNOWN'    
+        runinfo['Index1Reverse'] = 'N'
         runinfo['Index2Reverse'] = 'Y'
-        
+
+
     return runinfo
 
 # main function:
