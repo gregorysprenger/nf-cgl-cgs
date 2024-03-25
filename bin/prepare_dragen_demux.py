@@ -15,7 +15,7 @@ def checkfile(file_path):
 def fileexists(file_path):
     """Check if a file exists at the given path."""
     if os.path.exists(file_path):
-        raise argparse.ArgumentTypeError(f"The ouytfile {file_path} exists!")
+        raise argparse.ArgumentTypeError(f"The outfile {file_path} exists!")
     return file_path
 
 def reverse_complement(seq):
