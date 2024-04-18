@@ -19,14 +19,15 @@ workflow RNASEQ {
     ch_versions = ch_versions.mix(DRAGEN_FASTQ_LIST.out.versions)
 
     DRAGEN_CRAM(cram, 'cram', dragen_inputs)
-    ch_dragen_inputs = ch_dragen_inputs.mix(DRAGEN_CRAM.out.dragen_inputs)
+    ch_dragen_output = ch_dragen_output.mix(DRAGEN_CRAM.out.dragen_output)
     ch_versions = ch_versions.mix(DRAGEN_CRAM.out.versions)
 
     DRAGEN_BAM(bam, 'bam', dragen_inputs)
-    ch_dragen_inputs = ch_dragen_inputs.mix(DRAGEN_BAM.out.dragen_inputs)
+    ch_dragen_output = ch_dragen_output.mix(DRAGEN_BAM.out.dragen_output)
     ch_versions = ch_versions.mix(DRAGEN_BAM.out.versions)
 
-    ANNOTATE_RNASEQ(ch_dragen_output, ch_dragen_inputs)
+    ANNOTATE_RNASEQ(ch_dragen_output, dragen_inputs)
+
 
     emit:
     ch_versions
