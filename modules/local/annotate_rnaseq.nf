@@ -1,7 +1,7 @@
 process ANNOTATE_RNASEQ {
     tag "$meta.id"
     label 'process_low'
-    container "ghcr.io/dhslab/docker-python"
+    container "ghcr.io/dhslab/docker-python3:240301"
 
     publishDir "$params.outdir/${meta.id}/", saveAs: { filename -> filename == "versions.yml" ? null : filename }, mode:'copy'
 
