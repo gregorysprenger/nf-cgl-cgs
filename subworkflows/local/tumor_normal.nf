@@ -6,13 +6,11 @@ include { DRAGEN_TUMOR_NORMAL as TUMOR_BAM         } from '../../modules/local/d
 
 workflow TUMOR_NORMAL {
     take:
-    done
-    mgi_fastqs
-    fastqs
     fastq_list
     cram
     bam
-
+    dragen_inputs
+    
     main:
     ch_versions = Channel.empty()
 

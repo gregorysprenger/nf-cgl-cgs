@@ -1,34 +1,24 @@
-include { DRAGEN_5MC                      } from '../../modules/local/dragen_5mc.nf'
-include { DRAGEN_5MC as DRAGEN_FASTQS     } from '../../modules/local/dragen_5mc.nf'
-include { DRAGEN_5MC as DRAGEN_FASTQ_LIST } from '../../modules/local/dragen_5mc.nf'
-include { DRAGEN_5MC as DRAGEN_CRAM       } from '../../modules/local/dragen_5mc.nf'
-include { DRAGEN_5MC as DRAGEN_BAM       } from '../../modules/local/dragen_5mc.nf'
+include { DRAGEN_MULTIALIGN as DRAGEN_FASTQ_LIST    } from '../../modules/local/dragen_multialign.nf'
+include { DRAGEN_MULTIALIGN as DRAGEN_CRAM          } from '../../modules/local/dragen_multialign.nf'
+include { DRAGEN_MULTIALIGN as DRAGEN_BAM           } from '../../modules/local/dragen_multialign.nf'
 
 workflow METHYLATION {
     take:
-    done
-    mgi_fastqs
-    fastqs
     fastq_list
     cram
     bam
+    dragen_inputs
 
     main:
     ch_versions = Channel.empty()
 
-    DRAGEN_5MC(mgi_fastqs, 'mgi_fastq')
-    ch_versions = ch_versions.mix(DRAGEN_5MC.out.versions)
-
-    DRAGEN_FASTQS(fastqs, 'fastq')
-    ch_versions = ch_versions.mix(DRAGEN_FASTQS.out.versions)
-
-    DRAGEN_FASTQ_LIST(fastq_list, 'fastq_list')
+    DRAGEN_FASTQ_LIST(fastq_list, 'fastq_list', dragen_inputs)
     ch_versions = ch_versions.mix(DRAGEN_FASTQ_LIST.out.versions)
 
-    DRAGEN_CRAM(cram, 'cram')
+    DRAGEN_CRAM(cram, 'cram', dragen_inputs)
     ch_versions = ch_versions.mix(DRAGEN_CRAM.out.versions)
 
-    DRAGEN_BAM(bam, 'bam')
+    DRAGEN_BAM(bam, 'bam', dragen_inputs)
     ch_versions = ch_versions.mix(DRAGEN_BAM.out.versions)
 
     emit: 

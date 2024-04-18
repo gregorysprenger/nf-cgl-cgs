@@ -47,7 +47,7 @@ WorkflowMain.initialise(workflow, params, log)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { DRAGENMULTIWORKFLOW } from './workflows/dragenmultiworkflow'
+include { DRAGENMULTIWORKFLOW } from './workflows/dragenmultiworkflow.nf'
 
 //
 // WORKFLOW: Run main nf-core/dragenmultiworkflow analysis pipeline
