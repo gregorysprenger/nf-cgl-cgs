@@ -1,16 +1,23 @@
 include { SAMPLESHEET_CHECK              } from '../../modules/local/samplesheet_check.nf'
 include { MAKE_FASTQLIST                 } from '../../modules/local/make_fastqlist.nf'
 
-workflow INPUT_CHECK {
+/*
+Subworkflow that checks and reformats input data (via python script) that is passed
+as either read1/read2 pairs, an illumina fastq_list.csv file, or cram files or bam files.
+Channel operations are used to create an output channel that has meta, a value of 'fastq', 'cram', or 'bam'
+so that the next workflow can determine how to process the data, and then a list of files.
+*/
+
+workflow SAMPLE_INPUT_CHECK {
     take:
     master_samplesheet
     data_path
 
     main:
 
-    ch_reads        = Channel.empty()
-    ch_cram         = Channel.empty()
-    ch_bam          = Channel.empty()
+    ch_mastersheet        = Channel.empty()
+    ch_input_data         = Channel.empty()
+    ch_dragen_outputs     = Channel.empty()
 
     // Runs a python script that parses the sample sheet and adds key metadata, 
     // including index sequences, flowcell, and lane. If fastq_list.csv files are passed,
@@ -21,11 +28,11 @@ workflow INPUT_CHECK {
     .map { create_master_samplesheet(it) }
     .set { ch_mastersheet }
 
-    // Organize reads into a fastq list string (to be written to a file) and read1/read2 pairs.
+    // Organize reads into a fastq list string (to be written to a fastq_list file) and read1/read2 pairs.
     ch_mastersheet
     .map { meta -> 
         if (meta.read1 != null && meta.read2 != null){
-            def new_meta = meta.subMap('id', 'uid', 'sample', 'assay')
+            def new_meta = meta.subMap('id', 'mrn', 'accession','dob','sex','family_id','relationship')
             def rgid = meta.flowcell + '.' + meta.i7index + '.' + meta.i5index + '.' + meta.lane 
             def rglb = meta.id + '.' + meta.i7index + '.' + meta.i5index
             [ new_meta, [ rgid, meta.id, rglb, meta.lane, file(meta.read1), file(meta.read2) ] ]
@@ -59,51 +66,60 @@ workflow INPUT_CHECK {
     .transpose()
     .set { ch_read2 }
 
-    // Make fastq_list file from string.
+    // Make fastq_list file from string. if I could figure out how to do this with a channel operation, I would.
     ch_fastqs
     .map { meta, fqlist, read1, read2 -> [ meta, fqlist ] } | MAKE_FASTQLIST
 
-    // Concatenate read1, read2, and fastqlist channels and group by meta.
+    // Concatenate read1, read2, and fastq_list files group by meta.
     MAKE_FASTQLIST.out.fastq_list
     .concat(ch_read1,ch_read2)
+    .transpose()
     .groupTuple()
-    .set { ch_fastq_list }
+    .map { meta, files -> 
+        return [ meta, 'fastq', files ]
+    }
+    .set { ch_input_data }
 
     // Organize cram files into a channel.
     ch_mastersheet
     .map { meta -> 
         if (meta.cram != null){
-            def new_meta = meta.subMap('id', 'uid', 'sample', 'assay')
-            new_meta.cram = file(meta.cram).getName()
-            [ new_meta, [ file(meta.cram), file(meta.cram + '.crai')  ] ]
+            def new_meta = meta.subMap('id', 'mrn', 'accession','dob','sex','family_id','relationship')
+            return [ new_meta, 'cram', [ file(meta.cram), file(meta.cram + '.crai') ] ]
+        }
+        if (meta.bam != null){
+            def new_meta = meta.subMap('id', 'mrn', 'accession','dob','sex','family_id','relationship')
+            return [ new_meta, 'bam', [ file(meta.bam), file(meta.bam + '.crai') ] ]
         }
     }
-    .set { ch_cram }
+    .set { ch_aligned }
 
-    // Organize bam files into a channel.
+    ch_input_data = ch_input_data.mix(ch_aligned)
+    
     ch_mastersheet
     .map { meta -> 
-        if (meta.bam != null){
-            def new_meta = meta.subMap('id', 'uid', 'sample', 'assay')
-            new_meta.bam = file(meta.bam).getName()
-            [ new_meta, [ file(meta.bam), file(meta.bam + '.bai') ] ]
+        if (meta.dragen_path != null){
+            def new_meta = meta.subMap('id', 'mrn', 'accession','dob','sex','family_id','relationship')
+            return [ new_meta, file(meta.dragen_path).listFiles() ]
         }
     }
-    .set { ch_bam }
+    .set { ch_dragen_outputs }
 
     emit:
-    ch_fastq_list
-    ch_cram
-    ch_bam
+    dragen_outputs = ch_dragen_outputs
+    input_data = ch_input_data
 }
 
 def create_master_samplesheet(LinkedHashMap row) {
 
     def meta = [:]
     meta.id             = row.id
-    meta.uid            = row.uid ?: row.sample_id
-    meta.sample         = row.sample ?: null
-    meta.assay          = row.assay ?: null
+    meta.mrn            = row.mrn ?: null
+    meta.accession      = row.accession ?: null
+    meta.dob            = row.dob ?: null
+    meta.sex            = row.sex ?: null
+    meta.family_id      = row.family_id ?: null
+    meta.relationship   = row.relationship ?: null
     meta.i7index        = row.i7index ?: null
     meta.i5index        = row.i5index ?: null
     meta.flowcell       = row.flowcell ?: null
@@ -135,5 +151,13 @@ def create_master_samplesheet(LinkedHashMap row) {
         }
         meta.bam = file(row.bam)
     }
+
+    if (row.dragen_path) {
+        if (!file(row.dragen_path).exists()) {
+            exit 1, "ERROR: Please check input samplesheet -> dragen_path does not exist!\n${row.dragen_path}"
+        }
+        meta.dragen_path = file(row.dragen_path)
+    }
+
     return meta
 }

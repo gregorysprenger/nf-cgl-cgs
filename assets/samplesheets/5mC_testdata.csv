@@ -1,2 +1,0 @@
-File Name,Flow Cell ID,Index Sequence,Lane Number,Read Number,Sample Name,Species,Tissue Type,Library Type,Library Name,Completion Date,Total Bases Kb,% PF Clusters,Avg QScore,% > Q30,% Phix Error Rate,Protocol
-HKV3NDSX5_TGATACGTAT-ACGGCAAGCA_L001_R1.fastq.gz,HKV3NDSX5,TGATACGTAT-ACGGCAAGCA,1,1,SLAD-1423407-1423407,human,,bdna library,SLAD-1423407-1423407,2023-03-18,"165,123,710.708",85.36,35.06,88.9,0.25,Project Management
