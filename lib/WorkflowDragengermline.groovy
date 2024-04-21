@@ -1,11 +1,11 @@
 //
-// This file holds several functions specific to the workflow/dragenmultiworkflow.nf in the nf-core/dragenmultiworkflow pipeline
+// This file holds several functions specific to the workflow/dragengermline.nf in the nf-core/dragengermline pipeline
 //
 
 import nextflow.Nextflow
 import groovy.text.SimpleTemplateEngine
 
-class WorkflowDragenmultiworkflow {
+class WorkflowDragengermline {
 
     //
     // Check and validate parameters

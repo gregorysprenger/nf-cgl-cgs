@@ -1,11 +1,9 @@
 #!/usr/bin/env nextflow
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    nf-core/dragenmultiworkflow
+    dhslab/dragen-germline
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    Github : https://github.com/nf-core/dragenmultiworkflow
-    Website: https://nf-co.re/dragenmultiworkflow
-    Slack  : https://nfcore.slack.com/channels/dragenmultiworkflow
+    Github : https://github.com/dhslab/dragen-germline
 ----------------------------------------------------------------------------------------
 */
 
@@ -47,13 +45,13 @@ WorkflowMain.initialise(workflow, params, log)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { DRAGENMULTIWORKFLOW } from './workflows/dragenmultiworkflow'
+include { DRAGEN_GERMLINE } from './workflows/dragen_germline.nf'
 
 //
 // WORKFLOW: Run main nf-core/dragenmultiworkflow analysis pipeline
 //
-workflow NFCORE_DRAGENMULTIWORKFLOW {
-    DRAGENMULTIWORKFLOW ()
+workflow NFCORE_DRAGEN_GERMLINE {
+    DRAGEN_GERMLINE ()
 }
 
 /*
@@ -67,7 +65,7 @@ workflow NFCORE_DRAGENMULTIWORKFLOW {
 // See: https://github.com/nf-core/rnaseq/issues/619
 //
 workflow {
-    NFCORE_DRAGENMULTIWORKFLOW ()
+    NFCORE_DRAGEN_GERMLINE ()
 }
 
 /*

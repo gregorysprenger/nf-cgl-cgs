@@ -13,7 +13,7 @@ def summary_params = paramsSummaryMap(workflow)
 // Print parameter summary log to screen
 log.info logo + paramsSummaryLog(workflow) + citation
 
-WorkflowDragenmultiworkflow.initialise(params, log)
+WorkflowDragengermline.initialise(params, log)
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -35,12 +35,8 @@ ch_multiqc_custom_methods_description = params.multiqc_methods_description ? fil
 //
 // SUBWORKFLOW: Consisting of a mix of local and nf-core/modules
 //
-include { INPUT_CHECK  } from '../subworkflows/local/input_check'
-include { RNA_SEQ      } from '../subworkflows/local/rna_seq.nf'
-include { METHYLATION  } from '../subworkflows/local/methylation.nf'
-include { TUMOR_NORMAL } from '../subworkflows/local/tumor_normal.nf'
-include { GERMLINE_WGS } from '../subworkflows/local/germline_wgs.nf'
-
+include { SAMPLE_INPUT_CHECK    } from '../subworkflows/local/sample_input_check.nf'
+include { MULTISAMPLE_GENOTYPE  } from '../subworkflows/local/multisample_genotype.nf'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -50,7 +46,9 @@ include { GERMLINE_WGS } from '../subworkflows/local/germline_wgs.nf'
 
 //
 // MODULE: Installed directly from nf-core/modules
+
 //
+include { DRAGEN_ALIGN                } from '../modules/local/dragen_align.nf'
 include { FASTQC                      } from '../modules/nf-core/fastqc/main'
 include { MULTIQC                     } from '../modules/nf-core/multiqc/main'
 include { CUSTOM_DUMPSOFTWAREVERSIONS } from '../modules/nf-core/custom/dumpsoftwareversions/main'
@@ -61,46 +59,100 @@ include { CUSTOM_DUMPSOFTWAREVERSIONS } from '../modules/nf-core/custom/dumpsoft
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
+// This function 'stages' a set of files defined by a map of key:filepath pairs.
+// It returns a tuple: a map of key:filename pairs and list of file paths.
+// This can be used to generate a value Channel that can be used as input to a process
+// that accepts a tuple val(map), path("*") so map.key refers to the appropriate linked file.
+def stageFileset(Map filePathMap) {
+    def basePathMap = [:]
+    def filePathsList = []
+
+    filePathMap.each { key, value ->
+        if (value != null) {
+            def filepath = file(value)
+            if (filepath.exists()) {
+                // Add basename and key to the map
+                basePathMap[key] = value.split('/')[-1]
+                // Add file path to the list
+                filePathsList << filepath
+            } else {
+                println "Warning: File at '${value}' for key '${key}' does not exist."
+            }
+        }
+    }
+    return [basePathMap, filePathsList]
+}
+
+// If MGI samplesheet is used, we need to set the 
+// data path because only files are given. This sets the 
+// data path to the samplesheet directory, or the data_path parameter.
+def data_path = ""
+def mastersheet = params.mastersheet
+if (params.mgi == true) {
+    data_path = new File(params.mastersheet).parentFile.absolutePath
+} else if (params.data_path != null){
+    data_path  = params.data_path
+}
+
 // Info required for completion email and summary
 def multiqc_report = []
 
-workflow DRAGENMULTIWORKFLOW {
+workflow DRAGEN_GERMLINE {
+
     ch_versions     = Channel.empty()
+    ch_input_data      = Channel.empty()
 
-    mgi_samplesheet    = params.mgi_samplesheet    ?: null
-    input_dir          = params.input_dir          ?: null
-    master_samplesheet = params.master_samplesheet ?: null
+    SAMPLE_INPUT_CHECK(Channel.fromPath(mastersheet), data_path)
+    ch_versions = ch_versions.mix(SAMPLE_INPUT_CHECK.out.versions)
 
+    ch_input_data = SAMPLE_INPUT_CHECK.out.input_data
 
-    INPUT_CHECK(master_samplesheet, input_dir, mgi_samplesheet)
+    // this stages all dragen align inputs into an object keyed by the parameter name
+    ch_dragen_inputs = Channel.value(stageFileset(params.dragen_inputs))
 
-    done       = INPUT_CHECK.out.done
-    mgi_fastqs = INPUT_CHECK.out.ch_mgi_fastqs
-    fastqs     = INPUT_CHECK.out.ch_reads_info
-    fastq_list = INPUT_CHECK.out.ch_fastq_list
-    cram       = INPUT_CHECK.out.ch_cram
-    bam        = INPUT_CHECK.out.ch_bam
+    DRAGEN_ALIGN(ch_input_data, ch_dragen_inputs)
+    ch_versions = ch_versions.mix(DRAGEN_ALIGN.out.ch_versions)
 
-    if (params.workflow == 'rna') {
-        RNA_SEQ(done, mgi_fastqs, fastqs, fastq_list, cram, bam)
-        ch_versions = ch_versions.mix(RNA_SEQ.out.ch_versions)
+    // Channel operations to prepare joint genotyping
+    DRAGEN_ALIGN.out.dragen_output
+    .filter { it[0].family_id != null }
+    .map { meta, outfiles -> 
+        def new_meta = meta.subMap('id','relationship','sex')
+        def cnvfiles = outfiles.findAll { it.name.endsWith('.tn.tsv') }
+        def gvcfs = outfiles.findAll { it.name.endsWith('.gvcf.gz') || it.name.endsWith('.gvcf.gz.tbi') }
+        def svfiles = outfiles.findAll { it.name.endsWith('.bam') || it.name.endsWith('.bam.bai') it.name.endsWith('.cram') || it.name.endsWith('.cram.crai') }
+
+        [meta.family_id, new_meta, gvcfs, cnvfiles, svfiles]
     }
+    .groupTuple()
+    .map { family_id, meta, gvcfs, cnvfiles, svfiles ->
+        // iterate over each item in the list of meta objects
 
-    if (params.workflow == '5mc') {
-        METHYLATION(done, mgi_fastqs, fastqs, fastq_list, cram, bam)
-        ch_versions = ch_versions.mix(METHYLATION.out.ch_versions)
-    }
+        def proband_sex = ""
+        def proband_id = ""
+        def father_id = ""
+        def mother_id = ""
 
-    if (params.workflow == 'germline_wgs') {
-        GERMLINE_WGS(done, mgi_fastqs, fastqs, fastq_list, cram, bam)
-        ch_versions = ch_versions.mix(GERMLINE_WGS.out.ch_versions)
-    }
+        meta.each { sample_meta ->            
+            if (sample_meta.relationship == 'proband') {
+                proband_sex = sample_meta.sex == 'male' ? '1' : '2'
+                proband_id_ = sample_meta.id
+            } else if (sample_meta.relationship == 'father') {
+                father_id = sample_meta.id
+            } else if (sample_meta.relationship == 'mother') {
+                mother_id = sample_meta.id
+            }
+        }
+        def pedfile = "#Family_ID\tIndividual_ID\tPaternal_ID\tMaternal_ID\tSex\tPhenotype\n"
+        pedfile += "${family_id}\t${proband_id}\t${father_id}\t${mother_id}\t${proband_sex}\t2\n"
+        pedfile += "${family_id}\t${father_id}\t0\t0\t1\t1\n"
+        pedfile += "${family_id}\t${mother_id}\t0\t0\t2\t1\n"
 
-    
-    if (params.workflow == 'tumor_normal') {
-        TUMOR_NORMAL(done, mgi_fastqs, fastqs, fastq_list, cram, bam)
-        ch_versions = ch_versions.mix(TUMOR_NORMAL.out.ch_versions)
+        [ family_id, pedfile, gvcfs, cnvfiles, svfiles ]
     }
+    .set { multisample_genotype_input }
+
+//    MULTISAMPLE_GENOTYPE(multisample_genotype_input, ch_dragen_inputs)
 
     CUSTOM_DUMPSOFTWAREVERSIONS (
         ch_versions.unique().collectFile(name: 'collated_versions.yml')

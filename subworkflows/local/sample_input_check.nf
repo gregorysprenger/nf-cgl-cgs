@@ -18,6 +18,7 @@ workflow SAMPLE_INPUT_CHECK {
     ch_mastersheet        = Channel.empty()
     ch_input_data         = Channel.empty()
     ch_dragen_outputs     = Channel.empty()
+    ch_versions           = Channel.empty()
 
     // Runs a python script that parses the sample sheet and adds key metadata, 
     // including index sequences, flowcell, and lane. If fastq_list.csv files are passed,
@@ -27,6 +28,8 @@ workflow SAMPLE_INPUT_CHECK {
     .splitCsv ( header:true, sep:',' )
     .map { create_master_samplesheet(it) }
     .set { ch_mastersheet }
+
+    ch_versions = ch_versions.mix(SAMPLE_INPUT_CHECK.out.versions)
 
     // Organize reads into a fastq list string (to be written to a fastq_list file) and read1/read2 pairs.
     ch_mastersheet
@@ -106,6 +109,7 @@ workflow SAMPLE_INPUT_CHECK {
     .set { ch_dragen_outputs }
 
     emit:
+    versions = ch_versions
     dragen_outputs = ch_dragen_outputs
     input_data = ch_input_data
 }
