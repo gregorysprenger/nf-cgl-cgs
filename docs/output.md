@@ -1,4 +1,4 @@
-# nf-core/dragenmultiworkflow: Output
+# Clinical-Genomics-Laboratory/nfcglcgs: Output
 
 ## Introduction
 

@@ -1,7 +1,15 @@
-# ![dhslab/dragen-germline]
+[![GitHub Actions CI Status](https://github.com/Clinical-Genomics-Laboratory/nf-cgl-cgs/actions/workflows/ci.yml/badge.svg)](https://github.com/Clinical-Genomics-Laboratory/nfcglcgs/actions/workflows/ci.yml)
+[![GitHub Actions Linting Status](https://github.com/Clinical-Genomics-Laboratory/nf-cgl-cgs/actions/workflows/linting.yml/badge.svg)](https://github.com/Clinical-Genomics-Laboratory/nfcglcgs/actions/workflows/linting.yml)[![Cite with Zenodo](http://img.shields.io/badge/DOI-10.5281/zenodo.XXXXXXX-1073c8?labelColor=000000)](https://doi.org/10.5281/zenodo.XXXXXXX)
+
+[![Nextflow](https://img.shields.io/badge/nextflow%20DSL2-%E2%89%A523.04.0-23aa62.svg)](https://www.nextflow.io/)
+[![run with conda](http://img.shields.io/badge/run%20with-conda-3EB049?labelColor=000000&logo=anaconda)](https://docs.conda.io/en/latest/)
+[![run with docker](https://img.shields.io/badge/run%20with-docker-0db7ed?labelColor=000000&logo=docker)](https://www.docker.com/)
+[![run with singularity](https://img.shields.io/badge/run%20with-singularity-1d355c.svg?labelColor=000000)](https://sylabs.io/docs/)
+[![Launch on Seqera Platform](https://img.shields.io/badge/Launch%20%F0%9F%9A%80-Seqera%20Platform-%234256e7)](https://cloud.seqera.io/launch?pipeline=https://github.com/Clinical-Genomics-Laboratory/nf-cgl-cgs)
+
 ## Introduction
 
-**dhslab/dragen-germline** is a bioinformatics pipeline that ...
+**Clinical-Genomics-Laboratory/nf-cgl-cgs** is a bioinformatics pipeline that ...
 
 <!-- TODO nf-core:
    Complete this sentence with a 2-3 sentence summary of what types of data the pipeline ingests, a brief overview of the
@@ -42,7 +50,7 @@ Each row represents a fastq file (single-end) or a pair of fastq files (paired e
 
 mgi samplesheet should be updated version, mastersheet should have the following columns:
 sample_id,read1,read2,fastq_list,cram,bam
-where sample_id is library name 
+where sample_id is library name
 
 Now, you can run the pipeline using:
 
@@ -52,9 +60,9 @@ Now, you can run the pipeline using:
 nextflow run dhslab/dragen-germline \
    -profile ris,<dragen2/dragen4> \
    --mgi_samplesheet /path/to/mgi_samplesheet \
-   --input_dir /path/to/input_dir \ 
-   --master_sheet /path/to/master_sheet \ 
-   --outdir <OUTDIR> \ 
+   --input_dir /path/to/input_dir \
+   --master_sheet /path/to/master_sheet \
+   --outdir <OUTDIR> \
    --workflow <rna/5mc/germline_wgs/tumor_normal>
 ```
 
@@ -74,7 +82,7 @@ For more details about the output files and reports, please refer to the
 
 ## Credits
 
-nf-core/dragenmultiworkflow was originally written by Nidhi.
+Clinical-Genomics-Laboratory/nf-cgl-cgs was originally written by Nidhi.
 
 We thank the following people for their extensive assistance in the development of this pipeline:
 

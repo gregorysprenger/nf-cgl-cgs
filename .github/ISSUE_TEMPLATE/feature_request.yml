@@ -1,5 +1,5 @@
 name: Feature request
-description: Suggest an idea for the nf-core/dragenmultiworkflow pipeline
+description: Suggest an idea for the Clinical-Genomics-Laboratory/nfcglcgs pipeline
 labels: enhancement
 body:
   - type: textarea

@@ -1,7 +1,10 @@
 process MULTIQC {
-    label 'process_low'
+    label 'process_single'
+
     conda "${moduleDir}/environment.yml"
-    container "quay.io/biocontainers/multiqc:1.14--pyhdfd78af_0"
+    container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
+        'https://depot.galaxyproject.org/singularity/multiqc:1.21--pyhdfd78af_0' :
+        'biocontainers/multiqc:1.21--pyhdfd78af_0' }"
 
     input:
     path  multiqc_files, stageAs: "?/*"
@@ -40,7 +43,7 @@ process MULTIQC {
 
     stub:
     """
-    touch multiqc_data
+    mkdir multiqc_data
     touch multiqc_plots
     touch multiqc_report.html
 
