@@ -9,7 +9,7 @@ include { MULTIQC                } from '../modules/nf-core/multiqc/main'
 include { paramsSummaryMap       } from 'plugin/nf-validation'
 include { paramsSummaryMultiqc   } from '../subworkflows/nf-core/utils_nfcore_pipeline'
 include { softwareVersionsToYAML } from '../subworkflows/nf-core/utils_nfcore_pipeline'
-include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_nfcglcgs_pipeline'
+include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_nf-cgl-cgs_pipeline'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -17,7 +17,7 @@ include { methodsDescriptionText } from '../subworkflows/local/utils_nfcore_nfcg
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-workflow NFCGLCGS {
+workflow nf-cgl-cgs {
 
     take:
     ch_samplesheet // channel: samplesheet read in from --input

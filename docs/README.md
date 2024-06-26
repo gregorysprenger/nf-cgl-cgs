@@ -1,6 +1,6 @@
-# Clinical-Genomics-Laboratory/nfcglcgs: Documentation
+# Clinical-Genomics-Laboratory/nf-cgl-cgs: Documentation
 
-The Clinical-Genomics-Laboratory/nfcglcgs documentation is split into the following pages:
+The Clinical-Genomics-Laboratory/nf-cgl-cgs documentation is split into the following pages:
 
 - [Usage](usage.md)
   - An overview of how the pipeline works, how to run it and a description of all of the different command-line flags.

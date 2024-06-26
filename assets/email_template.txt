@@ -1,10 +1,10 @@
 Run Name: $runName
 
 <% if (success){
-    out << "## Clinical-Genomics-Laboratory/nfcglcgs execution completed successfully! ##"
+    out << "## Clinical-Genomics-Laboratory/nf-cgl-cgs execution completed successfully! ##"
 } else {
     out << """####################################################
-## Clinical-Genomics-Laboratory/nfcglcgs execution completed unsuccessfully! ##
+## Clinical-Genomics-Laboratory/nf-cgl-cgs execution completed unsuccessfully! ##
 ####################################################
 The exit status of the task that caused the workflow execution to fail was: $exitStatus.
 The full error message was:
@@ -27,5 +27,5 @@ Pipeline Configuration:
 <% out << summary.collect{ k,v -> " - $k: $v" }.join("\n") %>
 
 --
-Clinical-Genomics-Laboratory/nfcglcgs
-https://github.com/Clinical-Genomics-Laboratory/nfcglcgs
+Clinical-Genomics-Laboratory/nf-cgl-cgs
+https://github.com/Clinical-Genomics-Laboratory/nf-cgl-cgs

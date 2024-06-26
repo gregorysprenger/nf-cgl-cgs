@@ -1,9 +1,9 @@
 #!/usr/bin/env nextflow
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    Clinical-Genomics-Laboratory/nfcglcgs
+    Clinical-Genomics-Laboratory/nf-cgl-cgs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    Github : https://github.com/Clinical-Genomics-Laboratory/nfcglcgs
+    Github : https://github.com/Clinical-Genomics-Laboratory/nf-cgl-cgs
 ----------------------------------------------------------------------------------------
 */
 
@@ -15,11 +15,11 @@ nextflow.enable.dsl = 2
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { NFCGLCGS  } from './workflows/nfcglcgs'
-include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_nfcglcgs_pipeline'
-include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_nfcglcgs_pipeline'
+include { nf-cgl-cgs  } from './workflows/nf-cgl-cgs'
+include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_nf-cgl-cgs_pipeline'
+include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_nf-cgl-cgs_pipeline'
 
-include { getGenomeAttribute      } from './subworkflows/local/utils_nfcore_nfcglcgs_pipeline'
+include { getGenomeAttribute      } from './subworkflows/local/utils_nfcore_nf-cgl-cgs_pipeline'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -41,7 +41,7 @@ params.fasta = getGenomeAttribute('fasta')
 //
 // WORKFLOW: Run main analysis pipeline depending on type of input
 //
-workflow CLINICALGENOMICSLABORATORY_NFCGLCGS {
+workflow CLINICALGENOMICSLABORATORY_nf-cgl-cgs {
 
     take:
     samplesheet // channel: samplesheet read in from --input
@@ -51,12 +51,12 @@ workflow CLINICALGENOMICSLABORATORY_NFCGLCGS {
     //
     // WORKFLOW: Run pipeline
     //
-    NFCGLCGS (
+    nf-cgl-cgs (
         samplesheet
     )
 
     emit:
-    multiqc_report = NFCGLCGS.out.multiqc_report // channel: /path/to/multiqc_report.html
+    multiqc_report = nf-cgl-cgs.out.multiqc_report // channel: /path/to/multiqc_report.html
 
 }
 /*
@@ -85,7 +85,7 @@ workflow {
     //
     // WORKFLOW: Run main workflow
     //
-    CLINICALGENOMICSLABORATORY_NFCGLCGS (
+    CLINICALGENOMICSLABORATORY_nf-cgl-cgs (
         PIPELINE_INITIALISATION.out.samplesheet
     )
 
@@ -99,7 +99,7 @@ workflow {
         params.outdir,
         params.monochrome_logs,
         params.hook_url,
-        CLINICALGENOMICSLABORATORY_NFCGLCGS.out.multiqc_report
+        CLINICALGENOMICSLABORATORY_nf-cgl-cgs.out.multiqc_report
     )
 }
 

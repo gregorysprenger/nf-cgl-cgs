@@ -1,5 +1,5 @@
 //
-// Subworkflow with functionality specific to the Clinical-Genomics-Laboratory/nfcglcgs pipeline
+// Subworkflow with functionality specific to the Clinical-Genomics-Laboratory/nf-cgl-cgs pipeline
 //
 
 /*

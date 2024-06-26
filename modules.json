@@ -1,6 +1,6 @@
 {
-    "name": "Clinical-Genomics-Laboratory/nfcglcgs",
-    "homePage": "https://github.com/Clinical-Genomics-Laboratory/nfcglcgs",
+    "name": "Clinical-Genomics-Laboratory/nf-cgl-cgs",
+    "homePage": "https://github.com/Clinical-Genomics-Laboratory/nf-cgl-cgs",
     "repos": {
         "https://github.com/nf-core/modules.git": {
             "modules": {

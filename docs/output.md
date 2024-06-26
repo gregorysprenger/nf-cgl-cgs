@@ -1,4 +1,4 @@
-# Clinical-Genomics-Laboratory/nfcglcgs: Output
+# Clinical-Genomics-Laboratory/nf-cgl-cgs: Output
 
 ## Introduction
 

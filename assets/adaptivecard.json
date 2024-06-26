@@ -17,7 +17,7 @@
                         "size": "Large",
                         "weight": "Bolder",
                         "color": "<% if (success) { %>Good<% } else { %>Attention<%} %>",
-                        "text": "Clinical-Genomics-Laboratory/nfcglcgs v${version} - ${runName}",
+                        "text": "Clinical-Genomics-Laboratory/nf-cgl-cgs v${version} - ${runName}",
                         "wrap": true
                     },
                     {
