@@ -1,6 +1,6 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema",
-    "$id": "https://raw.githubusercontent.com/Clinical-Genomics-Laboratory/nf-cgl-cgs/master/assets/schema_input.json",
+    "$id": "https://raw.githubusercontent.com/Clinical-Genomics-Laboratory/nf-cgl-cgs/main/assets/schema_input.json",
     "title": "Clinical-Genomics-Laboratory/nf-cgl-cgs pipeline - params.input schema",
     "description": "Schema for the file provided with params.input",
     "type": "array",
