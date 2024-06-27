@@ -2,35 +2,30 @@ process DRAGEN_JOINT_SV {
     tag "${meta.id}"
     label 'dragen'
     label 'dragenalign'
-    container "${ext.dragen_aws_image}" ?: "${params.dragen_container}"
 
-//    publishDir "$params.outdir/${meta.id}/", saveAs: { filename -> filename == "versions.yml" ? null : filename.split('/')[1] }, mode:'copy'
+    container "${ workflow.profile == 'dragenaws' ?
+        'ghcr.io/dhslab/docker-dragen:el7.4.2.4' :
+        'etycksen/dragen4:4.2.4' }"
 
     input:
-    tuple val(meta), val(pedfile), path("*")
-    tuple val(dragen_inputs), path("*", stageAs: 'inputs/*')
+    tuple val(meta), path(sv_files)
 
     output:
-    tuple val(meta), path ("dragen/*"), emit: dragen_output
-    path "versions.yml",    emit: versions
+    tuple val(meta), path ("*.vcf.gz"), emit: dragen_output
+    path("versions.yml")              , emit: versions
 
     script:
-
+    def ref_dir = params.dragen_ref_dir ? "--ref-dir ${params.dragen_ref_dir}" : ""
+    def sv_list = sv_files.collect{ "--bam-input $it" }.join(' \\\\\n')
     """
-    echo ${pedfile} > ${meta.family_id}.ped && mkdir dragen && \\
-    /opt/edico/bin/dragen -r inputs/${dragen_inputs.reference} ${intermediate_dir} ${args_license}\\
-                --enable-map-align true \\
-                --enable-sort true \\
-                --enable-bam-indexing true \\
-                --enable-map-align-output true \\
-                --qc-coverage-ignore-overlaps=true \\
-                --gc-metrics-enable true \\
-                --enable-duplicate-marking ${params.mark_duplicates} \\
-                --read-trimmers adapter \\
-                --trim-adapter-read1 inputs/${dragen_inputs.dragen_adapter1} \\
-                --trim-adapter-read2 inputs/${dragen_inputs.dragen_adapter2} \\
-                --output-format ${params.alignment_file_format} \\
-                --output-directory ./dragen --force --output-file-prefix ${meta.id} ${dragen_args}
+    /opt/edico/bin/dragen \\
+        --force \\
+        ${sv_list} \\
+        ${ref_dir} \\
+        --enable-sv true \\
+        --enable-map-align false \\
+        --output-directory \$PWD \\
+        --output-file-prefix ${meta.id}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -39,29 +34,24 @@ process DRAGEN_JOINT_SV {
     """
 
     stub:
-
+    def dragen_version   = "4.2.4"
+    def ref_dir = params.dragen_ref_dir ? "--ref-dir ${params.dragen_ref_dir}" : ""
+    def sv_list = sv_files.collect{ "--bam-input $it" }.join(' \\\\\n')
     """
-    echo ${pedfile} > ${meta.family_id}.ped && mkdir dragen && \\
-    echo /opt/edico/bin/dragen -r inputs/${dragen_inputs.reference} ${input} ${intermediate_dir} ${args_license}\\
-                --enable-map-align true \\
-                --enable-sort true \\
-                --enable-bam-indexing true \\
-                --enable-map-align-output true \\
-                --qc-coverage-ignore-overlaps=true \\
-                --gc-metrics-enable true \\
-                --enable-duplicate-marking ${params.mark_duplicates} \\
-                --read-trimmers adapter \\
-                --trim-adapter-read1 inputs/${dragen_inputs.dragen_adapter1} \\
-                --trim-adapter-read2 inputs/${dragen_inputs.dragen_adapter2} \\
-                --output-format ${params.alignment_file_format} \\
-                --output-directory ./dragen --force --output-file-prefix ${meta.id} ${dragen_args} > ./dragen/${meta.id}.txt
+    cat <<-END_CMDS > "${meta.id}.txt"
+    /opt/edico/bin/dragen \\
+        --force \\
+        ${sv_list} \\
+        ${ref_dir} \\
+        --enable-sv true \\
+        --enable-map-align false \\
+        --output-directory \$PWD \\
+        --output-file-prefix ${meta.id}
+    END_CMDS
 
-    for i in ${projectDir}/assets/stub/dragen_path/*; do
-        cp $i ./dragen/
-    done
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        dragen: \$(cat $projectDir/assets/stub/versions/dragen_version.txt)
+        dragen: ${dragen_version}
     END_VERSIONS
     """
 }
