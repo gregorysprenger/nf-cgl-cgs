@@ -12,8 +12,11 @@ process DRAGEN_ALIGN {
     tuple val(dragen_inputs), path("*", stageAs: 'inputs/*')
 
     output:
-    tuple val(meta), path ("dragen/*"), emit: dragen_output
-    path("versions.yml")              , emit: versions
+    tuple val(meta), path ("dragen/*")    , emit: dragen_output
+    path("dragen/*.hard-filtered.gvcf.gz"), emit: hard_filtered_gvcf
+    path("dragen/*.tn.tsv.gz")            , emit: tangent_normalized_counts
+    path("dragen/*.bam")                  , emit: bam
+    path("versions.yml")                  , emit: versions
 
     script:
     def input = ""
