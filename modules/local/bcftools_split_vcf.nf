@@ -2,11 +2,10 @@ process BCFTOOLS_SPLIT_VCF {
     tag "${meta.id}"
     label 'process_medium'
 
-    container "mgibio/bcftools-cwl:1.12"
+    container "docker.io/mgibio/bcftools-cwl:1.12"
 
     input:
     tuple val(meta), path(joint_vcf_file)
-    val(sample_name)
 
     output:
     path("*.vcf.gz")    , emit: split_vcf
@@ -14,14 +13,13 @@ process BCFTOOLS_SPLIT_VCF {
 
     script:
     """
-    # Replace meta.id in joint_vcf_file
-    output_name=\$(echo "${joint_vcf_file}" | sed "s|${meta.id}|${sample_name}|1")
+    output_filename=\$(echo "${joint_vcf_file}" | sed "s|${meta.batch}|${meta.id}|1")
 
     bcftools view \\
-        -O z \\
-        -s "${sample_name}" \\
-        -o "\${output_name}" \\
-        "${joint_vcf_file}"
+        --output-type z \\
+        --samples ${meta.id} \\
+        --output "\${output_filename}" \\
+        ${joint_vcf_file}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -31,10 +29,9 @@ process BCFTOOLS_SPLIT_VCF {
 
     stub:
     """
-    # Replace meta.id in joint_vcf_file
-    output_name=\$(echo "${joint_vcf_file}" | sed "s|${meta.id}|${sample_name}|1")
+    output_filename=\$(echo "${joint_vcf_file}" | sed "s|${meta.batch}|${meta.id}|1")
 
-    touch "\${output_name}"
+    touch "\${output_filename}"
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
