@@ -8,8 +8,8 @@ process BCFTOOLS_SPLIT_VCF {
     tuple val(meta), path(joint_vcf_file)
 
     output:
-    path("*.vcf.gz")    , emit: split_vcf
-    path("versions.yml"), emit: versions
+    tuple val(meta), path("*.vcf.gz"), emit: split_vcf
+    path("versions.yml")             , emit: versions
 
     script:
     """
