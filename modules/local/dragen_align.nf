@@ -18,6 +18,9 @@ process DRAGEN_ALIGN {
     path("dragen/*.bam")                  , emit: bam
     path("versions.yml")                  , emit: versions
 
+    when:
+    task.ext.when == null || task.ext.when
+
     script:
     def input = ""
     if (type == 'fastq_list') {

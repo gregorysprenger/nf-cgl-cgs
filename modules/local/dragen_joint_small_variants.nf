@@ -11,8 +11,9 @@ process DRAGEN_JOINT_SMALL_VARIANTS {
     tuple val(meta), path(small_variant_files)
 
     output:
-    tuple val(meta), path("*.vcf.gz"), emit: joint_small_variants
-    path("versions.yml")             , emit: versions
+
+    when:
+    task.ext.when == null || task.ext.when
 
     script:
     def ref_dir             = params.dragen_ref_dir ? "--ref-dir ${params.dragen_ref_dir}" : ""

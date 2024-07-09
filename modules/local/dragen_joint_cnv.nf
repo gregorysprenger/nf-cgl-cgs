@@ -11,8 +11,9 @@ process DRAGEN_JOINT_CNV {
     tuple val(meta), path(cnv_files)
 
     output:
-    tuple val(meta), path("*cnv.vcf.gz"), emit: joint_cnv
-    path("versions.yml")                , emit: versions
+
+    when:
+    task.ext.when == null || task.ext.when
 
     script:
     def ref_dir  = params.dragen_ref_dir ? "--ref-dir ${params.dragen_ref_dir}" : ""

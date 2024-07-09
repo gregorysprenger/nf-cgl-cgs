@@ -11,6 +11,9 @@ process BCFTOOLS_SPLIT_VCF {
     tuple val(meta), path("*.vcf.gz"), emit: split_vcf
     path("versions.yml")             , emit: versions
 
+    when:
+    task.ext.when == null || task.ext.when
+
     script:
     """
     output_filename=\$(echo "${joint_vcf_file}" | sed "s|${meta.batch}|${meta.id}|1")

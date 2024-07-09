@@ -11,8 +11,9 @@ process DRAGEN_JOINT_SV {
     tuple val(meta), path(sv_files)
 
     output:
-    tuple val(meta), path("*.vcf.gz"), emit: joint_sv
-    path("versions.yml")             , emit: versions
+
+    when:
+    task.ext.when == null || task.ext.when
 
     script:
     def ref_dir = params.dragen_ref_dir ? "--ref-dir ${params.dragen_ref_dir}" : ""
