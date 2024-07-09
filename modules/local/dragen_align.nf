@@ -20,15 +20,6 @@ process DRAGEN_ALIGN {
     task.ext.when == null || task.ext.when
 
     script:
-    def input = ""
-    if (type == 'fastq_list') {
-        input = "--fastq-list fastq_list.csv --fastq-list-sample-id ${meta.id}"
-    } else if (type == 'cram') {
-        input = "--cram-input ${meta.cram}"
-    } else if (type == 'bam') {
-        input = "--bam-input ${meta.bam}"
-    }
-
     def args_license     = task.ext.dragen_license_args                 ?: ''
     def sample_sex       = meta.sex.toLowerCase() in ['male', 'female'] ? "--sample-sex ${meta.sex}"                                     : ""
     def dbsnp            = params.dragen_dbsnp                          ? "--dbsnp ${params.dragen_dbsnp}"                               : ""
@@ -80,19 +71,16 @@ process DRAGEN_ALIGN {
     """
 
     stub:
-    def input = ""
-    if (type == 'fastq_list') {
-        input = "--fastq-list fastq_list.csv --fastq-list-sample-id ${meta.id}"
-
-    } else if (type == 'cram') {
-        input = "--cram-input ${meta.cram}"
-    }
-    if (type == 'bam') {
-        input = "--bam-input ${meta.bam}"
-    }
-
     def dragen_version   = "4.2.4"
     def args_license     = task.ext.dragen_license_args                 ?: ''
+    def sample_sex       = meta.sex.toLowerCase() in ['male', 'female'] ? "--sample-sex ${meta.sex}"                                     : ""
+    def dbsnp            = params.dragen_dbsnp                          ? "--dbsnp ${params.dragen_dbsnp}"                               : ""
+    def ref_dir          = params.dragen_ref_dir                        ? "--ref-dir ${params.dragen_ref_dir}"                           : ""
+    def adapter1         = params.dragen_adatper1                       ? "--trim-adapter-read1 ${params.dragen_adatper1}"               : ""
+    def adapter2         = params.dragen_adapter2                       ? "--trim-adapter-read2 ${params.dragen_adatper2}"               : ""
+    def qc_cont_vcf      = params.qc_contamination_vcf                  ? "--qc-cross-cont-vcf ${params.qc_contamination_vcf}"           : ""
+    def qc_cov_region1   = params.qc_coverage_region_1                  ? "--qc-coverage-region-1 ${params.qc_coverage_region_1}"        : ""
+    def intermediate_dir = params.dragen_intermediate_dir               ? "--intermediate-results-dir ${params.dragen_intermediate_dir}" : ""
 
     """
     mkdir -p dragen
