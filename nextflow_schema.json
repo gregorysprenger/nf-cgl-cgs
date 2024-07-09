@@ -14,14 +14,15 @@
             "properties": {
                 "input": {
                     "type": "string",
+                    "description": "Path to comma-separated file containing information about the samples.",
                     "format": "file-path",
-                    "exists": true,
-                    "schema": "assets/schema_input.json",
                     "mimetype": "text/csv",
-                    "pattern": "^\\S+\\.csv$",
-                    "description": "Path to comma-separated file containing information about the samples in the experiment.",
-                    "help_text": "You will need to create a design file with information about the samples in your experiment before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 3 columns, and a header row.",
-                    "fa_icon": "fas fa-file-csv"
+                    "schema": "/assets/schema_input.json"
+                },
+                "batch_name": {
+                    "type": "string",
+                    "description": "Name of sequence batch.",
+                    "default": "yyyyMMdd_CGS"
                 },
                 "outdir": {
                     "type": "string",
@@ -43,6 +44,77 @@
                 }
             }
         },
+        "joint_genotype_options": {
+            "title": "Joint genotype options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "joint_genotype_small_variants": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Batch joint genotype single nucleotide variants (SNV) and insertions/deletions (InDels)."
+                },
+                "joint_genotype_cnv": {
+                    "type": "boolean",
+                    "description": "Batch joint genotype copy number variants (CNV)."
+                },
+                "joint_genotype_sv": {
+                    "type": "boolean",
+                    "description": "Batch joint genotype structural variants (SV)."
+                }
+            }
+        },
+        "dragen_align_options": {
+            "title": "DRAGEN align options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "dragen_adapter1": {
+                    "type": "string",
+                    "description": "Path to adapter 1 nucleotide sequence used in DRAGEN align.",
+                    "format": "file-path",
+                    "pattern": "^\\S+\\.fn?a(sta)?(\\.gz)?$",
+                    "mimetype": "text/plain"
+                },
+                "dragen_adapter2": {
+                    "type": "string",
+                    "description": "Path to adapter 2 nucleotide sequence used in DRAGEN align.",
+                    "pattern": "^\\S+\\.fn?a(sta)?(\\.gz)?$",
+                    "format": "file-path",
+                    "mimetype": "text/plain"
+                },
+                "dragen_dbsnp": {
+                    "type": "string",
+                    "pattern": "^\\S+\\.vcf(\\.gz)?$",
+                    "format": "file-path",
+                    "description": "Path to the variant annotation database in VCF format."
+                },
+                "dragen_ref_dir": {
+                    "type": "string",
+                    "description": "Path to the directory containing the reference hash table.",
+                    "format": "directory-path"
+                },
+                "dragen_qc_coverage_region_1": {
+                    "type": "string",
+                    "description": "Path to BED file used to generate coverage region report."
+                },
+                "dragen_qc_cross_contamination_vcf": {
+                    "type": "string",
+                    "default": "/opt/edico/config/sample_cross_contamination_resource_hg38.vcf.gz",
+                    "description": "Path to VCF file that includes marker sites (RSIDs) with population allele frequencies that are close to 0.5",
+                    "pattern": "^\\S+\\.vcf?(\\.gz)?$",
+                    "format": "file-path"
+                },
+                "dragen_intermediate_dir": {
+                    "type": "string",
+                    "default": "/staging/intermediate-results-dir",
+                    "description": "Path to a directory to store intermediate results.",
+                    "format": "directory-path"
+                }
+            }
+        },
         "reference_genome_options": {
             "title": "Reference genome options",
             "type": "object",
@@ -53,7 +125,8 @@
                     "type": "string",
                     "description": "Name of iGenomes reference.",
                     "fa_icon": "fas fa-book",
-                    "help_text": "If using a reference genome configured in the pipeline using iGenomes, use this parameter to give the ID for the reference. This is then used to build the full paths for all required reference genome files e.g. `--genome GRCh38`. \n\nSee the [nf-core website docs](https://nf-co.re/usage/reference_genomes) for more details."
+                    "help_text": "If using a reference genome configured in the pipeline using iGenomes, use this parameter to give the ID for the reference. This is then used to build the full paths for all required reference genome files e.g. `--genome GRCh38`. \n\nSee the [nf-core website docs](https://nf-co.re/usage/reference_genomes) for more details.",
+                    "hidden": true
                 },
                 "fasta": {
                     "type": "string",
@@ -63,7 +136,8 @@
                     "pattern": "^\\S+\\.fn?a(sta)?(\\.gz)?$",
                     "description": "Path to FASTA genome file.",
                     "help_text": "This parameter is *mandatory* if `--genome` is not specified. If you don't have a BWA index available this will be generated for you automatically. Combine with `--save_reference` to save BWA index for future runs.",
-                    "fa_icon": "far fa-file-code"
+                    "fa_icon": "far fa-file-code",
+                    "hidden": true
                 },
                 "igenomes_ignore": {
                     "type": "boolean",
@@ -279,6 +353,12 @@
     "allOf": [
         {
             "$ref": "#/definitions/input_output_options"
+        },
+        {
+            "$ref": "#/definitions/joint_genotype_options"
+        },
+        {
+            "$ref": "#/definitions/dragen_align_options"
         },
         {
             "$ref": "#/definitions/reference_genome_options"
