@@ -1,7 +1,6 @@
 process DRAGEN_JOINT_SV {
     tag "${meta.id}"
     label 'dragen'
-    label 'dragenalign'
 
     container "${ workflow.profile == 'dragenaws' ?
         'ghcr.io/dhslab/docker-dragen:el7.4.2.4' :
