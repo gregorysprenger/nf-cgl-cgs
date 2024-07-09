@@ -1,5 +1,5 @@
 process DRAGEN_JOINT_CNV {
-    tag "${meta.id}"
+    tag "${cnv_files[0].toString().split('\\.')[0]}"
     label 'dragen'
 
     container "${ workflow.profile == 'dragenaws' ?

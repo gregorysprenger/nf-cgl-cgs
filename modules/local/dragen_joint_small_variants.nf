@@ -1,5 +1,5 @@
 process DRAGEN_JOINT_SMALL_VARIANTS {
-    tag "${meta.id}"
+    tag "${small_variant_files[0].toString().split('\\.')[0]}"
     label 'dragen'
 
     container "${ workflow.profile == 'dragenaws' ?
