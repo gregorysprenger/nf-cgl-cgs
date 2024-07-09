@@ -21,8 +21,7 @@
                 },
                 "batch_name": {
                     "type": "string",
-                    "description": "Name of sequence batch.",
-                    "default": "yyyyMMdd_CGS"
+                    "description": "Name of sequence batch. If not provided, it will be in the format of `<year><month><day>_CGS`."
                 },
                 "outdir": {
                     "type": "string",
