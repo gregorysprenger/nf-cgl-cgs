@@ -5,7 +5,7 @@ process DRAGEN_JOINT_CNV {
 
     container "${ workflow.profile == 'dragenaws' ?
         'ghcr.io/dhslab/docker-dragen:el7.4.2.4' :
-        'etycksen/dragen4:4.2.4' }"
+        'docker.io/etycksen/dragen4:4.2.4' }"
 
     input:
     tuple val(meta), path(cnv_files)
