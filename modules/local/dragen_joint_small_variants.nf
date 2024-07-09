@@ -16,6 +16,7 @@ process DRAGEN_JOINT_SMALL_VARIANTS {
     task.ext.when == null || task.ext.when
 
     script:
+    def prefix              = task.ext.prefix
     def ref_dir             = params.dragen_ref_dir ? "--ref-dir ${params.dragen_ref_dir}" : ""
     def small_variants_list = small_variant_files.collect{ "--variant $it" }.join(' \\\\\n')
     """
@@ -25,7 +26,7 @@ process DRAGEN_JOINT_SMALL_VARIANTS {
         ${small_variants_list} \\
         --output-directory \$PWD \\
         --enable-joint-genotyping true \\
-        --output-file-prefix ${meta.id}
+        --output-file-prefix ${prefix.id}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

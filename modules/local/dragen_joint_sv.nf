@@ -16,6 +16,7 @@ process DRAGEN_JOINT_SV {
     task.ext.when == null || task.ext.when
 
     script:
+    def prefix  = task.ext.prefix
     def ref_dir = params.dragen_ref_dir ? "--ref-dir ${params.dragen_ref_dir}" : ""
     def sv_list = sv_files.collect{ "--bam-input $it" }.join(' \\\\\n')
     """
@@ -26,7 +27,7 @@ process DRAGEN_JOINT_SV {
         --enable-sv true \\
         --enable-map-align false \\
         --output-directory \$PWD \\
-        --output-file-prefix ${meta.id}
+        --output-file-prefix ${prefix.id}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
