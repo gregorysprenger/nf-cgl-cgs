@@ -8,9 +8,11 @@ process DRAGEN_JOINT_CNV {
         'docker.io/etycksen/dragen4:4.2.4' }"
 
     input:
-    tuple val(meta), path(cnv_files)
+    path(cnv_files)
 
     output:
+    tuple val(task.ext.prefix), path("*cnv.vcf.gz"), emit: joint_cnv
+    path("versions.yml")                           , emit: versions
 
     when:
     task.ext.when == null || task.ext.when

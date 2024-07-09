@@ -8,9 +8,11 @@ process DRAGEN_JOINT_SMALL_VARIANTS {
         'docker.io/etycksen/dragen4:4.2.4' }"
 
     input:
-    tuple val(meta), path(small_variant_files)
+    path(small_variant_files)
 
     output:
+    tuple val(task.ext.prefix), path("*.vcf.gz"), emit: joint_small_variants
+    path("versions.yml")                        , emit: versions
 
     when:
     task.ext.when == null || task.ext.when

@@ -8,9 +8,11 @@ process DRAGEN_JOINT_SV {
         'docker.io/etycksen/dragen4:4.2.4' }"
 
     input:
-    tuple val(meta), path(sv_files)
+    path(sv_files)
 
     output:
+    tuple val(task.ext.prefix), path("*.vcf.gz"), emit: joint_sv
+    path("versions.yml")                        , emit: versions
 
     when:
     task.ext.when == null || task.ext.when

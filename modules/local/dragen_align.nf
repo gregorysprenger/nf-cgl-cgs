@@ -8,8 +8,7 @@ process DRAGEN_ALIGN {
         'docker.io/etycksen/dragen4:4.2.4' }"
 
     input:
-    tuple val(meta), val(type), path("*")
-    tuple val(dragen_inputs), path("*", stageAs: 'inputs/*')
+    tuple val(meta), path(fastq_list)
 
     output:
     tuple val(meta), path ("dragen/*")    , emit: dragen_output
