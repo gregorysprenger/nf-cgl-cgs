@@ -37,11 +37,12 @@ process DRAGEN_JOINT_SV {
     """
 
     stub:
-    def dragen_version   = "4.2.4"
-    def ref_dir = params.dragen_ref_dir ? "--ref-dir ${params.dragen_ref_dir}" : ""
-    def sv_list = sv_files.collect{ "--bam-input $it" }.join(' \\\\\n')
+    def dragen_version = "4.2.4"
+    def prefix         = task.ext.prefix
+    def ref_dir        = params.dragen_ref_dir ? "--ref-dir ${params.dragen_ref_dir}" : ""
+    def sv_list        = sv_files.collect{ "--bam-input $it" }.join(' \\\\\n')
     """
-    cat <<-END_CMDS > "${meta.id}.txt"
+    cat <<-END_CMDS > "${prefix.id}.txt"
     /opt/edico/bin/dragen \\
         --force \\
         ${sv_list} \\
@@ -49,7 +50,7 @@ process DRAGEN_JOINT_SV {
         --enable-sv true \\
         --enable-map-align false \\
         --output-directory \$PWD \\
-        --output-file-prefix ${meta.id}
+        --output-file-prefix ${prefix.id}
     END_CMDS
 
     cat <<-END_VERSIONS > versions.yml
