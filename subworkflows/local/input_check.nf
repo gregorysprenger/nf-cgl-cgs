@@ -16,6 +16,7 @@ workflow INPUT_CHECK {
     input
 
     main:
+    ch_versions = Channel.empty()
 
     // Set separator for input FastQ list
     if (hasExtension(input, 'csv')) {
@@ -69,7 +70,8 @@ workflow INPUT_CHECK {
                     .combine( ch_fastq_list )
 
     emit:
-    samples = ch_samples // channel: [ val(meta), path(file) ]
+    samples  = ch_samples  // channel: [ val(meta), path(file) ]
+    versions = ch_versions // channel: [ path(file) ]
 
 }
 
