@@ -15,22 +15,10 @@ nextflow.enable.dsl = 2
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { nf-cgl-cgs  } from './workflows/nf-cgl-cgs'
+include { DRAGEN_CGS              } from './workflows/dragen_cgs'
 include { PIPELINE_INITIALISATION } from './subworkflows/local/utils_nfcore_nf-cgl-cgs_pipeline'
 include { PIPELINE_COMPLETION     } from './subworkflows/local/utils_nfcore_nf-cgl-cgs_pipeline'
-
-include { getGenomeAttribute      } from './subworkflows/local/utils_nfcore_nf-cgl-cgs_pipeline'
-
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    GENOME PARAMETER VALUES
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
-
-// TODO nf-core: Remove this line if you don't need a FASTA file
-//   This is an example of how to use getGenomeAttribute() to fetch parameters
-//   from igenomes.config using `--genome`
-params.fasta = getGenomeAttribute('fasta')
+include { softwareVersionsToYAML  } from './subworkflows/nf-core/utils_nfcore_pipeline'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -39,26 +27,25 @@ params.fasta = getGenomeAttribute('fasta')
 */
 
 //
-// WORKFLOW: Run main analysis pipeline depending on type of input
+// WORKFLOW: Run DRAGEN for constitutional Genome Sequences (cGS)
 //
-workflow CLINICALGENOMICSLABORATORY_nf-cgl-cgs {
+workflow NF_DRAGEN_CGS {
 
     take:
-    samplesheet // channel: samplesheet read in from --input
+    samples // channel: [ val(meta), path(file) ]
 
     main:
-
     //
     // WORKFLOW: Run pipeline
     //
-    nf-cgl-cgs (
-        samplesheet
+    DRAGEN_CGS (
+        samples
     )
 
     emit:
-    multiqc_report = nf-cgl-cgs.out.multiqc_report // channel: /path/to/multiqc_report.html
-
+    versions = DRAGEN_CGS.out.versions
 }
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
@@ -68,6 +55,7 @@ workflow CLINICALGENOMICSLABORATORY_nf-cgl-cgs {
 workflow {
 
     main:
+    ch_versions = Channel.empty()
 
     //
     // SUBWORKFLOW: Run initialisation tasks
@@ -81,13 +69,26 @@ workflow {
         params.outdir,
         params.input
     )
+    ch_versions = ch_versions.mix(PIPELINE_INITIALISATION.out.versions)
 
     //
     // WORKFLOW: Run main workflow
     //
-    CLINICALGENOMICSLABORATORY_nf-cgl-cgs (
-        PIPELINE_INITIALISATION.out.samplesheet
+    NF_DRAGEN_CGS (
+        PIPELINE_INITIALISATION.out.samples
     )
+    ch_versions = ch_versions.mix(NF_DRAGEN_CGS.out.versions)
+
+    //
+    // Collate and save software versions
+    //
+    softwareVersionsToYAML(ch_versions)
+        .collectFile(
+            storeDir: "${params.outdir}/pipeline_info",
+            name: 'software_versions.yml',
+            sort: true,
+            newLine: true
+        )
 
     //
     // SUBWORKFLOW: Run completion tasks
@@ -99,8 +100,9 @@ workflow {
         params.outdir,
         params.monochrome_logs,
         params.hook_url,
-        CLINICALGENOMICSLABORATORY_nf-cgl-cgs.out.multiqc_report
+        Channel.of([])
     )
+
 }
 
 /*
