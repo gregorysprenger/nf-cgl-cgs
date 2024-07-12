@@ -1,33 +1,58 @@
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    IMPORT MODULES / SUBWORKFLOWS / FUNCTIONS
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
+
+include { CREATE_DEMULTIPLEX_SAMPLESHEET   } from '../../modules/local/create_demultiplex_samplesheet'
+include { DRAGEN_DEMULTIPLEX               } from '../../modules/local/dragen_demultiplex'
+include { INPUT_CHECK as VERIFY_FASTQ_LIST } from '../../subworkflows/local/input_check'
+
+
+/*
+========================================================================================
+    SUBWORKFLOW TO CHECK INPUTS
+========================================================================================
+*/
+
 workflow DEMULTIPLEX {
 
     take:
-    mastersheet
-    rundir
-    demuxdir
+    ch_samplesheet      // channel: [ path(file) ]
+    ch_illumina_run_dir // channel: [ path(dir) ]
 
     main:
     ch_versions = Channel.empty()
 
-    // make demux samplesheet
-    MAKE_DEMUX_SAMPLESHEET(mastersheet, rundir)
-    ch_versions = ch_versions.mix(MAKE_DEMUX_SAMPLESHEET.out.versions)
+    //
+    // MODULE: Create demultiplex samplesheet
+    //
+    CREATE_DEMULTIPLEX_SAMPLESHEET (
+        ch_samplesheet,
+        ch_illumina_run_dir
+    )
+    ch_versions = ch_versions.mix(CREATE_DEMULTIPLEX_SAMPLESHEET.out.versions)
 
-    // do demux
-    DRAGEN_DEMUX(MAKE_DEMUX_SAMPLESHEET.out.samplesheet, rundir, demuxdir)
+    //
+    // MODULE: Demultiplex samples
+    //
+    DRAGEN_DEMULTIPLEX (
+        CREATE_DEMULTIPLEX_SAMPLESHEET.out.samplesheet,
+        illumina_run_dir
+    )
     ch_versions = ch_versions.mix(DRAGEN_DEMUX.out.versions)
 
-    DRAGEN_DEMUX.out.fastqlist
-    .splitCsv ( header:true, sep:',', quote:'"' )
-    .map { row -> [ row.RGSM, [ row.RGID, row.RGLB, row.Lane, file(row.Read1File), file(row.Read2File) ] ] }
-    .set { ch_fastqs }
-
-    ch_fastqs
-    .map { it -> [ it[0] ] }
-    .combine(MAKE_DEMUX_SAMPLESHEET.out.runinfo)
-    .set { ch_runinfo }
+    //
+    // SUBWORKFLOW: Verify fastq_list.csv
+    //
+    VERIFY_FASTQ_LIST (
+        [],
+        DEMULTIPLEX.out.fastq_list
+    )
+    ch_versions = ch_versions.mix(VERIFY_FASTQ_LIST.out.versions)
 
     emit:
-    fastqlist = ch_fastqs.join(ch_runinfo)
+    samples = VERIFY_FASTQ_LIST.out.samples
     versions = ch_versions
 
 }

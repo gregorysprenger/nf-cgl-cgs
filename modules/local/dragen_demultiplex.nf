@@ -4,24 +4,33 @@ process DRAGEN_DEMULTIPLEX {
     container "${params.dragen_container}"
 
     input:
-    path samplesheet
-    path rundir
-    path demuxdir
+    path(samplesheet)
+    path(rundir)
 
     output:
-    path ('fastq_list.csv'), emit: fastqlist
-    path "versions.yml",    emit: versions
+    path("fastq_list.csv"), emit: fastq_list
+    path("versions.yml")  , emit: versions
 
     script:
-    def first_tile = params.bcl_first_tile ? " --first-tile-only true" : ""
+    def first_tile = params.bcl_first_tile ? "--first-tile-only true" : ""
     """
-    /opt/edico/bin/dragen --bcl-conversion-only true --bcl-only-matched-reads true --strict-mode true${first_tile} \\
-    --sample-sheet ${samplesheet} --bcl-input-directory ${rundir} \\
-    --output-directory \$(realpath ${demuxdir})
+    mkdir -p demux_fastq
 
-    cp ${rundir}/RunParameters.xml ${demuxdir}/Reports/
-    FLOWCELL=`grep Flowcell ${rundir}/RunInfo.xml | head -n 1 | cut -d '>' -f 2 | cut -d '<' -f 1`
-    awk -v FC=\$FLOWCELL -v FS=',' -v OFS=',' '{ if (NR==1){ print \$0; } else { print FC"."\$1,\$2,\$2"."substr(\$1,1,length(\$1)-2),\$4,\$5,\$6; } }' ${demuxdir}/Reports/fastq_list.csv > fastq_list.csv
+    # Perform demultiplexing of samples
+    /opt/edico/bin/dragen \\
+        --bcl-conversion-only true \\
+        --bcl-only-matched-reads true \\
+        --strict-mode true \\
+        ${first_tile} \\
+        --sample-sheet ${samplesheet} \\
+        --bcl-input-directory ${rundir} \\
+        --output-directory demux_fastq
+
+    # Copy RunParameters.xml to demux_fastq/Reports
+    find ${run_dir} \\
+        -type f \\
+        -name "RunParameters.xml" \\
+        -exec cp '{}' demux_fastq/Reports/ \\;
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
