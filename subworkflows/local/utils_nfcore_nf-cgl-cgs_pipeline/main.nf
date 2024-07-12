@@ -36,7 +36,9 @@ workflow PIPELINE_INITIALISATION {
     monochrome_logs   // boolean: Do not use coloured log outputs
     nextflow_cli_args //   array: List of positional nextflow CLI args
     outdir            //  string: The output directory where the results will be saved
-    input             //  string: Path to input samplesheet
+    demux_outdir      //  string: The output directory where the demultiplexed data will be saved
+    input             //  string: Path to input MGI samplesheet
+    fastq_list        //  string: Path to input fastq_list.csv
 
     main:
     ch_versions = Channel.empty()
@@ -81,7 +83,8 @@ workflow PIPELINE_INITIALISATION {
     // Create channel from input file provided through params.input
     //
     INPUT_CHECK (
-        input
+        input,
+        fastq_list ? Channel.fromPath(fastq_list, checkIfExists: true) : []
     )
     ch_versions = ch_versions.mix(INPUT_CHECK.out.versions)
 
