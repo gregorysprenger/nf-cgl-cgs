@@ -34,7 +34,7 @@ def parse_runinfo(rundir):
     # check if this path exists:
     if not os.path.exists(runparams_path):
         raise ValueError('RunParameters.xml file not found in the specified directory')
-    
+
     tree = ET.parse(runparams_path)
     root = tree.getroot()
     runinfo = {}
@@ -75,7 +75,7 @@ def parse_runinfo(rundir):
             runinfo['Index2Reverse'] = 'Y'
 
     # in case we're processing older NovaSeq 6000 data
-    else: 
+    else:
         runinfo['Read1Cycles'] = int(root.find('.//Read1NumberOfCycles').text)
         runinfo['Read2Cycles'] = int(root.find('.//Read2NumberOfCycles').text)
         runinfo['Index1Cycles'] = int(root.find('.//IndexRead1NumberOfCycles').text)
@@ -86,7 +86,7 @@ def parse_runinfo(rundir):
         runinfo['FlowCellType'] = 'UNKNOWN'
         runinfo['InstrumentType'] = 'UNKNOWN'
         runinfo['Instrument'] = 'UNKNOWN'
-        runinfo['Side'] = 'UNKNOWN'    
+        runinfo['Side'] = 'UNKNOWN'
         runinfo['Index1Reverse'] = 'N'
         runinfo['Index2Reverse'] = 'Y'
 
@@ -113,10 +113,10 @@ def main():
     df = pd.read_csv(args.samplesheet, header=0)
 
     # rename columns in df called lane and id to Lane and Sample:
-    df.rename(columns={'lanes':'Lane', 'id':'Sample_ID'}, inplace=True)
+    df.rename(columns={'Content_Desc':'Sample_ID'}, inplace=True)
 
     # Split the 'index' column into 'Index' and 'Index2'
-    df[['Index', 'Index2']] = df['index'].str.split('-', expand=True)
+    df[['Index', 'Index2']] = df['Index'].str.split('-', expand=True)
 
     # if index1_direction is reverse, then reverse complement the DNA sequence:
     if args.checkindexes and runinfo['Index1Reverse'] == 'Y':
@@ -138,9 +138,9 @@ def main():
     cycle_str = cycle_str + ';I10'
     if runinfo['Index2Cycles'] > 10:
         cycle_str = cycle_str + 'N' + str(runinfo['Index2Cycles']-10)
-    
+
     cycle_str = cycle_str + ';Y' + str(runinfo['Read2Cycles'])
-    
+
     # Initialize a list to store rows
     rows_list = []
 
