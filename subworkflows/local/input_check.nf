@@ -4,6 +4,8 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
+include { CONVERT_XLSX_TO_CSV } from '../../modules/local/convert_xlsx_to_csv'
+
 /*
 ========================================================================================
     SUBWORKFLOW TO CHECK INPUTS
@@ -13,65 +15,81 @@
 workflow INPUT_CHECK {
 
     take:
-    input
+    mgi_samplesheet //  string: Path to input MGI samplesheet
+    ch_fastq_list   //  string: Path to input fastq_list.csv
 
     main:
     ch_versions = Channel.empty()
 
-    // Set separator for input FastQ list
-    if (hasExtension(input, 'csv')) {
-        input_separator=','
-    } else if (hasExtension(input, 'tsv')) {
-        input_separator='\t'
-    } else {
-        error("ERROR: Input file does not end in `.csv` or `.tsv`!")
+    /*
+    ================================================================================
+                        Process input MGI samplesheet
+    ================================================================================
+    */
+
+    if (mgi_samplesheet) {
+        // Verify MGI samplesheet has a file extension in [xlsx,csv,tsv]
+        if (hasExtension(mgi_samplesheet, 'xlsx')) {
+            CONVERT_XLSX_TO_CSV (
+                mgi_samplesheet
+            )
+            ch_versions = ch_versions.mix(CONVERT_XLSX_TO_CSV.out.versions)
+
+            ch_mgi_samplesheet = CONVERT_XLSX_TO_CSV.out.csv
+
+        } else if (hasExtension(mgi_samplesheet, 'csv') || hasExtension(mgi_samplesheet, 'tsv')) {
+            ch_mgi_samplesheet = Channel.fromPath(mgi_samplesheet, checkIfExists: true)
+        } else {
+            error("MGI samplesheet input does not end in `.{xlsx,csv,tsv}`!")
+        }
     }
 
-    // Parse FastQ list and verify columns
-    ch_parse_input = Channel.fromPath(input, checkIfExists: true)
-                        .splitCsv( header: true, sep: input_separator )
+    /*
+    ================================================================================
+                        Process input FastQ list
+    ================================================================================
+    */
+
+    if (ch_fastq_list) {
+        // Set separator for input FastQ list
+        if (ch_fastq_list.map{ hasExtension(it, 'csv') }) {
+            fastq_list_separator=','
+        } else if (ch_fastq_list.map{ hasExtension(it, 'tsv') }) {
+            fastq_list_separator='\t'
+        } else {
+            error("Input for `--fastq_list` does not end in `.{csv,tsv}`!")
+        }
+
+        // Parse FastQ list and verify columns
+        ch_samples = ch_fastq_list
+                        .splitCsv( header: true, sep: fastq_list_separator )
                         .map{
                             row ->
                                 if (row.size() >= 6) {
-                                    def line = [:]
-                                    line['RGID'] = row.RGID ?: error("ERROR: Missing 'RGID' column!")
-                                    line['RGSM'] = row.RGSM ?: error("ERROR: Missing 'RGSM' column!")
-                                    line['RGLB'] = row.RGLB ?: error("ERROR: Missing 'RGLB' column!")
-                                    line['Lane'] = row.Lane ?: error("ERROR: Missing 'Lane' column!")
-                                    line['Sex'] = row.Sex ?: ""
-                                    line['Read1File'] = row.Read1File ? file(row.Read1File, checkIfExists: true) : error("ERROR: Missing or invalid 'Read1File' file!")
-                                    line['Read2File'] = row.Read2File ? file(row.Read2File, checkIfExists: true) : error("ERROR: Missing or invalid 'Read2File' file!")
+                                    def RGID = row.RGID ?: error("Missing 'RGID' column!")
+                                    def RGSM = row.RGSM ?: error("Missing 'RGSM' column!")
+                                    def RGLB = row.RGLB ?: error("Missing 'RGLB' column!")
+                                    def LANE = row.Lane ?: error("Missing 'Lane' column!")
+                                    def R1   = row.Read1File ? file(row.Read1File, checkIfExists: true) : error("Missing or invalid 'Read1File' file!")
+                                    def R2   = row.Read2File ? file(row.Read2File, checkIfExists: true) : error("Missing or invalid 'Read2File' file!")
 
+                                    def regexPattern = /\w\d{2}-\d{4}/
                                     def meta = [:]
                                     meta['id'] = row.RGSM
-                                    meta['sex'] = row.Sex
-
-                                    return [ meta, line ]
+                                    meta['acc'] = row.RGSM.findAll(regexPattern)[0]
+                                    meta['sex'] = row.Sex ?: ''
+                                    [ meta ]
                                 } else {
-                                    error("Input samplesheet requires at least 6 columns but received ${row.size()}.")
+                                    error("Input for `--fastq_list` requires at least 6 columns but received ${row.size()}.")
                                 }
                         }
-                        .tap{ ch_input_header }
-
-    // Create FastQ list with required columns
-    ch_fastq_list = ch_input_header
-                        .first()
-                        .map{ meta, data -> data.keySet().join(',') }
-                        .concat( ch_parse_input.map{ meta, data -> data.values().join(',') } )
-                        .collectFile(
-                            name: "fastq_list.csv",
-                            newLine: true,
-                            sort: false
-                        )
-
-    // Sample channel with meta information and new FastQ list
-    ch_samples = ch_parse_input
-                    .map{ meta, data -> meta }
-                    .combine( ch_fastq_list )
+                        .combine(ch_fastq_list)
+    }
 
     emit:
-    samples  = ch_samples  // channel: [ val(meta), path(file) ]
-    versions = ch_versions // channel: [ path(file) ]
+    samples         = ch_samples ?: []         // channel: [ val(meta), path(file) ]
+    mgi_samplesheet = ch_mgi_samplesheet ?: [] // channel: [ path(file) ]
+    versions        = ch_versions              // channel: [ path(file) ]
 
 }
 
