@@ -69,6 +69,7 @@ workflow {
         params.monochrome_logs,
         args,
         params.outdir,
+        params.demux_outdir,
         params.input,
         params.fastq_list
     )
