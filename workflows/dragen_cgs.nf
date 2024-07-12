@@ -4,10 +4,11 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { DRAGEN_ALIGN                } from '../modules/local/dragen_align'
-include { DRAGEN_JOINT_CNV            } from '../modules/local/dragen_joint_cnv'
-include { DRAGEN_JOINT_SMALL_VARIANTS } from '../modules/local/dragen_joint_small_variants'
-include { BCFTOOLS_SPLIT_VCF          } from '../modules/local/bcftools_split_vcf'
+include { DEMULTIPLEX                      } from '../modules/subworkflows/local/demultiplex'
+include { DRAGEN_ALIGN                     } from '../modules/local/dragen_align'
+include { DRAGEN_JOINT_CNV                 } from '../modules/local/dragen_joint_cnv'
+include { DRAGEN_JOINT_SMALL_VARIANTS      } from '../modules/local/dragen_joint_small_variants'
+include { BCFTOOLS_SPLIT_VCF               } from '../modules/local/bcftools_split_vcf'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -18,11 +19,55 @@ include { BCFTOOLS_SPLIT_VCF          } from '../modules/local/bcftools_split_vc
 workflow DRAGEN_CGS {
 
     take:
-    ch_samples // channel: [ val(meta), path(file) ]
+    ch_mgi_samplesheet    // channel: [ path(file) ]
+    ch_samples            // channel: [ val(meta), path(file) ]
+    ch_illumina_run_dir   // channel: [ path(dir) ]
+    ch_sample_information // channel: [ path(file) ]
 
     main:
     ch_versions        = Channel.empty()
     ch_joint_vcf_files = Channel.empty()
+
+    //
+    // SUBWORKFLOW: Demultiplex samples
+    //
+    if (params.input && params.illumina_rundir && params.demux) {
+        DEMULTIPLEX (
+            ch_mgi_samplesheet,
+            ch_illumina_run_dir
+        )
+        ch_versions = ch_versions.mix(DEMULTIPLEX.out.versions)
+
+        ch_samples = DEMULTIPLEX.out.samples
+    }
+
+    if (params.sample_information) {
+        ch_update_samples = ch_samples.map{
+                                meta, fastq_list ->
+                                    [ meta['acc'], meta['id'] ]
+                            }
+                            .join(
+                                ch_sample_information
+                                    .splitCsv( header: true )
+                                    .map{ row -> [ row.Accession, row.gender ] },
+                                remainder: true
+                            )
+                            .map{
+                                acc, id, gender ->
+                                    def meta = [:]
+                                    meta['id'] = id
+                                    meta['acc'] = acc
+
+                                    gender = gender ? gender.toLowerCase() : ""
+                                    meta['sex'] = gender in ["male", "female"] ? gender :
+                                                    (gender == "m") ? "male" :
+                                                    (gender == "f") ? "female" : ""
+                                    [ meta ]
+                            }
+                            .combine(ch_samples.map{ meta, fastq_list -> fastq_list })
+
+        ch_samples = ch_update_samples
+    }
 
     //
     // MODULE: DRAGEN alignment
