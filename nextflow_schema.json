@@ -10,18 +10,31 @@
             "type": "object",
             "fa_icon": "fas fa-terminal",
             "description": "Define where the pipeline should find input data and save output data.",
-            "required": ["input", "outdir"],
+            "required": ["outdir"],
             "properties": {
                 "input": {
                     "type": "string",
-                    "description": "Path to comma-separated file containing information about the samples.",
                     "format": "file-path",
-                    "mimetype": "text/csv",
-                    "schema": "/assets/schema_input.json"
+                    "description": "Path to samplesheet file with the following columns: Lane, Flowcell ID, Content_Desc, and Index."
+                },
+                "fastq_list": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Path to samplesheet containing the columns: RGID, RGSM, RGLB, Lane, Read1File, Read2File."
+                },
+                "sample_info": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Path to samplesheet containing sample information."
                 },
                 "batch_name": {
                     "type": "string",
                     "description": "Name of sequence batch. If not provided, it will be in the format of `<year><month><day>_CGS`."
+                },
+                "illumina_rundir": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "Path to Illumina run directory."
                 },
                 "outdir": {
                     "type": "string",
@@ -40,6 +53,24 @@
                     "type": "string",
                     "description": "MultiQC report title. Printed as page header, used for filename if not otherwise specified.",
                     "fa_icon": "fas fa-file-signature"
+                }
+            }
+        },
+        "demultiplex_options": {
+            "title": "Demultiplex options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "demux": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Perform demultiplexing of samples from Illumina run directory."
+                },
+                "demux_outdir": {
+                    "type": "string",
+                    "description": "The output directory to save the demultiplexed FastQ files.",
+                    "format": "directory-path"
                 }
             }
         },
@@ -64,49 +95,48 @@
                 }
             }
         },
-        "dragen_align_options": {
-            "title": "DRAGEN align options",
+        "alignment_options": {
+            "title": "Alignment options",
             "type": "object",
             "description": "",
             "default": "",
             "properties": {
-                "dragen_adapter1": {
+                "adapter1": {
                     "type": "string",
-                    "description": "Path to adapter 1 nucleotide sequence used in DRAGEN align.",
+                    "description": "Path to adapter 1 nucleotide sequence for DRAGEN alignment.",
                     "format": "file-path",
                     "pattern": "^\\S+\\.fn?a(sta)?(\\.gz)?$",
                     "mimetype": "text/plain"
                 },
-                "dragen_adapter2": {
+                "adapter2": {
                     "type": "string",
-                    "description": "Path to adapter 2 nucleotide sequence used in DRAGEN align.",
+                    "description": "Path to adapter 2 nucleotide sequence for DRAGEN alignment.",
                     "pattern": "^\\S+\\.fn?a(sta)?(\\.gz)?$",
                     "format": "file-path",
                     "mimetype": "text/plain"
                 },
-                "dragen_dbsnp": {
+                "dbsnp": {
                     "type": "string",
                     "pattern": "^\\S+\\.vcf(\\.gz)?$",
                     "format": "file-path",
                     "description": "Path to the variant annotation database in VCF format."
                 },
-                "dragen_ref_dir": {
+                "refdir": {
                     "type": "string",
                     "description": "Path to the directory containing the reference hash table.",
                     "format": "directory-path"
                 },
-                "dragen_qc_coverage_region_1": {
+                "qc_coverage_region_1": {
                     "type": "string",
                     "description": "Path to BED file used to generate coverage region report."
                 },
-                "dragen_qc_cross_contamination_vcf": {
+                "qc_cross_contamination_vcf": {
                     "type": "string",
-                    "default": "/opt/edico/config/sample_cross_contamination_resource_hg38.vcf.gz",
                     "description": "Path to VCF file that includes marker sites (RSIDs) with population allele frequencies that are close to 0.5",
                     "pattern": "^\\S+\\.vcf?(\\.gz)?$",
                     "format": "file-path"
                 },
-                "dragen_intermediate_dir": {
+                "intermediate_dir": {
                     "type": "string",
                     "default": "/staging/intermediate-results-dir",
                     "description": "Path to a directory to store intermediate results.",
@@ -354,10 +384,13 @@
             "$ref": "#/definitions/input_output_options"
         },
         {
+            "$ref": "#/definitions/demultiplex_options"
+        },
+        {
             "$ref": "#/definitions/joint_genotype_options"
         },
         {
-            "$ref": "#/definitions/dragen_align_options"
+            "$ref": "#/definitions/alignment_options"
         },
         {
             "$ref": "#/definitions/reference_genome_options"
