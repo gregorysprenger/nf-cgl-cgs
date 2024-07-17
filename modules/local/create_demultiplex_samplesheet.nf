@@ -1,5 +1,7 @@
 process CREATE_DEMULTIPLEX_SAMPLESHEET {
+    tag "${prefix.id}"
     label 'process_low'
+
     container "ghcr.io/dhslab/docker-python3:231224"
 
     input:
@@ -12,6 +14,7 @@ process CREATE_DEMULTIPLEX_SAMPLESHEET {
     path("versions.yml")          , emit: versions
 
     script:
+    def prefix = task.ext.prefix
     """
     prepare_dragen_demux.py \\
         -r ${illumina_run_dir} \\
@@ -24,8 +27,9 @@ process CREATE_DEMULTIPLEX_SAMPLESHEET {
     """
 
     stub:
+    def prefix = task.ext.prefix
     """
-    touch STUB.demux_samplesheet.csv STUB.runinfo.csv
+    touch ${prefix.id}.demux_samplesheet.csv ${prefix.id}.runinfo.csv
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

@@ -1,5 +1,5 @@
 process DRAGEN_DEMULTIPLEX {
-    tag "$params.batch"
+    tag "${prefix.id}"
     label 'dragen'
     container "${params.dragen_container}"
 
@@ -12,6 +12,7 @@ process DRAGEN_DEMULTIPLEX {
     path("versions.yml")  , emit: versions
 
     script:
+    def prefix     = task.ext.prefix
     def first_tile = params.bcl_first_tile ? "--first-tile-only true" : ""
     """
     mkdir -p demux_fastq
