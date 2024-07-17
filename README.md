@@ -9,103 +9,76 @@
 [![GitHub Actions Linting Status](https://github.com/Clinical-Genomics-Laboratory/nf-cgl-cgs/actions/workflows/linting.yml/badge.svg)](https://github.com/Clinical-Genomics-Laboratory/nf-cgl-cgs/actions/workflows/linting.yml)
 
 [![Nextflow](https://img.shields.io/badge/nextflow%20DSL2-%E2%89%A523.04.0-23aa62.svg)](https://www.nextflow.io/)
-[![run with conda](http://img.shields.io/badge/run%20with-conda-3EB049?labelColor=000000&logo=anaconda)](https://docs.conda.io/en/latest/)
 [![run with docker](https://img.shields.io/badge/run%20with-docker-0db7ed?labelColor=000000&logo=docker)](https://www.docker.com/)
 [![run with singularity](https://img.shields.io/badge/run%20with-singularity-1d355c.svg?labelColor=000000)](https://sylabs.io/docs/)
 
 ## Introduction
 
-**Clinical-Genomics-Laboratory/nf-cgl-cgs** is a bioinformatics pipeline that ...
+**Clinical-Genomics-Laboratory/nf-cgl-cgs** is a bioinformatics pipeline that leverages the [Illumina DRAGEN Bio-IT Platform](https://support.illumina.com/sequencing/sequencing_software/dragen-bio-it-platform.html) to conduct sample alignment and joint genotyping for consitutional genomes.
 
-<!-- TODO nf-core:
-   Complete this sentence with a 2-3 sentence summary of what types of data the pipeline ingests, a brief overview of the
-   major pipeline sections and the types of output it produces. You're giving an overview to someone new
-   to nf-core here, in 15-20 seconds. For an example, see https://github.com/nf-core/rnaseq/blob/master/README.md#introduction
--->
+## Pipeline summary
 
-<!-- TODO nf-core: Include a figure that guides the user through the major workflow steps. Many nf-core
-     workflows use the "tube map" design for that. See https://nf-co.re/docs/contributing/design_guidelines#examples for examples.   -->
-<!-- TODO nf-core: Fill in short bullet-pointed list of the default steps in the pipeline -->
+This pipeline can demultiplex samples if requested or start from a `fastq_list.csv` file generated from already demultiplexed data.
 
-1. Read QC ([`FastQC`](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/))
-2. Present QC for raw reads ([`MultiQC`](http://multiqc.info/))
+This this pipeline will perform the following:
+1. Alignment for each sample
+2. Joint genotyping on all samples
+    - By default, joint genotyping of small variants is turned on
+    - Optionally, copy number variants (CNV) and structural variants (SV) can be joint genotyped
+3. Each sample is split from the joint genotyped VCF file
 
 ## Usage
 
-:::note
-If you are new to Nextflow and nf-core, please refer to [this page](https://nf-co.re/docs/usage/installation) on how
+> [!NOTE]
+> If you are new to Nextflow and nf-core, please refer to [this page](https://nf-co.re/docs/usage/installation) on how
 to set-up Nextflow. Make sure to [test your setup](https://nf-co.re/docs/usage/introduction#how-to-run-a-pipeline)
 with `-profile test` before running the workflow on actual data.
-:::
 
-<!-- TODO nf-core: Describe the minimum required steps to execute the pipeline, e.g. how to prepare samplesheets.
-     Explain what rows and columns represent. For instance (please edit as appropriate):
-
-First, prepare a samplesheet with your input data that looks as follows:
-
-`samplesheet.csv`:
-
-```csv
-sample,fastq_1,fastq_2
-CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
-```
-
-Each row represents a fastq file (single-end) or a pair of fastq files (paired end).
-
--->
-
-mgi samplesheet should be updated version, mastersheet should have the following columns:
-sample_id,read1,read2,fastq_list,cram,bam
-where sample_id is library name
-
-Now, you can run the pipeline using:
-
-<!-- TODO nf-core: update the following command to include all required parameters for a minimal example -->
+### Start from Illumina run directory
 
 ```bash
-nextflow run Clinical-Genomics-Laboratory/nf-cgl-cgs \
-   -profile ris,<dragen2/dragen4> \
-   --mgi_samplesheet /path/to/mgi_samplesheet \
-   --input_dir /path/to/input_dir \
-   --master_sheet /path/to/master_sheet \
-   --outdir <OUTDIR> \
-   --workflow <rna/5mc/germline_wgs/tumor_normal>
+nextflow run \
+  Clinical-Genomics-Laboratory/nf-cgl-cgs \
+  -r v1.0.0 \
+  -profile <docker/singularity/institute> \
+  --input samplesheet.xlsx \
+  --illumina_rundir <RUNDIR> \
+  --batch_name 20240717_cGS \
+  --sample_info daily_accession_log.csv \
+  --demux_outdir <DEMUX OUTDIR> \
+  --outdir <OUTDIR>
 ```
 
-:::warning
-Please provide pipeline parameters via the CLI or Nextflow `-params-file` option. Custom config files including those
+### Start from `fastq_list.csv`
+
+```bash
+nextflow run \
+  Clinical-Genomics-Laboratory/nf-cgl-cgs \
+  -r v1.0.0 \
+  -profile <docker/singularity/institute> \
+  --fastq_list fastq_list.csv \
+  --batch_name 20240717_cGS \
+  --sample_info daily_accession_log.csv \
+  --outdir <OUTDIR>
+```
+
+> [!WARNING]
+> Please provide pipeline parameters via the CLI or Nextflow `-params-file` option. Custom config files including those
 provided by the `-c` Nextflow option can be used to provide any configuration _**except for parameters**_;
 see [docs](https://nf-co.re/usage/configuration#custom-configuration-files).
-:::
 
 For more details and further functionality, please refer to the [usage documentation](https://nf-co.re/dragenmultiworkflow/usage) and the [parameter documentation](https://nf-co.re/dragenmultiworkflow/parameters).
 
 ## Pipeline output
 
-To see the results of an example test run with a full size dataset refer to the [results](https://nf-co.re/dragenmultiworkflow/results) tab on the nf-core website pipeline page.
 For more details about the output files and reports, please refer to the
 [output documentation](https://nf-co.re/dragenmultiworkflow/output).
-
-## Credits
-
-Clinical-Genomics-Laboratory/nf-cgl-cgs was originally written by Nidhi.
-
-We thank the following people for their extensive assistance in the development of this pipeline:
-
-<!-- TODO nf-core: If applicable, make list of people who have also contributed -->
 
 ## Contributions and Support
 
 If you would like to contribute to this pipeline, please see the [contributing guidelines](.github/CONTRIBUTING.md).
 
-For further information or help, don't hesitate to get in touch on the [Slack `#dragenmultiworkflow` channel](https://nfcore.slack.com/channels/dragenmultiworkflow) (you can join with [this invite](https://nf-co.re/join/slack)).
-
 ## Citations
-
-<!-- TODO nf-core: Add citation for pipeline after first release. Uncomment lines below and update Zenodo doi and badge at the top of this file. -->
-<!-- If you use  nf-core/dragenmultiworkflow for your analysis, please cite it using the following doi: [10.5281/zenodo.XXXXXX](https://doi.org/10.5281/zenodo.XXXXXX) -->
-
-<!-- TODO nf-core: Add bibliography of tools and data used in your pipeline -->
 
 An extensive list of references for the tools used by the pipeline can be found in the [`CITATIONS.md`](CITATIONS.md) file.
 
