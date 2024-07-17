@@ -18,7 +18,7 @@ process DRAGEN_JOINT_CNV {
 
     script:
     def prefix   = task.ext.prefix
-    def ref_dir  = params.dragen_ref_dir ? "--ref-dir ${params.dragen_ref_dir}" : ""
+    def ref_dir  = params.refdir ? "--ref-dir ${params.refdir}" : ""
     def cnv_list = cnv_files.collect{ "--cnv-input $it" }.join(' \\\\\n')
     """
     /opt/edico/bin/dragen \\
@@ -38,7 +38,7 @@ process DRAGEN_JOINT_CNV {
     stub:
     def dragen_version = "4.2.4"
     def prefix         = task.ext.prefix
-    def ref_dir        = params.dragen_ref_dir ? "--ref-dir ${params.dragen_ref_dir}" : ""
+    def ref_dir        = params.refdir ? "--ref-dir ${params.refdir}" : ""
     def cnv_list       = cnv_files.collect{ "--cnv-input $it" }.join(' ')
     """
     cat <<-END_CMDS > "${prefix.id}.txt"
