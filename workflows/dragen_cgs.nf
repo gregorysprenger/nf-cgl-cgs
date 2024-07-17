@@ -10,6 +10,25 @@ include { DRAGEN_JOINT_CNV            } from '../modules/local/dragen_joint_cnv'
 include { DRAGEN_JOINT_SMALL_VARIANTS } from '../modules/local/dragen_joint_small_variants'
 include { BCFTOOLS_SPLIT_VCF          } from '../modules/local/bcftools_split_vcf'
 
+/*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    CREATE CHANNELS FOR INPUT PARAMETERS
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*/
+
+// Illumina run directory
+if (params.illumina_rundir) {
+    ch_illumina_run_dir = Channel.fromPath(params.illumina_rundir, type: 'dir', checkIfExists: true)
+} else {
+    ch_illumina_run_dir = Channel.empty()
+}
+
+// Sample information
+if (params.sample_info) {
+    ch_sample_information = Channel.fromPath(params.sample_info, checkIfExists: true)
+} else {
+    ch_sample_information = Channel.empty()
+}
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -22,8 +41,6 @@ workflow DRAGEN_CGS {
     take:
     ch_mgi_samplesheet    // channel: [ path(file) ]
     ch_samples            // channel: [ val(meta), path(file) ]
-    ch_illumina_run_dir   // channel: [ path(dir) ]
-    ch_sample_information // channel: [ path(file) ]
 
     main:
     ch_versions        = Channel.empty()
