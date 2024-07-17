@@ -1,7 +1,10 @@
 process DRAGEN_DEMULTIPLEX {
     tag "${prefix.id}"
     label 'dragen'
-    container "${params.dragen_container}"
+
+    container "${ workflow.profile == 'dragenaws' ?
+        'ghcr.io/dhslab/docker-dragen:el7.4.2.4' :
+        'docker.io/etycksen/dragen4:4.2.4' }"
 
     input:
     path(samplesheet)
