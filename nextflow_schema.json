@@ -1,8 +1,8 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema",
-    "$id": "https://raw.githubusercontent.com/Clinical-Genomics-Laboratory/nf-cgl-cgs/main/nextflow_schema.json",
+    "$id": "https://raw.githubusercontent.com/Clinical-Genomics-Laboratory/nf-cgl-cgs/master/nextflow_schema.json",
     "title": "Clinical-Genomics-Laboratory/nf-cgl-cgs pipeline parameters",
-    "description": "",
+    "description": "Analysis pipeline for constitutional Genome Sequences (cGS).",
     "type": "object",
     "definitions": {
         "input_output_options": {
