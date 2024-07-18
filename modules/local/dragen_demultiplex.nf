@@ -45,7 +45,9 @@ process DRAGEN_DEMULTIPLEX {
 
     stub:
     """
-    cp ${projectDir}/assets/stub/demux_fastq/Reports/fastq_list.csv .
+    mkdir -p demux_fastq
+
+    cp ${projectDir}/assets/stub/demux_fastq/Reports/fastq_list.csv demux_fastq/
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
