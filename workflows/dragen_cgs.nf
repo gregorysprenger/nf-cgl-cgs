@@ -59,7 +59,7 @@ workflow DRAGEN_CGS {
         ch_samples = DEMULTIPLEX.out.samples
     }
 
-    if (params.sample_information) {
+    if (params.sample_info) {
         ch_update_samples = ch_samples.map{
                                 meta, fastq_list ->
                                     [ meta['acc'], meta['id'] ]
