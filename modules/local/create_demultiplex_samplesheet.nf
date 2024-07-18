@@ -13,6 +13,9 @@ process CREATE_DEMULTIPLEX_SAMPLESHEET {
     path("*runinfo.csv")          , emit: runinfo
     path("versions.yml")          , emit: versions
 
+    when:
+    task.ext.when == null || task.ext.when
+
     script:
     def prefix = task.ext.prefix
     """

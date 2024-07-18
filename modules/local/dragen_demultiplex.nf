@@ -11,8 +11,9 @@ process DRAGEN_DEMULTIPLEX {
     path(rundir)
 
     output:
-    path("fastq_list.csv"), emit: fastq_list
-    path("versions.yml")  , emit: versions
+
+    when:
+    task.ext.when == null || task.ext.when
 
     script:
     def prefix     = task.ext.prefix
