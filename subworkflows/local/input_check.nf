@@ -31,7 +31,7 @@ workflow INPUT_CHECK {
         // Verify MGI samplesheet has a file extension in [xlsx,csv,tsv]
         if (hasExtension(mgi_samplesheet, 'xlsx')) {
             CONVERT_XLSX_TO_CSV (
-                mgi_samplesheet
+                Channel.fromPath(mgi_samplesheet, checkIfExists: true)
             )
             ch_versions = ch_versions.mix(CONVERT_XLSX_TO_CSV.out.versions)
 
@@ -42,6 +42,8 @@ workflow INPUT_CHECK {
         } else {
             error("MGI samplesheet input does not end in `.{xlsx,csv,tsv}`!")
         }
+    } else {
+        ch_mgi_samplesheet = Channel.empty()
     }
 
     /*
@@ -84,12 +86,14 @@ workflow INPUT_CHECK {
                                 }
                         }
                         .combine(ch_fastq_list)
+    } else {
+        ch_samples = Channel.empty()
     }
 
     emit:
-    samples         = ch_samples ?: []         // channel: [ val(meta), path(file) ]
-    mgi_samplesheet = ch_mgi_samplesheet ?: [] // channel: [ path(file) ]
-    versions        = ch_versions              // channel: [ path(file) ]
+    samples         = ch_samples.ifEmpty([])         // channel: [ val(meta), path(file) ]
+    mgi_samplesheet = ch_mgi_samplesheet.ifEmpty([]) // channel: [ path(file) ]
+    versions        = ch_versions                    // channel: [ path(file) ]
 
 }
 
