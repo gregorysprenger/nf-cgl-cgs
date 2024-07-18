@@ -19,7 +19,7 @@ process DRAGEN_JOINT_SMALL_VARIANTS {
     script:
     def prefix              = task.ext.prefix
     def ref_dir             = params.refdir ? "--ref-dir ${params.refdir}" : ""
-    def small_variants_list = small_variant_files.collect{ "--variant $it" }.join(' \\\\\n')
+    def small_variants_list = small_variant_files.collect{ "--variant $it" }.join(' \\\\n')
     """
     /opt/edico/bin/dragen \\
         --force \\
@@ -39,7 +39,7 @@ process DRAGEN_JOINT_SMALL_VARIANTS {
     def dragen_version      = "4.2.4"
     def prefix              = task.ext.prefix
     def ref_dir             = params.refdir ? "--ref-dir ${params.refdir}" : ""
-    def small_variants_list = small_variant_files.collect{ "--variant $it" }.join(' \\\\\n')
+    def small_variants_list = small_variant_files.collect{ "--variant $it" }.join(' \\\\n')
     """
     cat <<-END_CMDS > "${prefix.id}.txt"
     /opt/edico/bin/dragen \\

@@ -19,7 +19,7 @@ process DRAGEN_JOINT_SV {
     script:
     def prefix  = task.ext.prefix
     def ref_dir = params.refdir ? "--ref-dir ${params.refdir}" : ""
-    def sv_list = sv_files.collect{ "--bam-input $it" }.join(' \\\\\n')
+    def sv_list = sv_files.collect{ "--bam-input $it" }.join(' \\\\n')
     """
     /opt/edico/bin/dragen \\
         --force \\
@@ -40,7 +40,7 @@ process DRAGEN_JOINT_SV {
     def dragen_version = "4.2.4"
     def prefix         = task.ext.prefix
     def ref_dir        = params.refdir ? "--ref-dir ${params.refdir}" : ""
-    def sv_list        = sv_files.collect{ "--bam-input $it" }.join(' \\\\\n')
+    def sv_list        = sv_files.collect{ "--bam-input $it" }.join(' \\\\n')
     """
     cat <<-END_CMDS > "${prefix.id}.txt"
     /opt/edico/bin/dragen \\
