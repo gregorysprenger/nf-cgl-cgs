@@ -52,7 +52,7 @@ workflow DEMULTIPLEX {
     ch_versions = ch_versions.mix(VERIFY_FASTQ_LIST.out.versions)
 
     emit:
-    samples = VERIFY_FASTQ_LIST.out.samples
+    samples  = VERIFY_FASTQ_LIST.out.samples
     versions = ch_versions
 
 }
