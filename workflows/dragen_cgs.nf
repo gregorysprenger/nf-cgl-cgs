@@ -4,7 +4,7 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { DEMULTIPLEX                 } from '../modules/subworkflows/local/demultiplex'
+include { DEMULTIPLEX                 } from '../subworkflows/local/demultiplex'
 include { DRAGEN_ALIGN                } from '../modules/local/dragen_align'
 include { DRAGEN_JOINT_CNV            } from '../modules/local/dragen_joint_cnv'
 include { DRAGEN_JOINT_SMALL_VARIANTS } from '../modules/local/dragen_joint_small_variants'
