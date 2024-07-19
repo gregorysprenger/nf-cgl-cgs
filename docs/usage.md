@@ -1,61 +1,150 @@
 # Clinical-Genomics-Laboratory/nf-cgl-cgs: Usage
 
-> _Documentation of pipeline parameters is generated automatically from the pipeline schema and can no longer be found in markdown files._
+Table of contents:
 
-## Introduction
+- [Clinical-Genomics-Laboratory/nf-cgl-cgs: Usage](#clinical-genomics-laboratorynf-cgl-cgs-usage)
+  - [Setup](#setup)
+  - [Input parameters](#input-parameters)
+    - [Start by demultiplexing samples](#start-by-demultiplexing-samples)
+    - [Start from FastQ list](#start-from-fastq-list)
+    - [Batch joint genotyping](#batch-joint-genotyping)
+  - [Running the pipeline](#running-the-pipeline)
+  - [Core Nextflow arguments](#core-nextflow-arguments)
+    - [`-profile`](#-profile)
+    - [`-resume`](#-resume)
+    - [`-c`](#-c)
+  - [Custom configuration](#custom-configuration)
+    - [Resource requests](#resource-requests)
+    - [Custom containers](#custom-containers)
+    - [Custom tool arguments](#custom-tool-arguments)
+    - [Running in the background](#running-in-the-background)
+    - [Nextflow memory requirements](#nextflow-memory-requirements)
 
-<!-- TODO nf-core: Add documentation about anything specific to running your pipeline. For general topics, please point to (and add to) the main nf-core website. -->
+## Setup
 
-## Samplesheet input
+### Optional: AWS
 
-You will need to create a samplesheet with information about the samples you would like to analyse before running the pipeline. Use this parameter to specify its location. It has to be a comma-separated file with 3 columns, and a header row as shown in the examples below.
+To utilize this pipeline with AWS, the use of Nextflow secrets are required. Below are instructions on setting Nextflow secrets:
+
+1. Store credentials using [Nextflow's secrets feature](https://www.nextflow.io/docs/latest/secrets.html).
+2. Set environmental variable `NXF_ENABLE_SECRETS` to an appropriate value.
+
+Here is an example of how to store a Nextflow secret (replace <KEY> with your key):
+
+```bash
+nextflow secrets set GNX_ACCESS_KEY <KEY>
+```
+
+#### AWS: Compute
+
+```console
+AWS_ACCESS_KEY
+AWS_SECRET_KEY
+```
+
+#### AWS: DRAGEN
+
+```console
+AWS_DRAGEN_USER
+AWS_DRAGEN_PASSWORD
+```
+
+## Input parameters
+
+### Start by demultiplexing samples
+
+To demultiplex samples, the demultiplexing parameter must be turned on and the location of the Illumina run directory and MGI samplesheet must be provided.
+
+#### Turn demultiplexing on
+
+To turn on the option to demultiplex samples, use the following parameter:
+
+```bash
+--demux
+```
+
+#### Illumina run directory
+
+The Illumina run directory that contains base call information of samples that need demultiplexing has to be specified. Use the following parameter to specify its location:
+
+```bash
+--illumina_rundir '[path to Illumina run directory]'
+```
+
+#### MGI samplesheet
+
+An Excel (.xlsx) samplesheet with information about the samples that needs to be demuliplexed must be created before running this pipeline. Use the following parameter to specify its location:
 
 ```bash
 --input '[path to samplesheet file]'
 ```
 
-### Multiple runs of the same sample
+##### MGI samplesheet example
 
-The `sample` identifiers have to be the same when you have re-sequenced the same sample more than once e.g. to increase sequencing depth. The pipeline will concatenate the raw reads before performing any downstream analysis. Below is an example for the same sample sequenced across 3 lanes:
-
-```csv title="samplesheet.csv"
-sample,fastq_1,fastq_2
-CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
-CONTROL_REP1,AEG588A1_S1_L003_R1_001.fastq.gz,AEG588A1_S1_L003_R2_001.fastq.gz
-CONTROL_REP1,AEG588A1_S1_L004_R1_001.fastq.gz,AEG588A1_S1_L004_R2_001.fastq.gz
+```excel title="samplesheet.xlsx"
+Run Directory: /path/to/run/directory
+Lane    Flowcell ID    Content_Desc    Index    Exceptions
+2       ABC123         Sample_1        AAG-ACC
+2       ABC123         Sample_2        AGC-GAG
 ```
 
-### Full samplesheet
+| Column          | Description                                                                         |
+|-----------------|-------------------------------------------------------------------------------------|
+| `Run Directory` | The path to the Illumina run directory.                                             |
+| `Lane`          | The lane number used on the instrument for each sample.                             |
+| `Flowcell ID`   | The ID of the flowcell used.                                                        |
+| `Content_Desc`  | The name of the sample.                                                             |
+| `Index`         | The indexes used during library prep, and should be in the format of Index1-Index2. |
+| `Exceptions`    | Note any exceptions for each sample.                                                |
 
-The pipeline will auto-detect whether a sample is single- or paired-end using the information provided in the samplesheet. The samplesheet can have as many columns as you desire, however, there is a strict requirement for the first 3 columns to match those defined in the table below.
+### Start from FastQ list
 
-A final samplesheet file consisting of both single- and paired-end data may look something like the one below. This is for 6 samples, where `TREATMENT_REP3` has been sequenced twice.
+Optionally, the pipeline can run from demultiplexed FastQ files using the `fastq_list.csv` file produced during demultiplexing. Use the following parameter to specify its location:
 
-```csv title="samplesheet.csv"
-sample,fastq_1,fastq_2
-CONTROL_REP1,AEG588A1_S1_L002_R1_001.fastq.gz,AEG588A1_S1_L002_R2_001.fastq.gz
-CONTROL_REP2,AEG588A2_S2_L002_R1_001.fastq.gz,AEG588A2_S2_L002_R2_001.fastq.gz
-CONTROL_REP3,AEG588A3_S3_L002_R1_001.fastq.gz,AEG588A3_S3_L002_R2_001.fastq.gz
-TREATMENT_REP1,AEG588A4_S4_L003_R1_001.fastq.gz,
-TREATMENT_REP2,AEG588A5_S5_L003_R1_001.fastq.gz,
-TREATMENT_REP3,AEG588A6_S6_L003_R1_001.fastq.gz,
-TREATMENT_REP3,AEG588A6_S6_L004_R1_001.fastq.gz,
+```bash
+--fastq_list '[path to fastq_list.csv file]'
 ```
 
-| Column    | Description                                                                                                                                                                            |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sample`  | Custom sample name. This entry will be identical for multiple sequencing libraries/runs from the same sample. Spaces in sample names are automatically converted to underscores (`_`). |
-| `fastq_1` | Full path to FastQ file for Illumina short reads 1. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                             |
-| `fastq_2` | Full path to FastQ file for Illumina short reads 2. File has to be gzipped and have the extension ".fastq.gz" or ".fq.gz".                                                             |
+#### FastQ list example
 
-An [example samplesheet](../assets/samplesheet.csv) has been provided with the pipeline.
+```csv title="fastq_list.csv"
+RGID,RGSM,RGLB,Lane,Read1File,Read2File
+AAG-ACC.2,Sample_1,UnknownLibrary,2,/path/to/Sample_1_R1.fastq.gz,/path/to/Sample_1_R2.fastq.gz
+AGC-CAG.2,Sample_2,UnknownLibrary,2,/path/to/Sample_2_R1.fastq.gz,/path/to/Sample_2_R2.fastq.gz
+```
+
+| Column      | Description                              |
+|-------------|------------------------------------------|
+| `RGID`      | The read group for the sample.           |
+| `RGSM`      | Sample ID                                |
+| `RGLB`      | Library information                      |
+| `Lane`      | The flowcell lane number.                |
+| `Read1File` | Full path to the first FastQ read file.  |
+| `Read2File` | Full path to the second FastQ read file. |
+
+### Batch joint genotyping
+
+Batch joint genotyping can be performed on all samples after alignment to reduce the noise in the final VCF files. The following types of joint genotyping can be performed: small variants (SNV/InDels), structural variants (SV), and/or copy number variants (CNV). By default, joint genotyping of small variants is turned on.
+
+Use the following parameters to turn on or off joint genotyping:
+
+```bash
+--joint_genotype_sv false
+--joint_genotype_cnv false
+--joint_genotype_small_variants true
+```
 
 ## Running the pipeline
 
 The typical command for running the pipeline is as follows:
 
 ```bash
-nextflow run Clinical-Genomics-Laboratory/nf-cgl-cgs --input ./samplesheet.csv --outdir ./results --genome GRCh37 -profile docker
+nextflow run \
+  Clinical-Genomics-Laboratory/nf-cgl-cgs \
+  -r v1.0.0 \
+  -profile docker \
+  --input ./samplesheet.xlsx \
+  --outdir ./results
 ```
 
 This will launch the pipeline with the `docker` configuration profile. See below for more information about profiles.
@@ -88,7 +177,6 @@ with `params.yaml` containing:
 ```yaml
 input: './samplesheet.csv'
 outdir: './results/'
-genome: 'GRCh37'
 <...>
 ```
 
@@ -177,13 +265,13 @@ Whilst the default requirements set within the pipeline will hopefully work for 
 
 To change the resource requests, please see the [max resources](https://nf-co.re/docs/usage/configuration#max-resources) and [tuning workflow resources](https://nf-co.re/docs/usage/configuration#tuning-workflow-resources) section of the nf-core website.
 
-### Custom Containers
+### Custom containers
 
 In some cases you may wish to change which container or conda environment a step of the pipeline uses for a particular tool. By default nf-core pipelines use containers and software from the [biocontainers](https://biocontainers.pro/) or [bioconda](https://bioconda.github.io/) projects. However in some cases the pipeline specified version maybe out of date.
 
 To use a different container from the default container or conda environment specified in a pipeline, please see the [updating tool versions](https://nf-co.re/docs/usage/configuration#updating-tool-versions) section of the nf-core website.
 
-### Custom Tool Arguments
+### Custom tool arguments
 
 A pipeline might not always support every possible argument or option of a particular tool used in pipeline. Fortunately, nf-core pipelines provide some freedom to users to insert additional parameters that the pipeline does not include by default.
 
@@ -197,7 +285,7 @@ See the main [Nextflow documentation](https://www.nextflow.io/docs/latest/config
 
 If you have any questions or issues please send us a message on [Slack](https://nf-co.re/join/slack) on the [`#configs` channel](https://nfcore.slack.com/channels/configs).
 
-## Azure Resource Requests
+## Azure resource requests
 
 To be used with the `azurebatch` profile by specifying the `-profile azurebatch`.
 We recommend providing a compute `params.vm_type` of `Standard_D16_v3` VMs by default but these options can be changed if required.
