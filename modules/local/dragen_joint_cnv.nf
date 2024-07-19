@@ -51,6 +51,9 @@ process DRAGEN_JOINT_CNV {
         --output-file-prefix ${prefix.id}
     END_CMDS
 
+    cp -f ${projectDir}/assets/test_data/dragen_path/joint_genotyped_vcf/joint_genotyped.vcf.gz .
+    mv joint_genotyped.vcf.gz ${prefix.id}.cnv.vcf.gz
+
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         dragen: ${dragen_version}

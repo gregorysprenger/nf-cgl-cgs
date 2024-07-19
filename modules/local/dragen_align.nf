@@ -118,9 +118,7 @@ process DRAGEN_ALIGN {
         --cnv-enable-self-normalization true
     END_CMDS
 
-    for i in ${projectDir}/assets/stub/dragen_path/*; do
-        cp "\${i}" ./dragen/
-    done
+    cp -rf ${projectDir}/assets/test_data/dragen_path/${meta.id}/* dragen/
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
