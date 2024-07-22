@@ -144,6 +144,26 @@
                 }
             }
         },
+        "lsf_cluster_options": {
+            "title": "LSF cluster options",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "queue": {
+                    "type": "string",
+                    "description": "Specify the queue to submit jobs to."
+                },
+                "user_group": {
+                    "type": "string",
+                    "description": "Specify your associated user group to submit jobs."
+                },
+                "job_group_name": {
+                    "type": "string",
+                    "description": "Specify the name of a job group to submit jobs under."
+                }
+            }
+        },
         "reference_genome_options": {
             "title": "Reference genome options",
             "type": "object",
@@ -391,6 +411,9 @@
         },
         {
             "$ref": "#/definitions/alignment_options"
+        },
+        {
+            "$ref": "#/definitions/lsf_cluster_options"
         },
         {
             "$ref": "#/definitions/reference_genome_options"
