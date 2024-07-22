@@ -3,8 +3,8 @@ process DRAGEN_ALIGN {
     label 'dragen'
 
     container "${ workflow.profile == 'dragenaws' ?
-        'ghcr.io/dhslab/docker-dragen:el7.4.2.4' :
-        'docker.io/etycksen/dragen4:4.2.4' }"
+        'ghcr.io/dhslab/docker-dragen:el8.4.3.6' :
+        'dockerreg01.accounts.ad.wustl.edu/cgl/cortex-genomics:oracle8-dragen-4.3.6' }"
 
     input:
     tuple val(meta), path(fastq_list)
