@@ -78,8 +78,7 @@ workflow INPUT_CHECK {
                                     def regexPattern = /\w\d{2}-\d{4}/
                                     def meta = [:]
                                     meta['id'] = row.RGSM
-                                    meta['acc'] = row.RGSM.findAll(regexPattern)[0]
-                                    meta['sex'] = row.Sex ?: ''
+                                    meta['acc'] = row.RGSM.findAll(regexPattern)[0] ?: row.RGSM
                                     [ meta ]
                                 } else {
                                     error("Input for `--fastq_list` requires at least 6 columns but received ${row.size()}.")
