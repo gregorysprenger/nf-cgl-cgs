@@ -84,6 +84,7 @@ workflow INPUT_CHECK {
                                     error("Input for `--fastq_list` requires at least 6 columns but received ${row.size()}.")
                                 }
                         }
+                        .unique()
                         .combine(ch_fastq_list)
     } else {
         ch_samples = Channel.empty()
