@@ -60,7 +60,7 @@ workflow DRAGEN_CGS {
     }
 
     if (params.sample_info) {
-        ch_update_samples = ch_samples.map{
+        ch_align_samples = ch_samples.map{
                                 meta, fastq_list ->
                                     [ meta['acc'], meta['id'] ]
                             }
@@ -72,26 +72,28 @@ workflow DRAGEN_CGS {
                             )
                             .map{
                                 acc, id, gender ->
-                                    def meta = [:]
-                                    meta['id'] = id
-                                    meta['acc'] = acc
+                                    if (id) {
+                                        def meta = [:]
+                                        meta['id'] = id
+                                        meta['acc'] = acc
 
-                                    gender = gender ? gender.toLowerCase() : ""
-                                    meta['sex'] = gender in ["male", "female"] ? gender :
-                                                    (gender == "m") ? "male" :
-                                                    (gender == "f") ? "female" : ""
-                                    [ meta ]
+                                        gender = gender ? gender.toLowerCase() : ""
+                                        meta['sex'] = gender in ["male", "female"] ? gender :
+                                                        (gender == "m") ? "male" :
+                                                        (gender == "f") ? "female" : ""
+                                        [ meta ]
+                                    }
                             }
-                            .combine(ch_samples.map{ meta, fastq_list -> fastq_list })
-
-        ch_samples = ch_update_samples
+                            .combine(ch_samples.map{ meta, fastq_list -> fastq_list }.first())
+    } else {
+        ch_align_samples = ch_samples
     }
 
     //
     // MODULE: DRAGEN alignment
     //
     DRAGEN_ALIGN (
-        ch_samples
+        ch_align_samples
     )
     ch_versions = ch_versions.mix(DRAGEN_ALIGN.out.versions)
 
