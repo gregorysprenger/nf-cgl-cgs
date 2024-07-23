@@ -20,15 +20,15 @@ process DRAGEN_ALIGN {
     task.ext.when == null || task.ext.when
 
     script:
-    def args_license     = task.ext.dragen_license_args                 ?: ""
-    def sample_sex       = meta.sex.toLowerCase() in ['male', 'female'] ? "--sample-sex ${meta.sex}"                                 : ""
-    def dbsnp            = params.dbsnp                                 ? "--dbsnp ${params.dbsnp}"                                  : ""
-    def ref_dir          = params.refdir                                ? "--ref-dir ${params.refdir}"                               : ""
-    def adapter1         = params.adapter1                              ? "--trim-adapter-read1 ${params.adapter1}"                  : ""
-    def adapter2         = params.adapter2                              ? "--trim-adapter-read2 ${params.adapter2}"                  : ""
-    def qc_cont_vcf      = params.qc_cross_contamination_vcf            ? "--qc-cross-cont-vcf ${params.qc_cross_contamination_vcf}" : ""
-    def qc_cov_region1   = params.qc_coverage_region_1                  ? "--qc-coverage-region-1 ${params.qc_coverage_region_1}"    : ""
-    def intermediate_dir = params.intermediate_dir                      ? "--intermediate-results-dir ${params.intermediate_dir}"    : ""
+    def args_license     = task.ext.dragen_license_args                  ?: ""
+    def sample_sex       = meta.sex?.toLowerCase() in ['male', 'female'] ? "--sample-sex ${meta.sex}"                                 : ""
+    def dbsnp            = params.dbsnp                                  ? "--dbsnp ${params.dbsnp}"                                  : ""
+    def ref_dir          = params.refdir                                 ? "--ref-dir ${params.refdir}"                               : ""
+    def adapter1         = params.adapter1                               ? "--trim-adapter-read1 ${params.adapter1}"                  : ""
+    def adapter2         = params.adapter2                               ? "--trim-adapter-read2 ${params.adapter2}"                  : ""
+    def qc_cont_vcf      = params.qc_cross_contamination_vcf             ? "--qc-cross-cont-vcf ${params.qc_cross_contamination_vcf}" : ""
+    def qc_cov_region1   = params.qc_coverage_region_1                   ? "--qc-coverage-region-1 ${params.qc_coverage_region_1}"    : ""
+    def intermediate_dir = params.intermediate_dir                       ? "--intermediate-results-dir ${params.intermediate_dir}"    : ""
 
     """
     mkdir -p dragen
@@ -72,15 +72,15 @@ process DRAGEN_ALIGN {
 
     stub:
     def dragen_version   = "4.3.6"
-    def args_license     = task.ext.dragen_license_args                 ?: ""
-    def sample_sex       = meta.sex.toLowerCase() in ['male', 'female'] ? "--sample-sex ${meta.sex}"                                 : ""
-    def dbsnp            = params.dbsnp                                 ? "--dbsnp ${params.dbsnp}"                                  : ""
-    def ref_dir          = params.refdir                                ? "--ref-dir ${params.refdir}"                               : ""
-    def adapter1         = params.adapter1                              ? "--trim-adapter-read1 ${params.adapter1}"                  : ""
-    def adapter2         = params.adapter2                              ? "--trim-adapter-read2 ${params.adapter2}"                  : ""
-    def qc_cont_vcf      = params.qc_cross_contamination_vcf            ? "--qc-cross-cont-vcf ${params.qc_cross_contamination_vcf}" : ""
-    def qc_cov_region1   = params.qc_coverage_region_1                  ? "--qc-coverage-region-1 ${params.qc_coverage_region_1}"    : ""
-    def intermediate_dir = params.intermediate_dir                      ? "--intermediate-results-dir ${params.intermediate_dir}"    : ""
+    def args_license     = task.ext.dragen_license_args                  ?: ""
+    def sample_sex       = meta.sex?.toLowerCase() in ['male', 'female'] ? "--sample-sex ${meta.sex}"                                 : ""
+    def dbsnp            = params.dbsnp                                  ? "--dbsnp ${params.dbsnp}"                                  : ""
+    def ref_dir          = params.refdir                                 ? "--ref-dir ${params.refdir}"                               : ""
+    def adapter1         = params.adapter1                               ? "--trim-adapter-read1 ${params.adapter1}"                  : ""
+    def adapter2         = params.adapter2                               ? "--trim-adapter-read2 ${params.adapter2}"                  : ""
+    def qc_cont_vcf      = params.qc_cross_contamination_vcf             ? "--qc-cross-cont-vcf ${params.qc_cross_contamination_vcf}" : ""
+    def qc_cov_region1   = params.qc_coverage_region_1                   ? "--qc-coverage-region-1 ${params.qc_coverage_region_1}"    : ""
+    def intermediate_dir = params.intermediate_dir                       ? "--intermediate-results-dir ${params.intermediate_dir}"    : ""
 
     """
     mkdir -p dragen
