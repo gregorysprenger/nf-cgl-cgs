@@ -36,7 +36,7 @@ process DRAGEN_JOINT_SMALL_VARIANTS {
     """
 
     stub:
-    def dragen_version      = "4.2.4"
+    def dragen_version      = "4.3.6"
     def prefix              = task.ext.prefix
     def ref_dir             = params.refdir ? "--ref-dir ${params.refdir}" : ""
     def small_variants_list = small_variant_files.collect{ "--variant $it" }.join(' \\\\n')

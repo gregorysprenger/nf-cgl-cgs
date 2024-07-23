@@ -37,7 +37,7 @@ process DRAGEN_JOINT_SV {
     """
 
     stub:
-    def dragen_version = "4.2.4"
+    def dragen_version = "4.3.6"
     def prefix         = task.ext.prefix
     def ref_dir        = params.refdir ? "--ref-dir ${params.refdir}" : ""
     def sv_list        = sv_files.collect{ "--bam-input $it" }.join(' \\\\n')

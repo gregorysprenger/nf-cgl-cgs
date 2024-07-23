@@ -71,7 +71,7 @@ process DRAGEN_ALIGN {
     """
 
     stub:
-    def dragen_version   = "4.2.4"
+    def dragen_version   = "4.3.6"
     def args_license     = task.ext.dragen_license_args                 ?: ""
     def sample_sex       = meta.sex.toLowerCase() in ['male', 'female'] ? "--sample-sex ${meta.sex}"                                 : ""
     def dbsnp            = params.dbsnp                                 ? "--dbsnp ${params.dbsnp}"                                  : ""
