@@ -158,7 +158,7 @@ Lane    Flowcell ID    Content_Desc    Index    Exceptions
 ```
 
 | Column          | Description                                                                         |
-|-----------------|-------------------------------------------------------------------------------------|
+| --------------- | ----------------------------------------------------------------------------------- |
 | `Run Directory` | The path to the Illumina run directory.                                             |
 | `Lane`          | The lane number used on the instrument for each sample.                             |
 | `Flowcell ID`   | The ID of the flowcell used.                                                        |
@@ -183,7 +183,7 @@ AGC-CAG.2,Sample_2,UnknownLibrary,2,/path/to/Sample_2_R1.fastq.gz,/path/to/Sampl
 ```
 
 | Column      | Description                              |
-|-------------|------------------------------------------|
+| ----------- | ---------------------------------------- |
 | `RGID`      | The read group for the sample.           |
 | `RGSM`      | Sample ID                                |
 | `RGLB`      | Library information                      |

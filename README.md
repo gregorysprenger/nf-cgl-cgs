@@ -21,18 +21,19 @@
 This pipeline can demultiplex samples if requested or start from a `fastq_list.csv` file generated from already demultiplexed data.
 
 This this pipeline will perform the following:
+
 1. Alignment for each sample
 2. Joint genotyping on all samples
-    - By default, joint genotyping of small variants is turned on
-    - Optionally, copy number variants (CNV) and structural variants (SV) can be joint genotyped
+   - By default, joint genotyping of small variants is turned on
+   - Optionally, copy number variants (CNV) and structural variants (SV) can be joint genotyped
 3. Each sample is split from the joint genotyped VCF file
 
 ## Usage
 
 > [!NOTE]
 > If you are new to Nextflow and nf-core, please refer to [this page](https://nf-co.re/docs/usage/installation) on how
-to set-up Nextflow. Make sure to [test your setup](https://nf-co.re/docs/usage/introduction#how-to-run-a-pipeline)
-with `-profile test` before running the workflow on actual data.
+> to set-up Nextflow. Make sure to [test your setup](https://nf-co.re/docs/usage/introduction#how-to-run-a-pipeline)
+> with `-profile test` before running the workflow on actual data.
 
 ### Start from Illumina run directory
 
@@ -64,8 +65,8 @@ nextflow run \
 
 > [!WARNING]
 > Please provide pipeline parameters via the CLI or Nextflow `-params-file` option. Custom config files including those
-provided by the `-c` Nextflow option can be used to provide any configuration _**except for parameters**_;
-see [docs](https://nf-co.re/usage/configuration#custom-configuration-files).
+> provided by the `-c` Nextflow option can be used to provide any configuration _**except for parameters**_;
+> see [docs](https://nf-co.re/usage/configuration#custom-configuration-files).
 
 For more details and further functionality, please refer to the [usage documentation](https://nf-co.re/dragenmultiworkflow/usage) and the [parameter documentation](https://nf-co.re/dragenmultiworkflow/parameters).
 
