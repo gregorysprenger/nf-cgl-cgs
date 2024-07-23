@@ -40,7 +40,7 @@ workflow DEMULTIPLEX {
         CREATE_DEMULTIPLEX_SAMPLESHEET.out.samplesheet,
         illumina_run_dir
     )
-    ch_versions = ch_versions.mix(DRAGEN_DEMUX.out.versions)
+    ch_versions = ch_versions.mix(DRAGEN_DEMULTIPLEX.out.versions)
 
     //
     // SUBWORKFLOW: Verify fastq_list.csv
