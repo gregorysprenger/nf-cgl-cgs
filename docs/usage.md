@@ -5,6 +5,8 @@ Table of contents:
 - [Clinical-Genomics-Laboratory/nf-cgl-cgs: Usage](#clinical-genomics-laboratorynf-cgl-cgs-usage)
   - [Setup](#setup)
   - [Input parameters](#input-parameters)
+    - [LSF cluster parameters](#lsf-cluster-parameters)
+    - [DRAGEN reference parameters](#dragen-reference-parameters)
     - [Start by demultiplexing samples](#start-by-demultiplexing-samples)
     - [Start from FastQ list](#start-from-fastq-list)
     - [Batch joint genotyping](#batch-joint-genotyping)
@@ -50,6 +52,73 @@ AWS_DRAGEN_PASSWORD
 ```
 
 ## Input parameters
+
+### LSF cluster parameters
+
+The LSF HPC cluster requires additional parameters when submitting jobs. Default parameters are used, but may need to be modified on a per user basis.
+
+#### LSF queue selection
+
+Specify the queue to submit all non-DRAGEN jobs to on the LSF HPC. The default queue is `pathology`.
+
+```bash
+--queue '[queue]'
+```
+
+#### LSF user group selection
+
+Specify the user group to use when submitting jobs to the LSF HPC. The default user group is `compute-duncavagee`.
+
+```bash
+--user_group '[user group]'
+```
+
+#### LSF job group name
+
+Specify the job group name to use when submitting jobs to the LSF HPC.
+
+```bash
+--job_group_name '[job group name]'
+```
+
+### DRAGEN reference parameters
+
+The DRAGEN alignment process requires several reference parameters to properly align and map samples.
+
+#### Trimming of adapter sequences
+
+The DRAGEN can trim adapter sequences on paired-end reads. Specify the location of adapter sequences for Read 1 and Read 2.
+
+```bash
+--adapter1 '[path to Read 1 adapter sequences]' \
+--adapter2 '[path to Read 2 adapter sequences]'
+```
+
+#### Cross-sample contamination
+
+The DRAGEN has a cross-contamination module that is able to estimate the fraction of reads in a sample that may be from another human source. Specify the location of the sample cross contamination VCF file.
+
+```bash
+--qc_cross_contamination_vcf '[path to cross contamination VCF file]'
+```
+
+#### Coverage report over custom region
+
+The DRAGEN can generate a coverage report over a custom region. Specify the location of a BED file.
+
+```bash
+--qc_coverage_region_1  '[path to BED file]'
+```
+
+#### dbSNP annotation
+
+Variant calls are annotated using the dbSNP database. Specify the location to the dbSNP VCF file.
+
+```bash
+--dbsnp '[path to dbSNP VCF file]'
+```
+
+####
 
 ### Start by demultiplexing samples
 
