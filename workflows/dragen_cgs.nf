@@ -66,15 +66,15 @@ if (params.intermediate_dir) {
 }
 
 // DRAGEN QC coverage over custom region
-if (params.qc_coverage_region_1) {
-    ch_qc_coverage_region_1 = Channel.fromPath(params.qc_coverage_region_1)
+if (params.qc_coverage_region) {
+    ch_qc_coverage_region = Channel.fromPath(params.qc_coverage_region)
 } else {
-    ch_qc_coverage_region_1 = []
+    ch_qc_coverage_region = []
 }
 
 // DRAGEN QC cross-sample contamination
-if (params.qc_cross_contamination_vcf) {
-    ch_qc_cross_contamination = Channel.fromPath(params.qc_cross_contamination_vcf)
+if (params.qc_cross_contamination) {
+    ch_qc_cross_contamination = Channel.fromPath(params.qc_cross_contamination)
 } else {
     ch_qc_cross_contamination = []
 }
@@ -144,7 +144,7 @@ workflow DRAGEN_CGS {
     DRAGEN_ALIGN (
         ch_align_samples,
         ch_qc_cross_contamination.collect(),
-        ch_qc_coverage_region_1.collect(),
+        ch_qc_coverage_region.collect(),
         ch_intermediate_dir.collect(),
         ch_reference_dir.collect(),
         ch_adapter1_file.collect(),

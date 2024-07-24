@@ -99,7 +99,7 @@ The DRAGEN can trim adapter sequences on paired-end reads. Specify the location 
 The DRAGEN has a cross-contamination module that is able to estimate the fraction of reads in a sample that may be from another human source. Specify the location of the sample cross contamination VCF file.
 
 ```bash
---qc_cross_contamination_vcf '[path to cross contamination VCF file]'
+--qc_cross_contamination '[path to cross contamination VCF file]'
 ```
 
 #### Coverage report over custom region
@@ -107,7 +107,7 @@ The DRAGEN has a cross-contamination module that is able to estimate the fractio
 The DRAGEN can generate a coverage report over a custom region. Specify the location of a BED file.
 
 ```bash
---qc_coverage_region_1  '[path to BED file]'
+--qc_coverage_region  '[path to BED file]'
 ```
 
 #### dbSNP annotation

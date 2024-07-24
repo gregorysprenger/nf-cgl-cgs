@@ -126,11 +126,11 @@
                     "description": "Path to the directory containing the reference hash table.",
                     "format": "directory-path"
                 },
-                "qc_coverage_region_1": {
+                "qc_coverage_region": {
                     "type": "string",
                     "description": "Path to BED file used to generate coverage region report."
                 },
-                "qc_cross_contamination_vcf": {
+                "qc_cross_contamination": {
                     "type": "string",
                     "description": "Path to VCF file that includes marker sites (RSIDs) with population allele frequencies that are close to 0.5",
                     "pattern": "^\\S+\\.vcf?(\\.gz)?$",

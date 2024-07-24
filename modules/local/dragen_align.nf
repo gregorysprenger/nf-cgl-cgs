@@ -9,7 +9,7 @@ process DRAGEN_ALIGN {
     input:
     tuple val(meta), path(fastq_list)
     path(qc_cross_contamination_file)
-    path(qc_coverage_region_1_file)
+    path(qc_coverage_region_file)
     path(intermediate_directory)
     path(reference_directory)
     path(adapter1_file)
@@ -34,7 +34,7 @@ process DRAGEN_ALIGN {
     def adapter1         = adapter1_file                                 ? "--trim-adapter-read1 ${adapter1_file}"                : ""
     def adapter2         = adapter2_file                                 ? "--trim-adapter-read2 ${adapter2_file}"                : ""
     def qc_cont_vcf      = qc_cross_contamination_file                   ? "--qc-cross-cont-vcf ${qc_cross_contamination_file}"   : ""
-    def qc_cov_region1   = qc_coverage_region_1_file                     ? "--qc-coverage-region-1 ${qc_coverage_region_1_file}"  : ""
+    def qc_cov_region1   = qc_coverage_region_file                       ? "--qc-coverage-region-1 ${qc_coverage_region_file}"    : ""
     def intermediate_dir = intermediate_directory                        ? "--intermediate-results-dir ${intermediate_directory}" : ""
 
     """
@@ -86,7 +86,7 @@ process DRAGEN_ALIGN {
     def adapter1         = adapter1_file                                 ? "--trim-adapter-read1 ${adapter1_file}"                : ""
     def adapter2         = adapter2_file                                 ? "--trim-adapter-read2 ${adapter2_file}"                : ""
     def qc_cont_vcf      = qc_cross_contamination_file                   ? "--qc-cross-cont-vcf ${qc_cross_contamination_file}"   : ""
-    def qc_cov_region1   = qc_coverage_region_1_file                     ? "--qc-coverage-region-1 ${qc_coverage_region_1_file}"  : ""
+    def qc_cov_region1   = qc_coverage_region_file                       ? "--qc-coverage-region-1 ${qc_coverage_region_file}"    : ""
     def intermediate_dir = intermediate_directory                        ? "--intermediate-results-dir ${intermediate_directory}" : ""
 
     """
