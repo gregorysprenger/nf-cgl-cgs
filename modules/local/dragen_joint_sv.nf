@@ -8,6 +8,7 @@ process DRAGEN_JOINT_SV {
 
     input:
     path(sv_files)
+    path(reference_directory)
 
     output:
     tuple val(task.ext.prefix), path("*.vcf.gz"), emit: joint_sv
@@ -18,7 +19,7 @@ process DRAGEN_JOINT_SV {
 
     script:
     def prefix  = task.ext.prefix
-    def ref_dir = params.refdir ? "--ref-dir ${params.refdir}" : ""
+    def ref_dir = reference_directory ? "--ref-dir ${reference_directory}" : ""
     def sv_list = sv_files.collect{ "--bam-input $it" }.join(' \\\\n')
     """
     /opt/edico/bin/dragen \\
@@ -39,7 +40,7 @@ process DRAGEN_JOINT_SV {
     stub:
     def dragen_version = "4.3.6"
     def prefix         = task.ext.prefix
-    def ref_dir        = params.refdir ? "--ref-dir ${params.refdir}" : ""
+    def ref_dir        = reference_directory ? "--ref-dir ${reference_directory}" : ""
     def sv_list        = sv_files.collect{ "--bam-input $it" }.join(' \\\\n')
     """
     cat <<-END_CMDS > "${prefix.id}.txt"

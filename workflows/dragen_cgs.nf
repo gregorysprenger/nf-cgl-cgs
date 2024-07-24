@@ -30,6 +30,55 @@ if (params.sample_info) {
     ch_sample_information = Channel.empty()
 }
 
+// DRAGEN reference directory
+if (params.refdir) {
+    ch_reference_dir = Channel.fromPath(params.refdir, type: 'dir', checkIfExists: true)
+} else {
+    ch_reference_dir = []
+}
+
+// DRAGEN dbSNP annotation VCF
+if (params.dbsnp) {
+    ch_dbsnp_file = Channel.fromPath(params.dbsnp, checkIfExists: true)
+} else {
+    ch_dbsnp_file = []
+}
+
+// DRAGEN adapter sequences for read 1
+if (params.adapter1) {
+    ch_adapter1_file = Channel.fromPath(params.adapter1, checkIfExists: true)
+} else {
+    ch_adapter1_file = []
+}
+
+// DRAGEN adapter sequences for read 2
+if (params.adapter2) {
+    ch_adapter2_file = Channel.fromPath(params.adapter2, checkIfExists: true)
+} else {
+    ch_adapter2_file = []
+}
+
+// DRAGEN intermediate directory
+if (params.intermediate_dir) {
+    ch_intermediate_dir = Channel.fromPath(params.intermediate_dir)
+} else {
+    ch_intermediate_dir = []
+}
+
+// DRAGEN QC coverage over custom region
+if (params.qc_coverage_region_1) {
+    ch_qc_coverage_region_1 = Channel.fromPath(params.qc_coverage_region_1)
+} else {
+    ch_qc_coverage_region_1 = []
+}
+
+// DRAGEN QC cross-sample contamination
+if (params.qc_cross_contamination_vcf) {
+    ch_qc_cross_contamination = Channel.fromPath(params.qc_cross_contamination_vcf)
+} else {
+    ch_qc_cross_contamination = []
+}
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     RUN MAIN WORKFLOW
@@ -52,7 +101,7 @@ workflow DRAGEN_CGS {
     if (params.input && params.illumina_rundir && params.demux) {
         DEMULTIPLEX (
             ch_mgi_samplesheet,
-            ch_illumina_run_dir
+            ch_illumina_run_dir.collect()
         )
         ch_versions = ch_versions.mix(DEMULTIPLEX.out.versions)
 
@@ -93,7 +142,14 @@ workflow DRAGEN_CGS {
     // MODULE: DRAGEN alignment
     //
     DRAGEN_ALIGN (
-        ch_align_samples
+        ch_align_samples,
+        ch_qc_cross_contamination.collect(),
+        ch_qc_coverage_region_1.collect(),
+        ch_intermediate_dir.collect(),
+        ch_reference_dir.collect(),
+        ch_adapter1_file.collect(),
+        ch_adapter2_file.collect(),
+        ch_dbsnp_file.collect()
     )
     ch_versions = ch_versions.mix(DRAGEN_ALIGN.out.versions)
 
@@ -102,7 +158,8 @@ workflow DRAGEN_CGS {
     //
     if (params.joint_genotype_cnv) {
         DRAGEN_JOINT_CNV (
-            DRAGEN_ALIGN.out.tangent_normalized_counts.collect()
+            DRAGEN_ALIGN.out.tangent_normalized_counts.collect(),
+            ch_reference_dir.collect()
         )
         ch_versions        = ch_versions.mix(DRAGEN_JOINT_CNV.out.versions)
         ch_joint_vcf_files = ch_joint_vcf_files.mix(DRAGEN_JOINT_CNV.out.joint_cnv)
@@ -113,7 +170,8 @@ workflow DRAGEN_CGS {
     //
     if (params.joint_genotype_small_variants) {
         DRAGEN_JOINT_SMALL_VARIANTS (
-            DRAGEN_ALIGN.out.hard_filtered_gvcf.collect()
+            DRAGEN_ALIGN.out.hard_filtered_gvcf.collect(),
+            ch_reference_dir.collect()
         )
         ch_versions        = ch_versions.mix(DRAGEN_JOINT_SMALL_VARIANTS.out.versions)
         ch_joint_vcf_files = ch_joint_vcf_files.mix(DRAGEN_JOINT_SMALL_VARIANTS.out.joint_small_variants)
@@ -124,7 +182,8 @@ workflow DRAGEN_CGS {
     //
     if (params.joint_genotype_sv) {
         DRAGEN_JOINT_SV (
-            DRAGEN_ALIGN.out.bam.collect()
+            DRAGEN_ALIGN.out.bam.collect(),
+            ch_reference_dir.collect()
         )
         ch_versions        = ch_versions.mix(DRAGEN_JOINT_SV.out.versions)
         ch_joint_vcf_files = ch_joint_vcf_files.mix(DRAGEN_JOINT_SV.out.joint_sv)

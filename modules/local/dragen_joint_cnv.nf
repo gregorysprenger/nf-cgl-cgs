@@ -8,6 +8,7 @@ process DRAGEN_JOINT_CNV {
 
     input:
     path(cnv_files)
+    path(reference_directory)
 
     output:
     tuple val(task.ext.prefix), path("*cnv.vcf.gz"), emit: joint_cnv
@@ -18,7 +19,7 @@ process DRAGEN_JOINT_CNV {
 
     script:
     def prefix   = task.ext.prefix
-    def ref_dir  = params.refdir ? "--ref-dir ${params.refdir}" : ""
+    def ref_dir  = reference_directory ? "--ref-dir ${reference_directory}" : ""
     def cnv_list = cnv_files.collect{ "--cnv-input $it" }.join(' \\\\n')
     """
     /opt/edico/bin/dragen \\
@@ -38,7 +39,7 @@ process DRAGEN_JOINT_CNV {
     stub:
     def dragen_version = "4.3.6"
     def prefix         = task.ext.prefix
-    def ref_dir        = params.refdir ? "--ref-dir ${params.refdir}" : ""
+    def ref_dir        = reference_directory ? "--ref-dir ${reference_directory}" : ""
     def cnv_list       = cnv_files.collect{ "--cnv-input $it" }.join(' \\\\n')
     """
     cat <<-END_CMDS > "${prefix.id}.txt"
