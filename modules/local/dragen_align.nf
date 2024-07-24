@@ -30,6 +30,7 @@ process DRAGEN_ALIGN {
     def args_license     = task.ext.dragen_license_args                  ?: ""
     def sample_sex       = meta.sex?.toLowerCase() in ['male', 'female'] ? "--sample-sex ${meta.sex}"                             : ""
     def dbsnp            = dbsnp_file                                    ? "--dbsnp ${dbsnp_file}"                                : ""
+    def output_gvcf      = params.output_gvcf                            ? "--vc-emit-ref-confidence GVCF"                        : ""
     def ref_dir          = reference_directory                           ? "--ref-dir ${reference_directory}"                     : ""
     def adapter1         = adapter1_file                                 ? "--trim-adapter-read1 ${adapter1_file}"                : ""
     def adapter2         = adapter2_file                                 ? "--trim-adapter-read2 ${adapter2_file}"                : ""
@@ -52,6 +53,7 @@ process DRAGEN_ALIGN {
         ${adapter2} \\
         ${sample_sex} \\
         ${qc_cont_vcf} \\
+        ${output_gvcf} \\
         ${args_license} \\
         --enable-sv true \\
         ${qc_cov_region1} \\
@@ -65,7 +67,6 @@ process DRAGEN_ALIGN {
         --sv-output-contigs true \\
         --enable-bam-indexing true \\
         --enable-variant-caller true \\
-        --vc-emit-ref-confidence GVCF \\
         --enable-map-align-output true \\
         --enable-duplicate-marking true \\
         --qc-coverage-ignore-overlaps true \\
@@ -82,6 +83,7 @@ process DRAGEN_ALIGN {
     def args_license     = task.ext.dragen_license_args                  ?: ""
     def sample_sex       = meta.sex?.toLowerCase() in ['male', 'female'] ? "--sample-sex ${meta.sex}"                             : ""
     def dbsnp            = dbsnp_file                                    ? "--dbsnp ${dbsnp_file}"                                : ""
+    def output_gvcf      = params.output_gvcf                            ? "--vc-emit-ref-confidence GVCF"                        : ""
     def ref_dir          = reference_directory                           ? "--ref-dir ${reference_directory}"                     : ""
     def adapter1         = adapter1_file                                 ? "--trim-adapter-read1 ${adapter1_file}"                : ""
     def adapter2         = adapter2_file                                 ? "--trim-adapter-read2 ${adapter2_file}"                : ""
@@ -105,6 +107,7 @@ process DRAGEN_ALIGN {
         ${adapter2} \\
         ${sample_sex} \\
         ${qc_cont_vcf} \\
+        ${output_gvcf} \\
         ${args_license} \\
         --enable-sv true \\
         ${qc_cov_region1} \\
@@ -118,7 +121,6 @@ process DRAGEN_ALIGN {
         --sv-output-contigs true \\
         --enable-bam-indexing true \\
         --enable-variant-caller true \\
-        --vc-emit-ref-confidence GVCF \\
         --enable-map-align-output true \\
         --enable-duplicate-marking true \\
         --qc-coverage-ignore-overlaps true \\

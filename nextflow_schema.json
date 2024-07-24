@@ -101,6 +101,11 @@
             "description": "",
             "default": "",
             "properties": {
+                "output_gvcf": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Generate gVCF outputs during DRAGEN align. Set to 'false' to generate VCF outputs."
+                },
                 "adapter1": {
                     "type": "string",
                     "description": "Path to adapter 1 nucleotide sequence for DRAGEN alignment.",

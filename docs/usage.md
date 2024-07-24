@@ -6,7 +6,7 @@ Table of contents:
   - [Setup](#setup)
   - [Input parameters](#input-parameters)
     - [LSF cluster parameters](#lsf-cluster-parameters)
-    - [DRAGEN reference parameters](#dragen-reference-parameters)
+    - [DRAGEN parameters](#dragen-parameters)
     - [Start by demultiplexing samples](#start-by-demultiplexing-samples)
     - [Start from FastQ list](#start-from-fastq-list)
     - [Batch joint genotyping](#batch-joint-genotyping)
@@ -81,9 +81,17 @@ Specify the job group name to use when submitting jobs to the LSF HPC.
 --job_group_name '[job group name]'
 ```
 
-### DRAGEN reference parameters
+### DRAGEN parameters
 
 The DRAGEN alignment process requires several reference parameters to properly align and map samples.
+
+#### Generate gVCF during alignment
+
+The DRAGEN can output variant calls in VCF or gVCF format. By default, gVCF files will be generated. To generate VCF files, set the following parameter to `false`.
+
+```bash
+--output_gvcf true
+```
 
 #### Trimming of adapter sequences
 
@@ -129,7 +137,7 @@ To demultiplex samples, the demultiplexing parameter must be turned on and the l
 To turn on the option to demultiplex samples, use the following parameter:
 
 ```bash
---demux
+--demux true
 ```
 
 #### Illumina run directory
