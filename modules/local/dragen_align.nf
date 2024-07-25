@@ -70,7 +70,8 @@ process DRAGEN_ALIGN {
         --enable-map-align-output true \\
         --enable-duplicate-marking true \\
         --qc-coverage-ignore-overlaps true \\
-        --cnv-enable-self-normalization true
+        --cnv-enable-self-normalization true \\
+        --variant-annotation-assembly GRCh38
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -124,7 +125,8 @@ process DRAGEN_ALIGN {
         --enable-map-align-output true \\
         --enable-duplicate-marking true \\
         --qc-coverage-ignore-overlaps true \\
-        --cnv-enable-self-normalization true
+        --cnv-enable-self-normalization true \\
+        --variant-annotation-assembly GRCh38
     END_CMDS
 
     cp -rf ${projectDir}/assets/test_data/dragen_path/${meta.id}/* dragen/
