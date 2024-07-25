@@ -29,8 +29,7 @@ process DRAGEN_ALIGN {
     script:
     def args_license     = task.ext.dragen_license_args                  ?: ""
     def sample_sex       = meta.sex?.toLowerCase() in ['male', 'female'] ? "--sample-sex ${meta.sex}"                             : ""
-    def dbsnp            = dbsnp_file                                    ? "--variant-annotation-data ${dbsnp_file}"              : ""
-    def annotate_vcf     = dbsnp_file                                    ? "--enable-variant-annotation true"                     : ""
+    def dbsnp            = dbsnp_file                                    ? "--dbsnp ${dbsnp_file}"                                : ""
     def output_gvcf      = params.output_gvcf                            ? "--vc-emit-ref-confidence GVCF"                        : ""
     def ref_dir          = reference_directory                           ? "--ref-dir ${reference_directory}"                     : ""
     def adapter1         = adapter1_file                                 ? "--trim-adapter-read1 ${adapter1_file}"                : ""
@@ -56,7 +55,6 @@ process DRAGEN_ALIGN {
         ${qc_cont_vcf} \\
         ${output_gvcf} \\
         ${args_license} \\
-        ${annotate_vcf} \\
         --enable-sv true \\
         ${qc_cov_region1} \\
         --enable-cnv true \\
@@ -85,8 +83,7 @@ process DRAGEN_ALIGN {
     def dragen_version   = "4.3.6"
     def args_license     = task.ext.dragen_license_args                  ?: ""
     def sample_sex       = meta.sex?.toLowerCase() in ['male', 'female'] ? "--sample-sex ${meta.sex}"                             : ""
-    def dbsnp            = dbsnp_file                                    ? "--variant-annotation-data ${dbsnp_file}"              : ""
-    def annotate_vcf     = dbsnp_file                                    ? "--enable-variant-annotation true"                     : ""
+    def dbsnp            = dbsnp_file                                    ? "--dbsnp ${dbsnp_file}"                                : ""
     def output_gvcf      = params.output_gvcf                            ? "--vc-emit-ref-confidence GVCF"                        : ""
     def ref_dir          = reference_directory                           ? "--ref-dir ${reference_directory}"                     : ""
     def adapter1         = adapter1_file                                 ? "--trim-adapter-read1 ${adapter1_file}"                : ""
@@ -113,7 +110,6 @@ process DRAGEN_ALIGN {
         ${qc_cont_vcf} \\
         ${output_gvcf} \\
         ${args_license} \\
-        ${annotate_vcf} \\
         --enable-sv true \\
         ${qc_cov_region1} \\
         --enable-cnv true \\
