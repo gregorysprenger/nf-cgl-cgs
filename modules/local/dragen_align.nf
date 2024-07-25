@@ -29,7 +29,7 @@ process DRAGEN_ALIGN {
     script:
     def args_license     = task.ext.dragen_license_args                  ?: ""
     def sample_sex       = meta.sex?.toLowerCase() in ['male', 'female'] ? "--sample-sex ${meta.sex}"                             : ""
-    def dbsnp            = dbsnp_file                                    ? "----variant-annotation-data ${dbsnp_file}"            : ""
+    def dbsnp            = dbsnp_file                                    ? "--variant-annotation-data ${dbsnp_file}"              : ""
     def annotate_vcf     = dbsnp_file                                    ? "--enable-variant-annotation true"                     : ""
     def output_gvcf      = params.output_gvcf                            ? "--vc-emit-ref-confidence GVCF"                        : ""
     def ref_dir          = reference_directory                           ? "--ref-dir ${reference_directory}"                     : ""
@@ -85,7 +85,7 @@ process DRAGEN_ALIGN {
     def dragen_version   = "4.3.6"
     def args_license     = task.ext.dragen_license_args                  ?: ""
     def sample_sex       = meta.sex?.toLowerCase() in ['male', 'female'] ? "--sample-sex ${meta.sex}"                             : ""
-    def dbsnp            = dbsnp_file                                    ? "----variant-annotation-data ${dbsnp_file}"            : ""
+    def dbsnp            = dbsnp_file                                    ? "--variant-annotation-data ${dbsnp_file}"              : ""
     def annotate_vcf     = dbsnp_file                                    ? "--enable-variant-annotation true"                     : ""
     def output_gvcf      = params.output_gvcf                            ? "--vc-emit-ref-confidence GVCF"                        : ""
     def ref_dir          = reference_directory                           ? "--ref-dir ${reference_directory}"                     : ""
