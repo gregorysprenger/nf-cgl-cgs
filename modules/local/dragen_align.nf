@@ -18,8 +18,8 @@ process DRAGEN_ALIGN {
 
     output:
     tuple val(meta), path ("dragen/*")    , emit: dragen_output
-    path("dragen/*.hard-filtered.gvcf.gz"), emit: hard_filtered_gvcf
-    path("dragen/*.tn.tsv.gz")            , emit: tangent_normalized_counts
+    path("dragen/*.hard-filtered.gvcf.gz"), emit: hard_filtered_gvcf       , optional: true
+    path("dragen/*.tn.tsv.gz")            , emit: tangent_normalized_counts, optional: true
     path("dragen/*.bam")                  , emit: bam
     path("versions.yml")                  , emit: versions
 
