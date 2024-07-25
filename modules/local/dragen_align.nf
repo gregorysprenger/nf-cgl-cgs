@@ -28,15 +28,16 @@ process DRAGEN_ALIGN {
 
     script:
     def args_license     = task.ext.dragen_license_args                  ?: ""
-    def sample_sex       = meta.sex?.toLowerCase() in ['male', 'female'] ? "--sample-sex ${meta.sex}"                               : ""
-    def dbsnp            = dbsnp_file                                    ? "--dbsnp ${dbsnp_file} --enable-variant-annotation true" : ""
-    def output_gvcf      = params.output_gvcf                            ? "--vc-emit-ref-confidence GVCF"                          : ""
-    def ref_dir          = reference_directory                           ? "--ref-dir ${reference_directory}"                       : ""
-    def adapter1         = adapter1_file                                 ? "--trim-adapter-read1 ${adapter1_file}"                  : ""
-    def adapter2         = adapter2_file                                 ? "--trim-adapter-read2 ${adapter2_file}"                  : ""
-    def qc_cont_vcf      = qc_cross_contamination_file                   ? "--qc-cross-cont-vcf ${qc_cross_contamination_file}"     : ""
-    def qc_cov_region1   = qc_coverage_region_file                       ? "--qc-coverage-region-1 ${qc_coverage_region_file}"      : ""
-    def intermediate_dir = intermediate_directory                        ? "--intermediate-results-dir ${intermediate_directory}"   : ""
+    def sample_sex       = meta.sex?.toLowerCase() in ['male', 'female'] ? "--sample-sex ${meta.sex}"                             : ""
+    def dbsnp            = dbsnp_file                                    ? "----variant-annotation-data ${dbsnp_file}"            : ""
+    def annotate_vcf     = dbsnp_file                                    ? "--enable-variant-annotation true"                     : ""
+    def output_gvcf      = params.output_gvcf                            ? "--vc-emit-ref-confidence GVCF"                        : ""
+    def ref_dir          = reference_directory                           ? "--ref-dir ${reference_directory}"                     : ""
+    def adapter1         = adapter1_file                                 ? "--trim-adapter-read1 ${adapter1_file}"                : ""
+    def adapter2         = adapter2_file                                 ? "--trim-adapter-read2 ${adapter2_file}"                : ""
+    def qc_cont_vcf      = qc_cross_contamination_file                   ? "--qc-cross-cont-vcf ${qc_cross_contamination_file}"   : ""
+    def qc_cov_region1   = qc_coverage_region_file                       ? "--qc-coverage-region-1 ${qc_coverage_region_file}"    : ""
+    def intermediate_dir = intermediate_directory                        ? "--intermediate-results-dir ${intermediate_directory}" : ""
 
     """
     mkdir -p dragen
@@ -55,6 +56,7 @@ process DRAGEN_ALIGN {
         ${qc_cont_vcf} \\
         ${output_gvcf} \\
         ${args_license} \\
+        ${annotate_vcf} \\
         --enable-sv true \\
         ${qc_cov_region1} \\
         --enable-cnv true \\
@@ -82,15 +84,16 @@ process DRAGEN_ALIGN {
     stub:
     def dragen_version   = "4.3.6"
     def args_license     = task.ext.dragen_license_args                  ?: ""
-    def sample_sex       = meta.sex?.toLowerCase() in ['male', 'female'] ? "--sample-sex ${meta.sex}"                               : ""
-    def dbsnp            = dbsnp_file                                    ? "--dbsnp ${dbsnp_file} --enable-variant-annotation true" : ""
-    def output_gvcf      = params.output_gvcf                            ? "--vc-emit-ref-confidence GVCF"                          : ""
-    def ref_dir          = reference_directory                           ? "--ref-dir ${reference_directory}"                       : ""
-    def adapter1         = adapter1_file                                 ? "--trim-adapter-read1 ${adapter1_file}"                  : ""
-    def adapter2         = adapter2_file                                 ? "--trim-adapter-read2 ${adapter2_file}"                  : ""
-    def qc_cont_vcf      = qc_cross_contamination_file                   ? "--qc-cross-cont-vcf ${qc_cross_contamination_file}"     : ""
-    def qc_cov_region1   = qc_coverage_region_file                       ? "--qc-coverage-region-1 ${qc_coverage_region_file}"      : ""
-    def intermediate_dir = intermediate_directory                        ? "--intermediate-results-dir ${intermediate_directory}"   : ""
+    def sample_sex       = meta.sex?.toLowerCase() in ['male', 'female'] ? "--sample-sex ${meta.sex}"                             : ""
+    def dbsnp            = dbsnp_file                                    ? "----variant-annotation-data ${dbsnp_file}"            : ""
+    def annotate_vcf     = dbsnp_file                                    ? "--enable-variant-annotation true"                     : ""
+    def output_gvcf      = params.output_gvcf                            ? "--vc-emit-ref-confidence GVCF"                        : ""
+    def ref_dir          = reference_directory                           ? "--ref-dir ${reference_directory}"                     : ""
+    def adapter1         = adapter1_file                                 ? "--trim-adapter-read1 ${adapter1_file}"                : ""
+    def adapter2         = adapter2_file                                 ? "--trim-adapter-read2 ${adapter2_file}"                : ""
+    def qc_cont_vcf      = qc_cross_contamination_file                   ? "--qc-cross-cont-vcf ${qc_cross_contamination_file}"   : ""
+    def qc_cov_region1   = qc_coverage_region_file                       ? "--qc-coverage-region-1 ${qc_coverage_region_file}"    : ""
+    def intermediate_dir = intermediate_directory                        ? "--intermediate-results-dir ${intermediate_directory}" : ""
 
     """
     mkdir -p dragen
@@ -110,6 +113,7 @@ process DRAGEN_ALIGN {
         ${qc_cont_vcf} \\
         ${output_gvcf} \\
         ${args_license} \\
+        ${annotate_vcf} \\
         --enable-sv true \\
         ${qc_cov_region1} \\
         --enable-cnv true \\
