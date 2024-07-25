@@ -41,7 +41,7 @@ process DRAGEN_ALIGN {
     """
     mkdir -p dragen
 
-    /opt/edico/bin/dragen \\
+    /opt/dragen/4.3.6/bin/dragen \\
         --fastq-list ${fastq_list} \\
         --fastq-list-sample-id ${meta.id} \\
         --output-file-prefix ${meta.id} \\
@@ -74,7 +74,7 @@ process DRAGEN_ALIGN {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        dragen: \$(/opt/edico/bin/dragen --version | tail -n 1 | cut -d ' ' -f 3)
+        dragen: \$(/opt/dragen/4.3.6/bin/dragen --version | head -n 1 | cut -d ' ' -f 3)
     END_VERSIONS
     """
 
@@ -95,7 +95,7 @@ process DRAGEN_ALIGN {
     mkdir -p dragen
 
     cat <<-END_CMDS > "dragen/${meta.id}.txt"
-    /opt/edico/bin/dragen \\
+    /opt/dragen/4.3.6/bin/dragen \\
         --fastq-list ${fastq_list} \\
         --fastq-list-sample-id ${meta.id} \\
         --output-file-prefix ${meta.id} \\

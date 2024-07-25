@@ -22,7 +22,7 @@ process DRAGEN_JOINT_CNV {
     def ref_dir  = reference_directory ? "--ref-dir ${reference_directory}" : ""
     def cnv_list = cnv_files.collect{ "--cnv-input $it" }.join(' \\\\n')
     """
-    /opt/edico/bin/dragen \\
+    /opt/dragen/4.3.6/bin/dragen \\
         --force \\
         ${ref_dir} \\
         ${cnv_list} \\
@@ -32,7 +32,7 @@ process DRAGEN_JOINT_CNV {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        dragen: \$(/opt/edico/bin/dragen --version | tail -n 1 | cut -d ' ' -f 3)
+        dragen: \$(/opt/dragen/4.3.6/bin/dragen --version | head -n 1 | cut -d ' ' -f 3)
     END_VERSIONS
     """
 
@@ -43,7 +43,7 @@ process DRAGEN_JOINT_CNV {
     def cnv_list       = cnv_files.collect{ "--cnv-input $it" }.join(' \\\\n')
     """
     cat <<-END_CMDS > "${prefix.id}.txt"
-    /opt/edico/bin/dragen \\
+    /opt/dragen/4.3.6/bin/dragen \\
         --force \\
         ${ref_dir} \\
         ${cnv_list} \\

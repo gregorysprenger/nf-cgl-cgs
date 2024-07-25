@@ -25,7 +25,7 @@ process DRAGEN_DEMULTIPLEX {
     mkdir -p demux_fastq
 
     # Perform demultiplexing of samples
-    /opt/edico/bin/dragen \\
+    /opt/dragen/4.3.6/bin/dragen \\
         --bcl-conversion-only true \\
         --bcl-only-matched-reads true \\
         --strict-mode true \\
@@ -42,7 +42,7 @@ process DRAGEN_DEMULTIPLEX {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        dragen: \$(/opt/edico/bin/dragen --version | tail -n 1 | cut -d ' ' -f 3)
+        dragen: \$(/opt/dragen/4.3.6/bin/dragen --version | head -n 1 | cut -d ' ' -f 3)
     END_VERSIONS
     """
 

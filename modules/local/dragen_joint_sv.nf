@@ -22,7 +22,7 @@ process DRAGEN_JOINT_SV {
     def ref_dir = reference_directory ? "--ref-dir ${reference_directory}" : ""
     def sv_list = sv_files.collect{ "--bam-input $it" }.join(' \\\\n')
     """
-    /opt/edico/bin/dragen \\
+    /opt/dragen/4.3.6/bin/dragen \\
         --force \\
         ${sv_list} \\
         ${ref_dir} \\
@@ -33,7 +33,7 @@ process DRAGEN_JOINT_SV {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        dragen: \$(/opt/edico/bin/dragen --version | tail -n 1 | cut -d ' ' -f 3)
+        dragen: \$(/opt/dragen/4.3.6/bin/dragen --version | head -n 1 | cut -d ' ' -f 3)
     END_VERSIONS
     """
 
@@ -44,7 +44,7 @@ process DRAGEN_JOINT_SV {
     def sv_list        = sv_files.collect{ "--bam-input $it" }.join(' \\\\n')
     """
     cat <<-END_CMDS > "${prefix.id}.txt"
-    /opt/edico/bin/dragen \\
+    /opt/dragen/4.3.6/bin/dragen \\
         --force \\
         ${sv_list} \\
         ${ref_dir} \\
