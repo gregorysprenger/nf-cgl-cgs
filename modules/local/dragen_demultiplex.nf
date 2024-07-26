@@ -35,7 +35,7 @@ process DRAGEN_DEMULTIPLEX {
         --output-directory demux_fastq
 
     # Copy RunParameters.xml to demux_fastq/Reports
-    find ${run_dir} \\
+    find ${rundir} \\
         -type f \\
         -name "RunParameters.xml" \\
         -exec cp '{}' demux_fastq/Reports/ \\;
