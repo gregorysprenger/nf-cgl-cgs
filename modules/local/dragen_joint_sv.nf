@@ -20,7 +20,7 @@ process DRAGEN_JOINT_SV {
     script:
     def prefix  = task.ext.prefix
     def ref_dir = reference_directory ? "--ref-dir ${reference_directory}" : ""
-    def sv_list = sv_files.collect{ "--bam-input $it" }.join(' \\\\n')
+    def sv_list = sv_files.collect{ "--bam-input $it" }.join(' ')
     """
     /opt/dragen/4.3.6/bin/dragen \\
         --force \\
@@ -41,7 +41,7 @@ process DRAGEN_JOINT_SV {
     def dragen_version = "4.3.6"
     def prefix         = task.ext.prefix
     def ref_dir        = reference_directory ? "--ref-dir ${reference_directory}" : ""
-    def sv_list        = sv_files.collect{ "--bam-input $it" }.join(' \\\\n')
+    def sv_list        = sv_files.collect{ "--bam-input $it" }.join(' ')
     """
     cat <<-END_CMDS > "${prefix.id}.txt"
     /opt/dragen/4.3.6/bin/dragen \\
