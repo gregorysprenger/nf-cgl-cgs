@@ -34,6 +34,14 @@ process BCFTOOLS_SPLIT_VCF {
     """
     output_filename=\$(echo "${joint_vcf_file}" | sed "s|${meta.batch}|${meta.id}|1")
 
+    cat <<-END_CMDS > ${meta.id}_cmds.txt
+    bcftools view \\
+        --output-type z \\
+        --samples ${meta.id} \\
+        --output "\${output_filename}" \\
+        ${joint_vcf_file}
+    END_CMDS
+
     touch "\${output_filename}"
 
     cat <<-END_VERSIONS > versions.yml
