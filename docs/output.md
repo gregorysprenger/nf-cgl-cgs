@@ -62,6 +62,21 @@ The input reference files are used to align and map each sample.
 
 </details>
 
+### QC metrics
+
+During the alignment and mapping of each sample, various QC metrics are produced.
+
+> [!NOTE]
+> To save QC metrics in an additional location, specify the location to a directory using `--qc_outdir`.
+
+<details markdown="1">
+<summary>Output files</summary>
+
+- `QC_metrics/<sample_name>`
+  - `*_metrics.csv`: Reports that contain various QC metrics.
+
+</details>
+
 ### Batch joint genotyping
 
 All samples can undergo small variant (SNV/InDel), structural variant (SV), and/or copy number variant (CNV) joint genotyping. This is to help reduce the noise in the final VCF files.

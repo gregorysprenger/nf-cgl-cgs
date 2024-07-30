@@ -10,6 +10,7 @@ Table of contents:
     - [Start by demultiplexing samples](#start-by-demultiplexing-samples)
     - [Start from FastQ list](#start-from-fastq-list)
     - [Batch joint genotyping](#batch-joint-genotyping)
+    - [Save QC metrics in different location](#save-qc-metrics-in-different-location)
   - [Running the pipeline](#running-the-pipeline)
   - [Core Nextflow arguments](#core-nextflow-arguments)
     - [`-profile`](#-profile)
@@ -126,8 +127,6 @@ Variant calls are annotated using the dbSNP database. Specify the location to th
 --dbsnp '[path to dbSNP VCF file]'
 ```
 
-####
-
 ### Start by demultiplexing samples
 
 To demultiplex samples, the demultiplexing parameter must be turned on and the location of the Illumina run directory and MGI samplesheet must be provided.
@@ -198,6 +197,16 @@ AGC-CAG.2,Sample_2,UnknownLibrary,2,/path/to/Sample_2_R1.fastq.gz,/path/to/Sampl
 | `Lane`      | The flowcell lane number.                |
 | `Read1File` | Full path to the first FastQ read file.  |
 | `Read2File` | Full path to the second FastQ read file. |
+
+### Save QC metrics in different location
+
+During the alignment and mapping of each sample, various QC metrics are produced. These files are saved in the specified `--outdir` location under the directory `QC_metrics`.
+
+To save the QC metrics in another location, specify the location using the following parameter:
+
+```bash
+--qc_outdir '[path to directory]'
+```
 
 ### Batch joint genotyping
 
