@@ -11,8 +11,9 @@ process DRAGEN_JOINT_SMALL_VARIANTS {
     path(reference_directory)
 
     output:
-    tuple val(task.ext.prefix), path("*.vcf.gz"), emit: joint_small_variants
-    path("versions.yml")                        , emit: versions
+    tuple val(task.ext.prefix), path("${task.ext.prefix.id}.vcf*"), emit: joint_small_variants
+    tuple val(task.ext.prefix), path("*hard-filtered.vcf*")       , emit: joint_small_variants_filtered
+    path("versions.yml")                                          , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -52,8 +53,10 @@ process DRAGEN_JOINT_SMALL_VARIANTS {
         --output-file-prefix ${prefix.id}
     END_CMDS
 
-    cp -f ${projectDir}/assets/test_data/dragen_path/joint_genotyped_vcf/joint_genotyped.vcf.gz \$PWD
-    mv joint_genotyped.vcf.gz ${prefix.id}.hard-filtered.vcf.gz
+    cp -f ${projectDir}/assets/test_data/dragen_path/joint_genotyped_vcf/*.vcf.gz \$PWD
+    for file in *.vcf.gz; do
+        mv \$file \${file/joint_genotyped/${prefix.id}}
+    done
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
