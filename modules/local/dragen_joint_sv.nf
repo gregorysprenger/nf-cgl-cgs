@@ -12,6 +12,7 @@ process DRAGEN_JOINT_SV {
 
     output:
     tuple val(task.ext.prefix), path("*.vcf.gz"), emit: joint_sv
+    path("joint_sv_usage.txt")                  , emit: sample_usage, optional: true
     path("versions.yml")                        , emit: versions
 
     when:
@@ -30,6 +31,12 @@ process DRAGEN_JOINT_SV {
         --enable-map-align false \\
         --output-directory \$PWD \\
         --output-file-prefix ${prefix.id}
+
+    # Copy and rename DRAGEN usage
+    find \$PWD \\
+        -type f \\
+        -name "*_usage.txt" \\
+        -exec cp "{}" "joint_sv_usage.txt" \\;
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

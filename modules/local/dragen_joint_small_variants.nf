@@ -13,6 +13,7 @@ process DRAGEN_JOINT_SMALL_VARIANTS {
     output:
     tuple val(task.ext.prefix), path("${task.ext.prefix.id}.vcf.gz"), emit: joint_small_variants
     tuple val(task.ext.prefix), path("*hard-filtered.vcf.gz")       , emit: joint_small_variants_filtered
+    path("joint_small_variants_usage.txt")                          , emit: sample_usage, optional: true
     path("versions.yml")                                            , emit: versions
 
     when:
@@ -30,6 +31,12 @@ process DRAGEN_JOINT_SMALL_VARIANTS {
         --output-directory \$PWD \\
         --enable-joint-genotyping true \\
         --output-file-prefix ${prefix.id}
+
+    # Copy and rename DRAGEN usage
+    find \$PWD \\
+        -type f \\
+        -name "*_usage.txt" \\
+        -exec cp "{}" "joint_small_variants_usage.txt" \\;
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

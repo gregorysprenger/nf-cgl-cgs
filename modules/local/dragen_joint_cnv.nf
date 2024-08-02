@@ -12,6 +12,7 @@ process DRAGEN_JOINT_CNV {
 
     output:
     tuple val(task.ext.prefix), path("*cnv.vcf.gz"), emit: joint_cnv
+    path("joint_cnv_usage.txt")                    , emit: sample_usage, optional: true
     path("versions.yml")                           , emit: versions
 
     when:
@@ -29,6 +30,12 @@ process DRAGEN_JOINT_CNV {
         --enable-cnv true \\
         --output-directory \$PWD \\
         --output-file-prefix ${prefix.id}
+
+    # Copy and rename DRAGEN usage
+    find \$PWD \\
+        -type f \\
+        -name "*_usage.txt" \\
+        -exec cp "{}" "joint_cnv_usage.txt" \\;
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
