@@ -11,9 +11,9 @@ process DRAGEN_JOINT_SMALL_VARIANTS {
     path(reference_directory)
 
     output:
-    tuple val(task.ext.prefix), path("${task.ext.prefix.id}.vcf*"), emit: joint_small_variants
-    tuple val(task.ext.prefix), path("*hard-filtered.vcf*")       , emit: joint_small_variants_filtered
-    path("versions.yml")                                          , emit: versions
+    tuple val(task.ext.prefix), path("${task.ext.prefix.id}.vcf.gz"), emit: joint_small_variants
+    tuple val(task.ext.prefix), path("*hard-filtered.vcf.gz")       , emit: joint_small_variants_filtered
+    path("versions.yml")                                            , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
