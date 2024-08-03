@@ -197,7 +197,7 @@ workflow DRAGEN_CGS {
 
     // Output usage information
     ch_dragen_usage.map {
-        def meta = it.getSimpleName().split("_")[0]
+        def meta = it.getSimpleName().split("_usage")[0]
         def data = it.text.split("\\: ").join('\t')
         return "Accession\tLicense Type\tUsage\n${meta}\t${data}"
     }
