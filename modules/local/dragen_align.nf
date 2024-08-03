@@ -21,7 +21,7 @@ process DRAGEN_ALIGN {
     path("dragen/*.hard-filtered.gvcf.gz"), emit: hard_filtered_gvcf       , optional: true
     path("dragen/*.tn.tsv.gz")            , emit: tangent_normalized_counts, optional: true
     path("dragen/*.bam")                  , emit: bam
-    path("${meta.id}_usage.txt")          , emit: sample_usage             , optional: true
+    path("${meta.id}_usage.txt")          , emit: usage                    , optional: true
     path("versions.yml")                  , emit: versions
 
     when:

@@ -13,7 +13,7 @@ process DRAGEN_JOINT_SMALL_VARIANTS {
     output:
     tuple val(task.ext.prefix), path("${task.ext.prefix.id}.vcf.gz"), emit: joint_small_variants
     tuple val(task.ext.prefix), path("*hard-filtered.vcf.gz")       , emit: joint_small_variants_filtered
-    path("joint_small_variants_usage.txt")                          , emit: sample_usage, optional: true
+    path("joint_small_variants_usage.txt")                          , emit: usage                        , optional: true
     path("versions.yml")                                            , emit: versions
 
     when:

@@ -93,6 +93,7 @@ workflow DRAGEN_CGS {
 
     main:
     ch_versions        = Channel.empty()
+    ch_dragen_usage    = Channel.empty()
     ch_joint_vcf_files = Channel.empty()
 
     //
@@ -151,7 +152,8 @@ workflow DRAGEN_CGS {
         ch_adapter2_file.collect(),
         ch_dbsnp_file.collect()
     )
-    ch_versions = ch_versions.mix(DRAGEN_ALIGN.out.versions)
+    ch_versions     = ch_versions.mix(DRAGEN_ALIGN.out.versions)
+    ch_dragen_usage = ch_dragen_usage.mix(DRAGEN_ALIGN.out.usage)
 
     //
     // MODULE: Batch joint genotype CNV
@@ -162,6 +164,7 @@ workflow DRAGEN_CGS {
             ch_reference_dir.collect()
         )
         ch_versions        = ch_versions.mix(DRAGEN_JOINT_CNV.out.versions)
+        ch_dragen_usage    = ch_dragen_usage.mix(DRAGEN_JOINT_CNV.mix.usage)
         ch_joint_vcf_files = ch_joint_vcf_files.mix(DRAGEN_JOINT_CNV.out.joint_cnv)
     }
 
@@ -174,6 +177,7 @@ workflow DRAGEN_CGS {
             ch_reference_dir.collect()
         )
         ch_versions        = ch_versions.mix(DRAGEN_JOINT_SMALL_VARIANTS.out.versions)
+        ch_dragen_usage    = ch_dragen_usage.mix(DRAGEN_JOINT_SMALL_VARIANTS.out.usage)
         ch_joint_vcf_files = ch_joint_vcf_files.mix(DRAGEN_JOINT_SMALL_VARIANTS.out.joint_small_variants)
         ch_joint_vcf_files = ch_joint_vcf_files.mix(DRAGEN_JOINT_SMALL_VARIANTS.out.joint_small_variants_filtered)
     }
@@ -187,8 +191,21 @@ workflow DRAGEN_CGS {
             ch_reference_dir.collect()
         )
         ch_versions        = ch_versions.mix(DRAGEN_JOINT_SV.out.versions)
+        ch_dragen_usage    = ch_dragen_usage.mix(DRAGEN_JOINT_SV.out.usage)
         ch_joint_vcf_files = ch_joint_vcf_files.mix(DRAGEN_JOINT_SV.out.joint_sv)
     }
+
+    // Output usage information
+    ch_dragen_usage.map {
+        def meta = it.getSimpleName().split("_")[0]
+        def data = it.text.split("\\: ").join('\t')
+        return "Accession\tLicense Type\tUsage\n${meta}\t${data}"
+    }
+    .collectFile(
+        name      : "DRAGEN_usage.tsv",
+        keepHeader: true,
+        storeDir  : "${params.outdir}/pipeline_info"
+    )
 
     //
     // MODULE: Split joint genotyped VCF files by sample

@@ -12,7 +12,7 @@ process DRAGEN_JOINT_CNV {
 
     output:
     tuple val(task.ext.prefix), path("*cnv.vcf.gz"), emit: joint_cnv
-    path("joint_cnv_usage.txt")                    , emit: sample_usage, optional: true
+    path("joint_cnv_usage.txt")                    , emit: usage    , optional: true
     path("versions.yml")                           , emit: versions
 
     when:
