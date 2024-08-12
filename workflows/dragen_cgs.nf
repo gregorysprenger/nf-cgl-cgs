@@ -197,15 +197,15 @@ workflow DRAGEN_CGS {
 
     // Output usage information
     ch_dragen_usage.map {
-        def meta = it.getSimpleName().split("_usage")[0]
-        def data = it.text.split("\\: ").join('\t')
-        return "Accession\tLicense Type\tUsage\n${meta}\t${data}"
-    }
-    .collectFile(
-        name      : "DRAGEN_usage.tsv",
-        keepHeader: true,
-        storeDir  : "${params.outdir}/pipeline_info"
-    )
+                        def meta = it.getSimpleName().split("_usage")[0]
+                        def data = it.text.split("\\: ").join('\t')
+                        return "Accession\tLicense Type\tUsage\n${meta}\t${data}"
+                    }
+                    .collectFile(
+                        name      : "DRAGEN_usage.tsv",
+                        keepHeader: true,
+                        storeDir  : "${params.outdir}/pipeline_info"
+                    )
 
     //
     // MODULE: Split joint genotyped VCF files by sample
