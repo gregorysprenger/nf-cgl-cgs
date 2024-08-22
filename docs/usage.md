@@ -91,7 +91,7 @@ The DRAGEN alignment process requires several reference parameters to properly a
 The DRAGEN can output variant calls in VCF or gVCF format. By default, gVCF files will be generated. To generate VCF files, set the following parameter to `false`.
 
 ```bash
---output_gvcf true
+--create_gvcf true
 ```
 
 #### Trimming of adapter sequences

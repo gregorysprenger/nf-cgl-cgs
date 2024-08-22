@@ -107,7 +107,7 @@
             "description": "",
             "default": "",
             "properties": {
-                "output_gvcf": {
+                "create_gvcf": {
                     "type": "boolean",
                     "default": true,
                     "description": "Generate gVCF outputs during DRAGEN align. Set to 'false' to generate VCF outputs."
