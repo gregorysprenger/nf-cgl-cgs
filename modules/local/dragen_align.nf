@@ -17,12 +17,14 @@ process DRAGEN_ALIGN {
     path(dbsnp_file)
 
     output:
-    tuple val(meta), path ("dragen/*")    , emit: dragen_output
-    path("dragen/*.hard-filtered.gvcf.gz"), emit: hard_filtered_gvcf       , optional: true
-    path("dragen/*.tn.tsv.gz")            , emit: tangent_normalized_counts, optional: true
-    path("dragen/*.bam")                  , emit: bam
-    path("${meta.id}_usage.txt")          , emit: usage                    , optional: true
-    path("versions.yml")                  , emit: versions
+    tuple val(meta), path ("dragen/*")          , emit: dragen_output
+    path("dragen/*.hard-filtered.gvcf.gz")      , emit: hard_filtered_gvcf       , optional: true
+    path("dragen/*.cnv_metrics.csv")            , emit: cnv_metrics
+    path("dragen/*.vc_metrics.csv")             , emit: vc_metrics
+    path("${meta.id}_usage.txt")                , emit: usage                    , optional: true
+    path("dragen/*.tn.tsv.gz")                  , emit: tangent_normalized_counts, optional: true
+    path("dragen/*.bam")                        , emit: bam
+    path("versions.yml")                        , emit: versions
 
     when:
     task.ext.when == null || task.ext.when

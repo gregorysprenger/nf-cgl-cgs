@@ -92,9 +92,10 @@ workflow DRAGEN_CGS {
     ch_samples            // channel: [ val(meta), path(file) ]
 
     main:
-    ch_versions        = Channel.empty()
-    ch_dragen_usage    = Channel.empty()
-    ch_joint_vcf_files = Channel.empty()
+    ch_versions           = Channel.empty()
+    ch_dragen_usage       = Channel.empty()
+    ch_joint_vcf_files    = Channel.empty()
+    ch_joint_metric_files = Channel.empty()
 
     //
     // SUBWORKFLOW: Demultiplex samples
@@ -166,6 +167,28 @@ workflow DRAGEN_CGS {
         ch_versions        = ch_versions.mix(DRAGEN_JOINT_CNV.out.versions)
         ch_dragen_usage    = ch_dragen_usage.mix(DRAGEN_JOINT_CNV.mix.usage)
         ch_joint_vcf_files = ch_joint_vcf_files.mix(DRAGEN_JOINT_CNV.out.joint_cnv)
+
+        // Replace lines in '<sample name>.cnv_metrics.csv' file
+        // with values from joint called metrics
+        ch_cnv_metrics = DRAGEN_JOINT_CNV.out.cnv_metrics
+                            .combine(DRAGEN_ALIGN.out.cnv_metrics)
+                                .map{
+                                    joint, sample ->
+                                        joint_lines = joint.readLines()
+                                        sample_lines = sample.readLines()
+
+                                        joint_lines.each{
+                                            def pattern = it.split(',')[0..2].join(',')
+                                            sample_lines.toString().replaceAll(("${pattern}.+"), (it)) as List
+                                        }
+                                        [ sample.getSimpleName(), sample_lines.join('\n') ]
+                                }
+                                .collectFile{
+                                    sample, output ->
+                                        [ "${params.outdir}/QC_metrics/${sample}/${sample}.cnv_metrics.csv", output ]
+                                }
+
+        ch_joint_metric_files = ch_joint_metric_files.mix(ch_cnv_metrics)
     }
 
     //
@@ -180,6 +203,34 @@ workflow DRAGEN_CGS {
         ch_dragen_usage    = ch_dragen_usage.mix(DRAGEN_JOINT_SMALL_VARIANTS.out.usage)
         ch_joint_vcf_files = ch_joint_vcf_files.mix(DRAGEN_JOINT_SMALL_VARIANTS.out.joint_small_variants)
         ch_joint_vcf_files = ch_joint_vcf_files.mix(DRAGEN_JOINT_SMALL_VARIANTS.out.joint_small_variants_filtered)
+
+        // Get values from single sample and joint called '*.vc_metrics.csv' files
+        // and get all lines with sample name from joint called '*.vc_metrics.csv' file
+        // and save to <sample name>.vc_metrics.csv file
+        ch_small_variant_metrics = DRAGEN_JOINT_SMALL_VARIANTS.out.vc_metrics
+                                    .combine(DRAGEN_ALIGN.out.vc_metrics)
+                                    .map{
+                                        joint, sample ->
+                                            def sample_name = sample.getSimpleName()
+                                            def joint_sample_lines = joint.text.findAll(".+${sample_name}.+")
+
+                                            // Find values in files
+                                            def number_samples = joint.text.findAll("VARIANT CALLER SUMMARY,,Number of samples,.+")
+                                            def reads_processed = sample.text.findAll("VARIANT CALLER SUMMARY,,Reads Processed,.+")
+                                            def child_sample = sample.text.findAll("VARIANT CALLER SUMMARY,,Child Sample,.+")
+                                            def autosome_callability = sample.text.findAll("VARIANT CALLER POSTFILTER,.+,Percent Autosome Callability,.+")[0]
+
+                                            // Replace autosome callability in joint_sample_lines and create output
+                                            def updated_lines = joint_sample_lines.collect{ it.replaceAll(/.+,Percent Autosome Callability,.+/, autosome_callability) }
+                                            def output = number_samples + reads_processed + child_sample + updated_lines
+                                            [ sample_name, output.join('\n') ]
+                                    }
+                                    .collectFile{
+                                        sample, output ->
+                                            [ "${params.outdir}/QC_metrics/${sample}/${sample}.vc_metrics.csv", output]
+                                    }
+
+        ch_joint_metric_files = ch_joint_metric_files.mix(ch_small_variant_metrics)
     }
 
     //
@@ -193,6 +244,19 @@ workflow DRAGEN_CGS {
         ch_versions        = ch_versions.mix(DRAGEN_JOINT_SV.out.versions)
         ch_dragen_usage    = ch_dragen_usage.mix(DRAGEN_JOINT_SV.out.usage)
         ch_joint_vcf_files = ch_joint_vcf_files.mix(DRAGEN_JOINT_SV.out.joint_sv)
+
+        // Parse metrics for each sample
+        // from joint called '*.sv_metrics.csv' file
+        ch_sv_metrics = DRAGEN_JOINT_SV.out.sv_metrics
+                            .splitText(elem: 0)
+                            .collectFile{
+                                def sample = it.split(",")[1]
+                                [ "${params.outdir}/QC_metrics/${sample}/${sample}.sv_metrics.csv", it ]
+                            }
+
+        ch_joint_metric_files = ch_joint_metric_files.mix(ch_sv_metrics)
+    }
+
     //
     // MODULE: Parse QC metrics
     //
