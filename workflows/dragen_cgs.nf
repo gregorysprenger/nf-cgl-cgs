@@ -104,9 +104,9 @@ workflow DRAGEN_CGS {
             ch_mgi_samplesheet,
             ch_illumina_run_dir.collect()
         )
-        ch_versions = ch_versions.mix(DEMULTIPLEX.out.versions)
-
         ch_dragen_usage = DEMULTIPLEX.out.usage
+        ch_samples      = DEMULTIPLEX.out.samples
+        ch_versions     = ch_versions.mix(DEMULTIPLEX.out.versions)
     }
 
     if (params.sample_info) {
