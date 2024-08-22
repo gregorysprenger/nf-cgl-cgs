@@ -11,6 +11,8 @@ process DRAGEN_DEMULTIPLEX {
     path(rundir)
 
     output:
+    path("${task.ext.prefix}/fastq_list.csv"), emit: fastq_list
+    path("${task.ext.prefix}/*")             , emit: demux_files
     path("*_usage.txt")                      , emit: usage      , optional: true
     path("versions.yml")                     , emit: versions
 
@@ -21,7 +23,7 @@ process DRAGEN_DEMULTIPLEX {
     def prefix     = task.ext.prefix
     def first_tile = params.bcl_first_tile ? "--first-tile-only true" : ""
     """
-    mkdir -p demux_fastq
+    mkdir -p ${prefix}
 
     # Perform demultiplexing of samples
     /opt/dragen/4.3.6/bin/dragen \\
@@ -31,12 +33,13 @@ process DRAGEN_DEMULTIPLEX {
         ${first_tile} \\
         --sample-sheet ${samplesheet} \\
         --bcl-input-directory ${rundir} \\
-        --output-directory demux_fastq
+        --output-directory ${prefix}
 
-    # Copy RunParameters.xml to demux_fastq/Reports
+    # Copy RunParameters.xml to ${prefix}/Reports
     find ${rundir} \\
         -type f \\
         -name "RunParameters.xml" \\
+        -exec cp "{}" ${prefix}/Reports/ \\;
 
     # Copy and rename DRAGEN usage
     find \$PWD \\
@@ -52,9 +55,9 @@ process DRAGEN_DEMULTIPLEX {
 
     stub:
     """
-    mkdir -p demux_fastq
+    mkdir -p ${prefix}
 
-    cp ${projectDir}/assets/stub/demux_fastq/Reports/fastq_list.csv demux_fastq/
+    cp ${projectDir}/assets/stub/demux_fastq/Reports/fastq_list.csv ${prefix}/
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
