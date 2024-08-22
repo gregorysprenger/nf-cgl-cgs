@@ -193,7 +193,14 @@ workflow DRAGEN_CGS {
         ch_versions        = ch_versions.mix(DRAGEN_JOINT_SV.out.versions)
         ch_dragen_usage    = ch_dragen_usage.mix(DRAGEN_JOINT_SV.out.usage)
         ch_joint_vcf_files = ch_joint_vcf_files.mix(DRAGEN_JOINT_SV.out.joint_sv)
-    }
+    //
+    // MODULE: Parse QC metrics
+    //
+    PARSE_QC_METRICS (
+        ch_mgi_samplesheet.collect().ifEmpty([])
+        DRAGEN_ALIGN.out.metric_files.collect(),
+        ch_joint_metric_files.collect().ifEmpty([])
+    )
 
     // Output usage information
     ch_dragen_usage.map {
