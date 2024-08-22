@@ -51,6 +51,22 @@ workflow DEMULTIPLEX {
     )
     ch_versions = ch_versions.mix(VERIFY_FASTQ_LIST.out.versions)
 
+    // Use 'params.demux_outdir' path for paths in 'fastq_list.csv' and save
+    if (params.demux_outdir) {
+        DRAGEN_DEMULTIPLEX.out.fastq_list.map{
+            def batch_name = it.tostring().split('/')[-2]
+            def pattern = it.toString().split('/')[0..-3].join('/')
+
+            def lines = it.readLines()
+            lines.toString().replaceAll(("${pattern}"), ("${params.demux_outdir}")) as List
+            [ batch_name, lines.join('\n') ]
+        }
+        .collectFile{
+            batch_name, output ->
+                [ "${params.demux_outdir}/${batch_name}/fastq_list.csv", output ]
+        }
+    }
+
     emit:
     samples  = VERIFY_FASTQ_LIST.out.samples
     usage    = DRAGEN_DEMULTIPLEX.out.usage
