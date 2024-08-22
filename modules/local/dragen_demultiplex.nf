@@ -11,9 +11,8 @@ process DRAGEN_DEMULTIPLEX {
     path(rundir)
 
     output:
-    path("demux_fastq/fastq_list.csv"), emit: fastq_list
-    path("demux_fastq/*")             , emit: demux_files
-    path("versions.yml")              , emit: versions
+    path("*_usage.txt")                      , emit: usage      , optional: true
+    path("versions.yml")                     , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -38,7 +37,12 @@ process DRAGEN_DEMULTIPLEX {
     find ${rundir} \\
         -type f \\
         -name "RunParameters.xml" \\
-        -exec cp '{}' demux_fastq/Reports/ \\;
+
+    # Copy and rename DRAGEN usage
+    find \$PWD \\
+        -type f \\
+        -name "*_usage.txt" \\
+        -exec cp "{}" "demultiplex_usage.txt" \\;
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
