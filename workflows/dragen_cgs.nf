@@ -106,7 +106,7 @@ workflow DRAGEN_CGS {
         )
         ch_versions = ch_versions.mix(DEMULTIPLEX.out.versions)
 
-        ch_samples = DEMULTIPLEX.out.samples
+        ch_dragen_usage = DEMULTIPLEX.out.usage
     }
 
     if (params.sample_info) {
