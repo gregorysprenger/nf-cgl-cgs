@@ -23,7 +23,7 @@ process DRAGEN_DEMULTIPLEX {
     def prefix     = task.ext.prefix
     def first_tile = params.bcl_first_tile ? "--first-tile-only true" : ""
     """
-    mkdir -p ${prefix}
+    mkdir -p ${prefix.id}
 
     # Perform demultiplexing of samples
     /opt/dragen/4.3.6/bin/dragen \\
@@ -33,13 +33,13 @@ process DRAGEN_DEMULTIPLEX {
         ${first_tile} \\
         --sample-sheet ${samplesheet} \\
         --bcl-input-directory ${rundir} \\
-        --output-directory ${prefix}
+        --output-directory ${prefix.id}
 
-    # Copy RunParameters.xml to ${prefix}/Reports
+    # Copy RunParameters.xml to ${prefix.id}/Reports
     find ${rundir} \\
         -type f \\
         -name "RunParameters.xml" \\
-        -exec cp "{}" ${prefix}/Reports/ \\;
+        -exec cp "{}" ${prefix.id}/Reports/ \\;
 
     # Copy and rename DRAGEN usage
     find \$PWD \\
@@ -54,10 +54,12 @@ process DRAGEN_DEMULTIPLEX {
     """
 
     stub:
+    def prefix     = task.ext.prefix
+    def first_tile = params.bcl_first_tile ? "--first-tile-only true" : ""
     """
-    mkdir -p ${prefix}
+    mkdir -p ${prefix.id}
 
-    cp ${projectDir}/assets/stub/demux_fastq/Reports/fastq_list.csv ${prefix}/
+    cp ${projectDir}/assets/stub/demux_fastq/Reports/fastq_list.csv ${prefix.id}/
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
