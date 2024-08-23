@@ -13,7 +13,7 @@ process DRAGEN_JOINT_SV {
     output:
     tuple val(task.ext.prefix), path("*.vcf.gz"), emit: joint_sv
     path("joint_sv_usage.txt")                  , emit: usage     , optional: true
-    path("*.sv_metrics.csv")                    , emit: sv_metrics
+    path("*.sv_metrics.csv")                    , emit: metrics
     path("versions.yml")                        , emit: versions
 
     when:
