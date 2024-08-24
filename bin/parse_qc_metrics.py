@@ -309,9 +309,6 @@ def save_all_metrics(all_qc_dataframes, filename_prefix, outdir):
     :param filename_prefix: Prefix for output filenames
     :param outdir: Output directory to save file
     """
-    for x in all_qc_dataframes:
-        print(x)
-        print(x.columns)
     all_qc_metrics = reduce(
         lambda left, right: pd.merge(left, right, on=["SAMPLE ID"], how="outer"),
         all_qc_dataframes,
