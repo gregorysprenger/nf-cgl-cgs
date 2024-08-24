@@ -190,7 +190,7 @@ def parse_vc_metrics(metric_files):
 
     metrics_files = [f.strip() for f in metric_files if f.endswith(".vc_metrics.csv")]
 
-    return parse_metrics(metrics_files, metric_dict, "VARIANT CALLER POSTFILTER")
+    return parse_metrics(metrics_files, metric_dict, "CALLER POSTFILTER")
 
 
 def parse_cnv_metrics(metric_files):
@@ -220,7 +220,9 @@ def parse_metrics(files, metric_dict, line_startswith):
 
     for file in files:
         lines = [
-            line.strip() for line in open(file) if line.startswith(line_startswith)
+            line.strip()
+            for line in open(file)
+            if line.startswith(line_startswith) or line_startswith in line
         ]
 
         data_dict = {}
