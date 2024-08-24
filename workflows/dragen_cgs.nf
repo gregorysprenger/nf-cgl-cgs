@@ -285,6 +285,18 @@ workflow DRAGEN_CGS {
     )
     ch_versions = ch_versions.mix(BCFTOOLS_SPLIT_VCF.out.versions)
 
+    // Output DRAGEN usage information
+    ch_dragen_usage.map {
+                        def meta = it.getSimpleName().split("_usage")[0]
+                        def data = it.text.split("\\: ").join('\t')
+                        return "Accession\tLicense Type\tUsage\n${meta}\t${data}"
+                    }
+                    .collectFile(
+                        name      : "DRAGEN_usage.tsv",
+                        keepHeader: true,
+                        storeDir  : "${params.outdir}/pipeline_info"
+                    )
+
     emit:
     versions = ch_versions
 }
