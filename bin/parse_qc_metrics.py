@@ -402,7 +402,7 @@ def main():
         filename_prefix = ""
 
     # Gather all DRAGEN metric files
-    metric_files = [f for f in glob.glob(f"{inputdir}/**metrics.csv", recursive=True)]
+    metric_files = [f for f in glob.glob(f"{inputdir}/**/*metrics.csv", recursive=True)]
 
     mapping_metrics = parse_mapping_metrics(metric_files)
     wgs_coverage_metrics = parse_wgs_coverage_metrics(metric_files)
