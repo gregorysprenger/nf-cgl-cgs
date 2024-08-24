@@ -171,23 +171,24 @@ workflow DRAGEN_CGS {
 
         // Replace lines in '<sample name>.cnv_metrics.csv' file
         // with values from joint called metrics
-        ch_cnv_metrics = DRAGEN_JOINT_CNV.out.cnv_metrics
-                            .combine(DRAGEN_ALIGN.out.cnv_metrics)
-                                .map{
-                                    joint, sample ->
-                                        joint_lines = joint.readLines()
-                                        sample_lines = sample.readLines()
+        ch_cnv_metrics = DRAGEN_JOINT_CNV.out.metrics.collect()
+                            .combine(DRAGEN_ALIGN.out.metrics.flatten().filter( ~/.*cnv_metrics.csv/ ))
+                            .map{
+                                joint, sample ->
+                                    joint_lines = joint.readLines()
+                                    sample_lines = sample.readLines()
 
-                                        joint_lines.each{
-                                            def pattern = it.split(',')[0..2].join(',')
-                                            sample_lines.toString().replaceAll(("${pattern}.+"), (it)) as List
-                                        }
-                                        [ sample.getSimpleName(), sample_lines.join('\n') ]
-                                }
-                                .collectFile{
-                                    sample, output ->
-                                        [ "${params.outdir}/QC_metrics/${sample}/${sample}.cnv_metrics.csv", output ]
-                                }
+                                    joint_lines.each{
+                                        def pattern = it.split(',')[0..2].join(',')
+                                        sample_lines.toString().replaceAll(("${pattern}.+"), (it)) as List
+                                    }
+                                    [ sample.getSimpleName(), sample_lines.join('\n') ]
+                            }
+                            .collectFile( storeDir: "${params.outdir}/DRAGEN_output" )
+                            {
+                                sample, output ->
+                                    [ "${sample}/${sample}.cnv_metrics.csv", output ]
+                            }
 
         ch_joint_metric_files = ch_joint_metric_files.mix(ch_cnv_metrics)
     }
@@ -208,8 +209,8 @@ workflow DRAGEN_CGS {
         // Get values from single sample and joint called '*.vc_metrics.csv' files
         // and get all lines with sample name from joint called '*.vc_metrics.csv' file
         // and save to <sample name>.vc_metrics.csv file
-        ch_small_variant_metrics = DRAGEN_JOINT_SMALL_VARIANTS.out.vc_metrics
-                                    .combine(DRAGEN_ALIGN.out.vc_metrics)
+        ch_small_variant_metrics = DRAGEN_JOINT_SMALL_VARIANTS.out.metrics.collect()
+                                    .combine(DRAGEN_ALIGN.out.metrics.flatten().filter( ~/.*vc_metrics.csv/ ))
                                     .map{
                                         joint, sample ->
                                             def sample_name = sample.getSimpleName()
@@ -226,9 +227,9 @@ workflow DRAGEN_CGS {
                                             def output = number_samples + reads_processed + child_sample + updated_lines
                                             [ sample_name, output.join('\n') ]
                                     }
-                                    .collectFile{
-                                        sample, output ->
-                                            [ "${params.outdir}/QC_metrics/${sample}/${sample}.vc_metrics.csv", output]
+                                    .collectFile( storeDir: "${params.outdir}/DRAGEN_output" )
+                                    { sample, output ->
+                                        [ "${sample}/${sample}.vc_metrics.csv", output ]
                                     }
 
         ch_joint_metric_files = ch_joint_metric_files.mix(ch_small_variant_metrics)
@@ -248,11 +249,12 @@ workflow DRAGEN_CGS {
 
         // Parse metrics for each sample
         // from joint called '*.sv_metrics.csv' file
-        ch_sv_metrics = DRAGEN_JOINT_SV.out.sv_metrics
+        ch_sv_metrics = DRAGEN_JOINT_SV.out.metrics
                             .splitText(elem: 0)
-                            .collectFile{
+                            .collectFile( storeDir: "${params.outdir}/DRAGEN_output" )
+                            {
                                 def sample = it.split(",")[1]
-                                [ "${params.outdir}/QC_metrics/${sample}/${sample}.sv_metrics.csv", it ]
+                                [ "${sample}/${sample}.sv_metrics.csv", it ]
                             }
 
         ch_joint_metric_files = ch_joint_metric_files.mix(ch_sv_metrics)
