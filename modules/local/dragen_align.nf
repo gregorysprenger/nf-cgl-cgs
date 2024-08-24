@@ -75,6 +75,15 @@ process DRAGEN_ALIGN {
         --cnv-enable-self-normalization true \\
         --variant-annotation-assembly GRCh38
 
+    # Create md5sum of files
+    find dragen/ \\
+        -type f \\
+        -name "*.gz*"  -o \\
+        -name "*.gff3" -o \\
+        -name "*.bam*" \\
+        | xargs -I "{}" \\
+            bash -c "md5sum {} | sed 's|dragen/||g' > {}.md5sum"
+
     # Copy and rename DRAGEN usage
     find dragen/ \\
         -type f \\

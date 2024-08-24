@@ -8,8 +8,8 @@ process BCFTOOLS_SPLIT_VCF {
     tuple val(meta), path(joint_vcf_file)
 
     output:
-    tuple val(meta), path("*.vcf.gz"), emit: split_vcf
-    path("versions.yml")             , emit: versions
+    tuple val(meta), path("*.vcf.gz*"), emit: split_vcf
+    path("versions.yml")              , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -23,6 +23,8 @@ process BCFTOOLS_SPLIT_VCF {
         --samples ${meta.id} \\
         --output "\${output_filename}" \\
         ${joint_vcf_file}
+
+    md5sum "\${output_filename}" > "\${output_filename}.md5sum"
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
