@@ -280,8 +280,9 @@ def save_mgi_metrics(
 
     df.rename(columns=columns_to_rename, inplace=True)
 
-    # Only output columns above
-    df = df[
+    # Output select columns
+    df = get_columns(
+        df,
         [
             "ACCESSION NUMBER",
             "RUN ID",
@@ -291,8 +292,8 @@ def save_mgi_metrics(
             "Library Input (ng)",
             "Capture Input (ng)",
         ]
-        + list(columns_to_rename.values())
-    ]
+        + list(columns_to_rename.values()),
+    )
     df.to_excel(
         f"{outdir}/{filename_prefix}_MGI_QC.xlsx",
         index=False,
@@ -330,7 +331,8 @@ def save_genoox_metrics(mgi_worksheet, mapping_metrics, filename_prefix, outdir)
     :param outdir: Output directory to save file
     """
     # Use only specified columns from MGI worksheet
-    cleaned_mgi_worksheet = mgi_worksheet[
+    cleaned_mgi_worksheet = get_columns(
+        mgi_worksheet,
         [
             "ACCESSION NUMBER",
             "RUN ID",
@@ -338,25 +340,34 @@ def save_genoox_metrics(mgi_worksheet, mapping_metrics, filename_prefix, outdir)
             "Total DNA yield (ng)",
             "260/280",
             "Library Input (ng)",
-        ]
-    ].copy()
+        ],
+    )
 
-    single_sample_stats = mapping_metrics[
-        ["SAMPLE ID", "Total bases", "PCT Q30 bases R1", "PCT Q30 bases R2"]
-    ].copy()
+    # Get specified single sample metrics
+    single_sample_stats = get_columns(
+        mapping_metrics,
+        ["SAMPLE ID", "Total bases", "PCT Q30 bases R1", "PCT Q30 bases R2"],
+    )
     single_sample_stats.rename(
-        columns={
-            "SAMPLE ID": "Library",
-            "Total bases": "Total Bases",
-            "PCT Q30 bases R1": "Percent Q30 (R1)",
-            "PCT Q30 bases R2": "Percent Q30 (R2)",
-        },
+        lambda c: c
+        if any(
+            k in c
+            for k in {
+                "SAMPLE ID": "Library",
+                "Total bases": "Total Bases",
+                "PCT Q30 bases R1": "Percent Q30 (R1)",
+                "PCT Q30 bases R2": "Percent Q30 (R2)",
+            }
+        )
+        else c,
+        axis=1,
         inplace=True,
     )
 
-    final_coverage_stats = mapping_metrics[
-        ["SAMPLE ID", "Estimated sample contamination"]
-    ].copy()
+    # Get sample contamination metrics
+    final_coverage_stats = get_columns(
+        mapping_metrics, ["SAMPLE ID", "Estimated sample contamination"]
+    )
     final_coverage_stats.rename(
         columns={
             "SAMPLE ID": "Sample",
