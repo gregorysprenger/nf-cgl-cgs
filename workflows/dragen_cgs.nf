@@ -8,6 +8,7 @@ include { DEMULTIPLEX                 } from '../subworkflows/local/demultiplex'
 include { DRAGEN_ALIGN                } from '../modules/local/dragen_align'
 include { DRAGEN_JOINT_CNV            } from '../modules/local/dragen_joint_cnv'
 include { DRAGEN_JOINT_SMALL_VARIANTS } from '../modules/local/dragen_joint_small_variants'
+include { PARSE_QC_METRICS            } from '../modules/local/parse_qc_metrics'
 include { BCFTOOLS_SPLIT_VCF          } from '../modules/local/bcftools_split_vcf'
 
 /*
@@ -261,22 +262,11 @@ workflow DRAGEN_CGS {
     // MODULE: Parse QC metrics
     //
     PARSE_QC_METRICS (
-        ch_mgi_samplesheet.collect().ifEmpty([])
-        DRAGEN_ALIGN.out.metric_files.collect(),
+        ch_mgi_samplesheet.collect().ifEmpty([]),
+        DRAGEN_ALIGN.out.metrics.collect(),
         ch_joint_metric_files.collect().ifEmpty([])
     )
-
-    // Output usage information
-    ch_dragen_usage.map {
-                        def meta = it.getSimpleName().split("_usage")[0]
-                        def data = it.text.split("\\: ").join('\t')
-                        return "Accession\tLicense Type\tUsage\n${meta}\t${data}"
-                    }
-                    .collectFile(
-                        name      : "DRAGEN_usage.tsv",
-                        keepHeader: true,
-                        storeDir  : "${params.outdir}/pipeline_info"
-                    )
+    ch_versions = ch_versions.mix(PARSE_QC_METRICS.out.versions)
 
     //
     // MODULE: Split joint genotyped VCF files by sample
