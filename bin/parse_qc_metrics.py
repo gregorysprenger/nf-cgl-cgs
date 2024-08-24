@@ -75,6 +75,17 @@ def get_list_value(lst, sep, index, value):
     return next((s.split(sep)[index] for s in lst if value in s), None)
 
 
+def get_columns(df, col_list):
+    """
+    Subset a DataFrame from a list of columns if those columns are present in the DataFrame.
+
+    :param df: DataFrame to subset columns from
+    :param col_list: List of column names to subset DataFrame
+    :return: DataFrame with a specified subset of columns if they exist
+    """
+    return df[[col for col in col_list if col in df.columns]].copy()
+
+
 def parse_mapping_metrics(metric_files):
     """
     Parse metrics out of all files that end with `mapping_metrics.csv`.
@@ -386,7 +397,7 @@ def main():
     outdir = get_output_directory(args.outdir)
 
     if args.prefix:
-        filename_prefix = f"{args.prefix}"
+        filename_prefix = args.prefix
     else:
         filename_prefix = ""
 
