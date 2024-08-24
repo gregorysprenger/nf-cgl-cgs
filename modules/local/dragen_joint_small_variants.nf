@@ -61,7 +61,7 @@ process DRAGEN_JOINT_SMALL_VARIANTS {
         --output-file-prefix ${prefix.id}
     END_CMDS
 
-    cp -f ${projectDir}/assets/test_data/dragen_path/joint_genotyped_vcf/*.vcf.gz \$PWD
+    cp -f ${projectDir}/assets/test_data/dragen_path/joint_genotyped_vcf/* \$PWD
     for file in *.vcf.gz; do
         mv \$file \${file/joint_genotyped/${prefix.id}}
     done
