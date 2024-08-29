@@ -8,6 +8,7 @@ import sys
 from functools import reduce
 
 import pandas as pd
+import xlsxwriter
 
 
 def parseArgs():
