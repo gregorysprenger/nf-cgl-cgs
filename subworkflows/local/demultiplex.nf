@@ -47,14 +47,14 @@ workflow DEMULTIPLEX {
     //
     VERIFY_FASTQ_LIST (
         [],
-        DEMULTIPLEX.out.fastq_list
+        DRAGEN_DEMULTIPLEX.out.fastq_list
     )
     ch_versions = ch_versions.mix(VERIFY_FASTQ_LIST.out.versions)
 
     // Use 'params.demux_outdir' path for paths in 'fastq_list.csv' and save
     if (params.demux_outdir) {
         DRAGEN_DEMULTIPLEX.out.fastq_list.map{
-            def batch_name = it.tostring().split('/')[-2]
+            def batch_name = it.toString().split('/')[-2]
             def pattern = it.toString().split('/')[0..-3].join('/')
 
             def lines = it.readLines()
