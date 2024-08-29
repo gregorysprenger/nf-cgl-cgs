@@ -24,6 +24,10 @@ process BCFTOOLS_SPLIT_VCF {
         --output "\${output_filename}" \\
         ${joint_vcf_file}
 
+    # Index VCF file
+    tabix -p vcf "\${output_filename}"
+
+    # Create MD5SUM of VCF file
     md5sum "\${output_filename}" > "\${output_filename}.md5sum"
 
     cat <<-END_VERSIONS > versions.yml
