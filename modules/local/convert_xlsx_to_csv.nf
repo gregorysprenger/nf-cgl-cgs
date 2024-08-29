@@ -1,20 +1,21 @@
 process CONVERT_XLSX_TO_CSV {
-    tag "${meta.id}"
+    tag "${task.ext.prefix.id}"
     label 'process_low'
 
     container 'docker.io/gregorysprenger/pandas-excel:v2.2.2'
 
     input:
-    tuple val(meta), path(spreadsheet)
+    path(spreadsheet)
 
     output:
-    tuple val(meta), path("${meta.id}.csv"), emit: csv
-    path("versions.yml")                   , emit: versions
+    path("${task.ext.prefix.id}.csv"), emit: csv
+    path("versions.yml")             , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
 
     script:
+    def prefix = task.ext.prefix
     """
     #!/usr/bin/env python3
 
@@ -23,7 +24,25 @@ process CONVERT_XLSX_TO_CSV {
     import pandas as pd
 
     batch = pd.read_excel("${spreadsheet}".replace("\\\\", ""), engine="openpyxl", skiprows=1)
-    batch.to_csv("${meta.id}.csv", index=False)
+    batch.to_csv("${prefix.id}.csv", index=False)
+
+    # Output version information
+    with open("versions.yml", "w") as f:
+        f.write(f'"{subprocess.getoutput("echo ${task.process}")}":\\n')
+        f.write(f'    python: {platform.python_version()}\\n')
+    """
+
+    stub:
+    def prefix = task.ext.prefix
+    """
+    #!/usr/bin/env python3
+
+    import platform
+    import subprocess
+    import pandas as pd
+
+    batch = pd.read_excel("${spreadsheet}".replace("\\\\", ""), engine="openpyxl", skiprows=1)
+    batch.to_csv("${prefix.id}.csv", index=False)
 
     # Output version information
     with open("versions.yml", "w") as f:
