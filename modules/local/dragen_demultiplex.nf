@@ -54,8 +54,9 @@ process DRAGEN_DEMULTIPLEX {
     """
 
     stub:
-    def prefix     = task.ext.prefix
-    def first_tile = params.bcl_first_tile ? "--first-tile-only true" : ""
+    def dragen_version = "4.3.6"
+    def prefix         = task.ext.prefix
+    def first_tile     = params.bcl_first_tile ? "--first-tile-only true" : ""
     """
     mkdir -p ${prefix.id}
 
@@ -63,7 +64,7 @@ process DRAGEN_DEMULTIPLEX {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        dragen: \$(cat ${projectDir}/assets/stub/versions/dragen_version.txt)
+        dragen: ${dragen_version}
     END_VERSIONS
     """
 }
