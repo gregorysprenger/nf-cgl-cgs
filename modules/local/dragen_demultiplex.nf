@@ -1,5 +1,5 @@
 process DRAGEN_DEMULTIPLEX {
-    tag "${prefix.id}"
+    tag "${task.ext.prefix.id}"
     label 'dragen'
 
     container "${ workflow.profile == 'dragenaws' ?
@@ -11,10 +11,10 @@ process DRAGEN_DEMULTIPLEX {
     path(rundir)
 
     output:
-    path("${task.ext.prefix}/fastq_list.csv"), emit: fastq_list
-    path("${task.ext.prefix}/*")             , emit: demux_files
-    path("*_usage.txt")                      , emit: usage      , optional: true
-    path("versions.yml")                     , emit: versions
+    path("${task.ext.prefix.id}/fastq_list.csv"), emit: fastq_list
+    path("${task.ext.prefix.id}/*")             , emit: demux_files
+    path("*_usage.txt")                         , emit: usage      , optional: true
+    path("versions.yml")                        , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -59,7 +59,7 @@ process DRAGEN_DEMULTIPLEX {
     """
     mkdir -p ${prefix.id}
 
-    cp ${projectDir}/assets/stub/demux_fastq/Reports/fastq_list.csv ${prefix.id}/
+    cp -r ${projectDir}/assets/test_data/demux_fastq/* ${prefix.id}/
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
