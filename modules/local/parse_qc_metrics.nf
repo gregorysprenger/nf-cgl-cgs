@@ -1,7 +1,7 @@
 process PARSE_QC_METRICS {
     label 'process_low'
 
-    container 'docker.io/gregorysprenger/pandas-excel:v2.0.1'
+    container 'docker.io/gregorysprenger/pandas-excel:v2.2.2'
 
     input:
     path(mgi_worksheet)

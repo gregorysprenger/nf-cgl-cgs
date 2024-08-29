@@ -2,7 +2,7 @@ process CONVERT_XLSX_TO_CSV {
     tag "${meta.id}"
     label 'process_low'
 
-    container 'docker.io/gregorysprenger/pandas-excel:v2.0.1'
+    container 'docker.io/gregorysprenger/pandas-excel:v2.2.2'
 
     input:
     tuple val(meta), path(spreadsheet)
