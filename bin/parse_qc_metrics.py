@@ -392,6 +392,23 @@ def save_genoox_metrics(mgi_worksheet, mapping_metrics, filename_prefix, outdir)
     writer.close()
 
 
+def read_file_to_dataframe(file):
+    if file.endswith("tsv"):
+        df = pd.read_csv(file, sep="\t")
+    elif file.endswith("csv"):
+        df = pd.read_csv(file, sep=",")
+    elif file.endswith("xlsx"):
+        df = pd.read_excel(file, sheet_name="QC Metrics")
+    else:
+        return pd.DataFrame(columns=["SAMPLE ID"])
+
+    if "SAMPLE ID" in df.columns:
+        return df
+    else:
+        df["SAMPLE ID"] = None
+        return df
+
+
 def main():
     """
     Parse QC metrics for all files and save to Excel workbooks.
@@ -400,12 +417,7 @@ def main():
 
     # Check inputs
     inputdir = os.path.abspath(args.inputdir)
-
-    if args.mgi_worksheet:
-        mgi_worksheet = pd.read_excel(args.mgi_worksheet, sheet_name="QC Metrics")
-    else:
-        mgi_worksheet = pd.DataFrame(columns=["SAMPLE ID"])
-
+    mgi_worksheet = read_file_to_dataframe(args.mgi_worksheet)
     outdir = get_output_directory(args.outdir)
 
     if args.prefix:
