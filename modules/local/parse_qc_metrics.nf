@@ -31,8 +31,6 @@ process PARSE_QC_METRICS {
         --outdir \$PWD \\
         --prefix ${prefix.id}
 
-    touch abc.xlsx
-
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         python: \$(python3 --version 2>&1 | awk '{print \$2}')
