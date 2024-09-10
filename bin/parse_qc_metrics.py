@@ -5,6 +5,7 @@ import glob
 import os
 import re
 import sys
+from datetime import datetime
 from functools import reduce
 
 import pandas as pd
@@ -410,7 +411,8 @@ def main():
     if args.prefix:
         filename_prefix = args.prefix
     else:
-        filename_prefix = ""
+        timestamp = datetime.today().strftime("%Y%m%d")
+        filename_prefix = f"{timestamp}_CGS"
 
     # Gather all DRAGEN metric files
     metric_files = [f for f in glob.glob(f"{inputdir}/**/*metrics.csv", recursive=True)]
