@@ -143,7 +143,7 @@
                 },
                 "qc_cross_contamination": {
                     "type": "string",
-                    "description": "Path to VCF file that includes marker sites (RSIDs) with population allele frequencies that are close to 0.5",
+                    "description": "Path to VCF file that includes marker sites (RSIDs) with population allele frequencies that are close to 0.5.",
                     "pattern": "^\\S+\\.vcf?(\\.gz)?$",
                     "format": "file-path"
                 },
@@ -370,7 +370,8 @@
                 "multiqc_methods_description": {
                     "type": "string",
                     "description": "Custom MultiQC yaml file containing HTML including a methods description.",
-                    "fa_icon": "fas fa-cog"
+                    "fa_icon": "fas fa-cog",
+                    "hidden": true
                 },
                 "validate_params": {
                     "type": "boolean",
