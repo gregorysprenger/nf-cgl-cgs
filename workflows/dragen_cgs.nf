@@ -19,63 +19,63 @@ include { BCFTOOLS_SPLIT_VCF          } from '../modules/local/bcftools_split_vc
 
 // Illumina run directory
 if (params.illumina_rundir) {
-    ch_illumina_run_dir = Channel.fromPath(params.illumina_rundir, type: 'dir', checkIfExists: true)
+    ch_illumina_run_dir = Channel.fromPath(params.illumina_rundir, type: 'dir', checkIfExists: true).collect()
 } else {
     ch_illumina_run_dir = Channel.empty()
 }
 
 // Sample information
 if (params.sample_info) {
-    ch_sample_information = Channel.fromPath(params.sample_info, checkIfExists: true)
+    ch_sample_information = Channel.fromPath(params.sample_info, checkIfExists: true).collect()
 } else {
     ch_sample_information = Channel.empty()
 }
 
 // DRAGEN reference directory
 if (params.refdir) {
-    ch_reference_dir = Channel.fromPath(params.refdir, type: 'dir', checkIfExists: true)
+    ch_reference_dir = Channel.fromPath(params.refdir, type: 'dir', checkIfExists: true).collect()
 } else {
     ch_reference_dir = []
 }
 
 // DRAGEN dbSNP annotation VCF
 if (params.dbsnp) {
-    ch_dbsnp_file = Channel.fromPath(params.dbsnp, checkIfExists: true)
+    ch_dbsnp_file = Channel.fromPath(params.dbsnp, checkIfExists: true).collect()
 } else {
     ch_dbsnp_file = []
 }
 
 // DRAGEN adapter sequences for read 1
 if (params.adapter1) {
-    ch_adapter1_file = Channel.fromPath(params.adapter1, checkIfExists: true)
+    ch_adapter1_file = Channel.fromPath(params.adapter1, checkIfExists: true).collect()
 } else {
     ch_adapter1_file = []
 }
 
 // DRAGEN adapter sequences for read 2
 if (params.adapter2) {
-    ch_adapter2_file = Channel.fromPath(params.adapter2, checkIfExists: true)
+    ch_adapter2_file = Channel.fromPath(params.adapter2, checkIfExists: true).collect()
 } else {
     ch_adapter2_file = []
 }
 
 // DRAGEN intermediate directory
 if (params.intermediate_dir) {
-    ch_intermediate_dir = Channel.fromPath(params.intermediate_dir)
+    ch_intermediate_dir = Channel.fromPath(params.intermediate_dir).collect()
 } else {
     ch_intermediate_dir = []
 }
 
 // DRAGEN QC coverage over custom region
 if (params.qc_coverage_region) {
-    ch_qc_coverage_region = Channel.fromPath(params.qc_coverage_region)
+    ch_qc_coverage_region = Channel.fromPath(params.qc_coverage_region).collect()
 } else {
     ch_qc_coverage_region = []
 }
 
 // DRAGEN QC cross-sample contamination
 if (params.qc_cross_contamination) {
-    ch_qc_cross_contamination = Channel.fromPath(params.qc_cross_contamination)
+    ch_qc_cross_contamination = Channel.fromPath(params.qc_cross_contamination).collect()
 } else {
     ch_qc_cross_contamination = []
 }
@@ -104,7 +104,7 @@ workflow DRAGEN_CGS {
     if (params.input && params.illumina_rundir && params.demux) {
         DEMULTIPLEX (
             ch_mgi_samplesheet,
-            ch_illumina_run_dir.collect()
+            ch_illumina_run_dir
         )
         ch_dragen_usage = DEMULTIPLEX.out.usage
         ch_samples      = DEMULTIPLEX.out.samples
@@ -146,13 +146,13 @@ workflow DRAGEN_CGS {
     //
     DRAGEN_ALIGN (
         ch_align_samples,
-        ch_qc_cross_contamination.collect(),
-        ch_qc_coverage_region.collect(),
-        ch_intermediate_dir.collect(),
-        ch_reference_dir.collect(),
-        ch_adapter1_file.collect(),
-        ch_adapter2_file.collect(),
-        ch_dbsnp_file.collect()
+        ch_qc_cross_contamination,
+        ch_qc_coverage_region,
+        ch_intermediate_dir,
+        ch_reference_dir,
+        ch_adapter1_file,
+        ch_adapter2_file,
+        ch_dbsnp_file
     )
     ch_versions     = ch_versions.mix(DRAGEN_ALIGN.out.versions)
     ch_dragen_usage = ch_dragen_usage.mix(DRAGEN_ALIGN.out.usage)
@@ -163,7 +163,7 @@ workflow DRAGEN_CGS {
     if (params.joint_genotype_cnv) {
         DRAGEN_JOINT_CNV (
             DRAGEN_ALIGN.out.tangent_normalized_counts.collect(),
-            ch_reference_dir.collect()
+            ch_reference_dir
         )
         ch_versions        = ch_versions.mix(DRAGEN_JOINT_CNV.out.versions)
         ch_dragen_usage    = ch_dragen_usage.mix(DRAGEN_JOINT_CNV.mix.usage)
@@ -199,7 +199,7 @@ workflow DRAGEN_CGS {
     if (params.joint_genotype_small_variants) {
         DRAGEN_JOINT_SMALL_VARIANTS (
             DRAGEN_ALIGN.out.hard_filtered_gvcf.collect(),
-            ch_reference_dir.collect()
+            ch_reference_dir
         )
         ch_versions        = ch_versions.mix(DRAGEN_JOINT_SMALL_VARIANTS.out.versions)
         ch_dragen_usage    = ch_dragen_usage.mix(DRAGEN_JOINT_SMALL_VARIANTS.out.usage)
@@ -241,7 +241,7 @@ workflow DRAGEN_CGS {
     if (params.joint_genotype_sv) {
         DRAGEN_JOINT_SV (
             DRAGEN_ALIGN.out.bam.collect(),
-            ch_reference_dir.collect()
+            ch_reference_dir
         )
         ch_versions        = ch_versions.mix(DRAGEN_JOINT_SV.out.versions)
         ch_dragen_usage    = ch_dragen_usage.mix(DRAGEN_JOINT_SV.out.usage)
