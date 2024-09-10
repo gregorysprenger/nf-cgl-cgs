@@ -19,7 +19,7 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
 > [!NOTE]
 > Demultiplexing is an optional step. If FastQ files exist, input a `fastq_list.csv` to the `--fastq_list` parameter.
 
-Samples can be demultiplexed when the following parameters are used: `--input <mgi_samplesheet>`, `--illumina_rundir <run_dir>`, and `--demux`. To save the demultiplexed data, use `--demux_outdir <dir_path>`.
+Samples can be demultiplexed when the following parameters are used: `--input <mgi_samplesheet>` and `--illumina_rundir <run_dir>`. To save the demultiplexed data, use `--demux_outdir <dir_path>`.
 
 <details markdown="1">
 <summary>Output files</summary>

@@ -131,14 +131,6 @@ Variant calls are annotated using the dbSNP database. Specify the location to th
 
 To demultiplex samples, the demultiplexing parameter must be turned on and the location of the Illumina run directory and MGI samplesheet must be provided.
 
-#### Turn demultiplexing on
-
-To turn on the option to demultiplex samples, use the following parameter:
-
-```bash
---demux true
-```
-
 #### Illumina run directory
 
 The Illumina run directory that contains base call information of samples that need demultiplexing has to be specified. Use the following parameter to specify its location:

@@ -68,11 +68,6 @@
             "description": "",
             "default": "",
             "properties": {
-                "demux": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "Perform demultiplexing of samples from Illumina run directory."
-                },
                 "demux_outdir": {
                     "type": "string",
                     "description": "The output directory to save the demultiplexed FastQ files.",

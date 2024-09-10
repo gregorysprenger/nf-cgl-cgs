@@ -101,7 +101,7 @@ workflow DRAGEN_CGS {
     //
     // SUBWORKFLOW: Demultiplex samples
     //
-    if (params.input && params.illumina_rundir && params.demux) {
+    if (params.input && params.illumina_rundir) {
         DEMULTIPLEX (
             ch_mgi_samplesheet,
             ch_illumina_run_dir
