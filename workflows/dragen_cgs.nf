@@ -184,10 +184,11 @@ workflow DRAGEN_CGS {
                                     }
                                     [ sample.getSimpleName(), sample_lines.join('\n') ]
                             }
-                            .collectFile( storeDir: "${params.outdir}/DRAGEN_output" )
-                            {
+                            .collectFile{
                                 sample, output ->
-                                    [ "${sample}/${sample}.cnv_metrics.csv", output ]
+                                    def outdir = file("${params.outdir}/DRAGEN_output/${sample}")
+                                    outdir.mkdirs()
+                                    [ "${outdir}/${sample}.cnv_metrics.csv", output ]
                             }
 
         ch_joint_metric_files = ch_joint_metric_files.mix(ch_cnv_metrics)
@@ -227,9 +228,11 @@ workflow DRAGEN_CGS {
                                             def output = number_samples + reads_processed + child_sample + updated_lines
                                             [ sample_name, output.join('\n') ]
                                     }
-                                    .collectFile( storeDir: "${params.outdir}/DRAGEN_output" )
-                                    { sample, output ->
-                                        [ "${sample}/${sample}.vc_metrics.csv", output ]
+                                    .collectFile{
+                                        sample, output ->
+                                            def outdir = file("${params.outdir}/DRAGEN_output/${sample}")
+                                            outdir.mkdirs()
+                                            [ "${outdir}/${sample}.vc_metrics.csv", output ]
                                     }
 
         ch_joint_metric_files = ch_joint_metric_files.mix(ch_small_variant_metrics)
@@ -251,10 +254,11 @@ workflow DRAGEN_CGS {
         // from joint called '*.sv_metrics.csv' file
         ch_sv_metrics = DRAGEN_JOINT_SV.out.metrics
                             .splitText(elem: 0)
-                            .collectFile( storeDir: "${params.outdir}/DRAGEN_output" )
-                            {
+                            .collectFile{
                                 def sample = it.split(",")[1]
-                                [ "${sample}/${sample}.sv_metrics.csv", it ]
+                                def outdir = file("${params.outdir}/${sample}")
+                                outdir.mkdirs()
+                                [ "${outdir}/${sample}.sv_metrics.csv", it ]
                             }
 
         ch_joint_metric_files = ch_joint_metric_files.mix(ch_sv_metrics)
