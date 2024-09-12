@@ -348,21 +348,14 @@ def save_genoox_metrics(mgi_worksheet, mapping_metrics, filename_prefix, outdir)
     if None in list(set(cleaned_mgi_worksheet["SAMPLE ID"])):
         cleaned_mgi_worksheet = cleaned_mgi_worksheet.merge(
             mapping_metrics["SAMPLE ID"], on="SAMPLE ID", how="outer"
+        )
 
-    # Create dict to house DataFrames
-    dataframe_dict = {
-        "QC Metrics - qPCR": cleaned_mgi_worksheet,
-        "Single Sample Stats": single_sample_stats,
-        "Final Coverage Stats - TCP": final_coverage_stats,
-    }
-
-    # Create workbook and write data
-    writer = pd.ExcelWriter(
-        f"{outdir}/{filename_prefix}_Genoox.xlsx", engine="xlsxwriter"
+    # Save as Excel spreadsheet
+    cleaned_mgi_worksheet.to_excel(
+        f"{outdir}/{filename_prefix}_Genoox.xlsx",
+        sheet_name="QC Metrics - qPCR",
+        index=False,
     )
-    for sheetname, df_data in dataframe_dict.items():
-        df_data.to_excel(writer, index=False, sheet_name=sheetname)
-    writer.close()
 
 
 def read_file_to_dataframe(file):
