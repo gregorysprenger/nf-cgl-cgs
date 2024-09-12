@@ -217,15 +217,34 @@ workflow DRAGEN_CGS {
                                             def sample_name = sample.getSimpleName()
                                             def joint_sample_lines = joint.text.findAll(".+${sample_name}.+")
 
-                                            // Find values in files
+                                            // Find values in joint vc_metrics.csv file
                                             def number_samples = joint.text.findAll("VARIANT CALLER SUMMARY,,Number of samples,.+")
+                                            def indels_list = joint_sample_lines.findAll{
+                                                                                    it.contains("Insertions") ||
+                                                                                    it.contains("Deletions") ||
+                                                                                    it.contains("Indels")
+                                                                                }
+
+                                            // Calculate number of indels
+                                            def indel_count = 0
+                                            def indel_percent = 0.0
+                                            indels_list.each{
+                                                indel_count += it.split(',')[3].toInteger()
+                                                indel_percent += it.split(',')[4].toFloat()
+                                            }
+
+                                            def number_of_indels = ["JOINT CALLER POSTFILTER,${sample_name},Number of Indels,${indel_count},${indel_percent.round(2)}"]
+
+                                            // Find values in single sample vc_metrics.csv file
                                             def reads_processed = sample.text.findAll("VARIANT CALLER SUMMARY,,Reads Processed,.+")
                                             def child_sample = sample.text.findAll("VARIANT CALLER SUMMARY,,Child Sample,.+")
                                             def autosome_callability = sample.text.findAll("VARIANT CALLER POSTFILTER,.+,Percent Autosome Callability,.+")[0]
 
                                             // Replace autosome callability in joint_sample_lines and create output
                                             def updated_lines = joint_sample_lines.collect{ it.replaceAll(/.+,Percent Autosome Callability,.+/, autosome_callability) }
-                                            def output = number_samples + reads_processed + child_sample + updated_lines
+
+                                            // Create output and return values
+                                            def output = number_samples + reads_processed + child_sample + updated_lines + number_of_indels
                                             [ sample_name, output.join('\n') ]
                                     }
                                     .collectFile{
