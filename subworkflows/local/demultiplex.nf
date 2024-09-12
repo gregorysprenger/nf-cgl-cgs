@@ -53,18 +53,28 @@ workflow DEMULTIPLEX {
 
     // Use 'params.demux_outdir' path for paths in 'fastq_list.csv' and save
     if (params.demux_outdir) {
-        DRAGEN_DEMULTIPLEX.out.fastq_list.map{
-            def batch_name = it.toString().split('/')[-2]
-            def pattern = it.toString().split('/')[0..-3].join('/')
+        def batch_name = params.batch_name ?: new java.util.Date().format('yyyyMMdd') + '_CGS'
 
-            def lines = it.readLines()
-            lines.toString().replaceAll(("${pattern}"), ("${params.demux_outdir}")) as List
-            [ batch_name, lines.join('\n') ]
-        }
-        .collectFile{
-            batch_name, output ->
-                [ "${params.demux_outdir}/${batch_name}/fastq_list.csv", output ]
-        }
+        DRAGEN_DEMULTIPLEX.out.fastq_list
+            .splitCsv( header: true )
+            .map{
+                row ->
+                    def read1 = row['Read1File'].split('/')[-2..-1].join('/')
+                    def read2 = row['Read2File'].split('/')[-2..-1].join('/')
+
+                    // Get absolute path of 'params.demux_outdir'
+                    def demux_outdir = file(params.demux_outdir).toAbsolutePath().toString()
+
+                    row['Read1File'] = "${demux_outdir}/${read1}"
+                    row['Read2File'] = "${demux_outdir}/${read2}"
+
+                    return "${row.keySet().join(',')}\n${row.values().join(',')}\n"
+            }
+            .collectFile(
+                name      : "fastq_list.csv",
+                keepHeader: true,
+                storeDir  : "${params.demux_outdir}/${batch_name}/"
+            )
     }
 
     emit:
