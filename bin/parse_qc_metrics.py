@@ -456,7 +456,10 @@ def main():
 
     ## Genoox metrics
     save_genoox_metrics(
-        mgi_worksheet.copy(), mapping_metrics.copy(), filename_prefix, outdir
+        mgi_worksheet.copy(),
+        mapping_metrics.copy(),
+        filename_prefix,
+        outdir,
     )
 
     ## All metrics
