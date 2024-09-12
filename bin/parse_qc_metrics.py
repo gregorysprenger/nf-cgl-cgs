@@ -344,37 +344,10 @@ def save_genoox_metrics(mgi_worksheet, mapping_metrics, filename_prefix, outdir)
         ],
     )
 
-    # Get specified single sample metrics
-    single_sample_stats = get_columns(
-        mapping_metrics,
-        ["SAMPLE ID", "Total bases", "PCT Q30 bases R1", "PCT Q30 bases R2"],
-    )
-    single_sample_stats.rename(
-        lambda c: c
-        if any(
-            k in c
-            for k in {
-                "SAMPLE ID": "Library",
-                "Total bases": "Total Bases",
-                "PCT Q30 bases R1": "Percent Q30 (R1)",
-                "PCT Q30 bases R2": "Percent Q30 (R2)",
-            }
-        )
-        else c,
-        axis=1,
-        inplace=True,
-    )
-
-    # Get sample contamination metrics
-    final_coverage_stats = get_columns(
-        mapping_metrics, ["SAMPLE ID", "Estimated sample contamination"]
-    )
-    final_coverage_stats.rename(
-        columns={
-            "SAMPLE ID": "Sample",
-            "Estimated sample contamination": "contaminationestimate",
-        }
-    )
+    # Check if all values in SAMPLE ID column are None
+    if None in list(set(cleaned_mgi_worksheet["SAMPLE ID"])):
+        cleaned_mgi_worksheet = cleaned_mgi_worksheet.merge(
+            mapping_metrics["SAMPLE ID"], on="SAMPLE ID", how="outer"
 
     # Create dict to house DataFrames
     dataframe_dict = {
