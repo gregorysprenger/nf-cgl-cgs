@@ -21,7 +21,6 @@ process DRAGEN_DEMULTIPLEX {
 
     script:
     def prefix     = task.ext.prefix
-    def first_tile = params.bcl_first_tile ? "--first-tile-only true" : ""
     """
     mkdir -p ${prefix.id}
 
@@ -30,7 +29,6 @@ process DRAGEN_DEMULTIPLEX {
         --bcl-conversion-only true \\
         --bcl-only-matched-reads true \\
         --strict-mode true \\
-        ${first_tile} \\
         --sample-sheet ${samplesheet} \\
         --bcl-input-directory ${rundir} \\
         --output-directory ${prefix.id}
@@ -56,7 +54,6 @@ process DRAGEN_DEMULTIPLEX {
     stub:
     def dragen_version = "4.3.6"
     def prefix         = task.ext.prefix
-    def first_tile     = params.bcl_first_tile ? "--first-tile-only true" : ""
     """
     mkdir -p ${prefix.id}
 
