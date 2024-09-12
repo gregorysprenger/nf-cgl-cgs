@@ -324,10 +324,10 @@ def save_all_metrics(all_qc_dataframes, filename_prefix, outdir):
 
 def save_genoox_metrics(mgi_worksheet, mapping_metrics, filename_prefix, outdir):
     """
-    Create Excel workbook that contains the following sheets: QC Metrics - qPCR, Single Sample Stats, and Final Coverage Stats - TCP.
+    Create Excel workbook that contains the following sheets: QC Metrics - qPCR.
 
     :param mgi_worksheet: QC metrics sheet from the MGI worksheet input
-    :param mapping_metrics: Metrics pulled from '*.mapping_metrics.csv' files
+    :param mapping_metrics: Metrics pulled from '*.mapping_metrics.csv' files - ONLY SAMPLE_ID column is used
     :param filename_prefix: Prefix for output filenames
     :param outdir: Output directory to save file
     """
