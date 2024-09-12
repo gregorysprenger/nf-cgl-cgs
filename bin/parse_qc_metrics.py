@@ -400,13 +400,22 @@ def read_file_to_dataframe(file):
     elif file.endswith("xlsx"):
         df = pd.read_excel(file, sheet_name="QC Metrics")
     else:
-        return pd.DataFrame(columns=["SAMPLE ID"])
+        df = pd.DataFrame()
 
-    if "SAMPLE ID" in df.columns:
-        return df
-    else:
-        df["SAMPLE ID"] = None
-        return df
+    cols = [
+        "ACCESSION NUMBER",
+        "RUN ID",
+        "SAMPLE ID",
+        "Total DNA yield (ng)",
+        "260/280",
+        "Library Input (ng)",
+    ]
+
+    for col in cols:
+        if col not in df:
+            df[col] = None
+
+    return df
 
 
 def main():
