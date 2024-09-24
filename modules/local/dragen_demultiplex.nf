@@ -18,10 +18,8 @@ process DRAGEN_DEMULTIPLEX {
     task.ext.when == null || task.ext.when
 
     script:
-    def prefix     = task.ext.prefix
+    def prefix = task.ext.prefix
     """
-    mkdir -p ${prefix.id}
-
     # Perform demultiplexing of samples
     /opt/dragen/4.3.6/bin/dragen \\
         --bcl-conversion-only true \\
