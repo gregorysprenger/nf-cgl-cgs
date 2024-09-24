@@ -79,7 +79,6 @@ workflow DEMULTIPLEX {
 
     emit:
     samples  = VERIFY_FASTQ_LIST.out.samples
-    usage    = DRAGEN_DEMULTIPLEX.out.usage
     versions = ch_versions
 
 }
