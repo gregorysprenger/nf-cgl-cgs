@@ -90,7 +90,7 @@ workflow DRAGEN_CGS {
 
     take:
     ch_mgi_samplesheet    // channel: [ path(file) ]
-    ch_samples            // channel: [ val(meta), path(file) ]
+    ch_input_samples      // channel: [ val(meta), path(file) ]
 
     main:
     ch_versions           = Channel.empty()
@@ -106,9 +106,31 @@ workflow DRAGEN_CGS {
             ch_mgi_samplesheet,
             ch_illumina_run_dir
         )
-        ch_dragen_usage = DEMULTIPLEX.out.usage
-        ch_samples      = DEMULTIPLEX.out.samples
-        ch_versions     = ch_versions.mix(DEMULTIPLEX.out.versions)
+        ch_samples  = DEMULTIPLEX.out.samples
+        ch_versions = ch_versions.mix(DEMULTIPLEX.out.versions)
+
+        ch_input_samples
+            .collect()
+            .map{ it != [] }
+            .subscribe {
+                isNotEmpty ->
+                    if (isNotEmpty) {
+                        ch_merged_samples    = ch_samples.mix(ch_input_samples)
+                                                .map{ meta, file -> meta }
+                                                .unique()
+
+                        ch_merged_fastq_list = ch_samples.mix(ch_input_samples)
+                                                .map{ meta, file -> file }
+                                                .collectFile()
+                                                .splitText(keepHeader: true)
+                                                .unique()
+                                                .collectFile(name: "merged_fastq_list.csv")
+
+                        ch_samples = ch_merged_samples.combine(ch_merged_fastq_list)
+                    }
+            }
+    } else {
+        ch_samples = ch_input_samples
     }
 
     if (params.sample_info) {
