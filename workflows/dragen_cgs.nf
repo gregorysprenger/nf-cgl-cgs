@@ -10,6 +10,7 @@ include { DRAGEN_JOINT_CNV            } from '../modules/local/dragen_joint_cnv'
 include { DRAGEN_JOINT_SMALL_VARIANTS } from '../modules/local/dragen_joint_small_variants'
 include { PARSE_QC_METRICS            } from '../modules/local/parse_qc_metrics'
 include { BCFTOOLS_SPLIT_VCF          } from '../modules/local/bcftools_split_vcf'
+include { TRANSFER_DATA_AWS           } from '../modules/local/transfer_data_aws'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -329,6 +330,18 @@ workflow DRAGEN_CGS {
             }
     )
     ch_versions = ch_versions.mix(BCFTOOLS_SPLIT_VCF.out.versions)
+
+    //
+    // MODULE: Transfer data to AWS bucket
+    //
+    if (params.transfer_data) {
+        TRANSFER_DATA_AWS (
+            DRAGEN_ALIGN.out.dragen_output,
+            ch_joint_vcf_files.map{ meta, file -> file }.collect()
+                .mix(ch_joint_metric_files.collect())
+        )
+        ch_versions = ch_versions.mix(TRANSFER_DATA_AWS.out.versions)
+    }
 
     // Output DRAGEN usage information
     ch_dragen_usage.map{
