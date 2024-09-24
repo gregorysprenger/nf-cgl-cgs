@@ -11,6 +11,7 @@ process DRAGEN_DEMULTIPLEX {
     path(rundir)
 
     output:
+    path("${task.ext.prefix.id}/Reports/fastq_list.csv"), emit: fastq_list
     path("${task.ext.prefix.id}/*")                     , emit: demux_files
     path("versions.yml")                                , emit: versions
 
