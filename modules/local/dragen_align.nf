@@ -150,9 +150,9 @@ process DRAGEN_ALIGN {
     cp -rf ${projectDir}/assets/test_data/dragen_path/GM24385/* dragen/
 
     # Rename files
-    find dragen/ \
-        -type f \
-        -name "GM24385*" \
+    find \$PWD \\
+        -type f \\
+        -name "GM24385*" \\
         -exec bash -c 'mv "{}" \$(echo "{}" | sed "s/GM24385/${meta.id}/")' \\;
 
     cat <<-END_VERSIONS > versions.yml
