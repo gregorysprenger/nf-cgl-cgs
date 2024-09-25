@@ -7,7 +7,8 @@ process TRANSFER_DATA_AWS {
 
     input:
     tuple val(meta), path(dragen_align_files, stageAs: "dragen_align_files/*")
-    path(joint_called_files, stageAs: "joint_called_files/*")
+    path(joint_vcf_files, stageAs: "joint_called_files/*")
+    path(joint_metric_files, stageAs: "joint_called_files/*")
 
     output:
     path("versions.yml"), emit: versions

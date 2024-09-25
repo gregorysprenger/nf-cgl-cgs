@@ -337,8 +337,8 @@ workflow DRAGEN_CGS {
     if (params.transfer_data) {
         TRANSFER_DATA_AWS (
             DRAGEN_ALIGN.out.dragen_output,
-            ch_joint_vcf_files.map{ meta, file -> file }.collect()
-                .mix(ch_joint_metric_files.collect())
+            ch_joint_vcf_files.map{ meta, file -> file }.collect(),
+            ch_joint_metric_files.collect()
         )
         ch_versions = ch_versions.mix(TRANSFER_DATA_AWS.out.versions)
     }
