@@ -39,19 +39,35 @@ Here is an example of how to store a Nextflow secret (replace <KEY> with your ke
 nextflow secrets set GNX_ACCESS_KEY <KEY>
 ```
 
+#### AWS: Data transfers
+
+| Secret         | Description                                                                              |
+|----------------|------------------------------------------------------------------------------------------|
+| GNX_DATA       | The first directory in the AWS S3 bucket to save files to (ex. `s3://bucket/<GNX_DATA>`) |
+| GNX_BUCKET     | Name of AWS S3 bucket                                                                    |
+| GNX_REGION     | AWS S3 region                                                                            |
+| GNX_ACCESS_KEY | Genoox AWS S3 access key                                                                 |
+| GNX_SECRET_KEY | Genoox AWS S3 secret key                                                                 |
+
 #### AWS: Compute
 
-```console
-AWS_ACCESS_KEY
-AWS_SECRET_KEY
-```
+> [!NOTE]
+> The following Nextflow secrets are only required if using Compute on AWS.
+
+| Secret         | Description            |
+|----------------|------------------------|
+| AWS_ACCESS_KEY | AWS Compute access key |
+| AWS_SECRET_KEY | AWS Compute secret key |
 
 #### AWS: DRAGEN
 
-```console
-AWS_DRAGEN_USER
-AWS_DRAGEN_PASSWORD
-```
+> [!NOTE]
+> The following Nextflow secrets are only required if using the Illumina DRAGEN on AWS.
+
+| Secret              | Description                                 |
+|---------------------|---------------------------------------------|
+| AWS_DRAGEN_USER     | Username to access Illumina's DRAGEN on AWS |
+| AWS_DRAGEN_PASSWORD | Password to access Illumina's DRAGEN on AWS |
 
 ## Input parameters
 
@@ -158,7 +174,7 @@ Lane    Flowcell ID    Content_Desc    Index    Exceptions
 ```
 
 | Column          | Description                                                                         |
-| --------------- | ----------------------------------------------------------------------------------- |
+|-----------------|-------------------------------------------------------------------------------------|
 | `Run Directory` | The path to the Illumina run directory.                                             |
 | `Lane`          | The lane number used on the instrument for each sample.                             |
 | `Flowcell ID`   | The ID of the flowcell used.                                                        |
@@ -183,23 +199,13 @@ AGC-CAG.2,Sample_2,UnknownLibrary,2,/path/to/Sample_2_R1.fastq.gz,/path/to/Sampl
 ```
 
 | Column      | Description                              |
-| ----------- | ---------------------------------------- |
+|-------------|------------------------------------------|
 | `RGID`      | The read group for the sample.           |
 | `RGSM`      | Sample ID                                |
 | `RGLB`      | Library information                      |
 | `Lane`      | The flowcell lane number.                |
 | `Read1File` | Full path to the first FastQ read file.  |
 | `Read2File` | Full path to the second FastQ read file. |
-
-### Save QC metrics in different location
-
-During the alignment and mapping of each sample, various QC metrics are produced. These files are saved in the specified `--outdir` location under the directory `QC_metrics`.
-
-To save the QC metrics in another location, specify the location using the following parameter:
-
-```bash
---qc_outdir '[path to directory]'
-```
 
 ### Batch joint genotyping
 
@@ -211,6 +217,18 @@ Use the following parameters to turn on or off joint genotyping:
 --joint_genotype_sv false
 --joint_genotype_cnv false
 --joint_genotype_small_variants true
+```
+
+### Save QC metrics in different location
+
+During the alignment and mapping of each sample, various QC metrics are produced. These files are saved in the specified `--outdir` location under the directory `QC_metrics`.
+
+To save the QC metrics in another location, specify the location using the following parameter:
+
+```bash
+--qc_outdir '[path to directory]'
+```
+
 ### Transfer data to AWS S3
 
 > [!NOTE]
