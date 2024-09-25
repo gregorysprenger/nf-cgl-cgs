@@ -328,10 +328,22 @@ workflow DRAGEN_CGS {
     // MODULE: Transfer data to AWS bucket
     //
     if (params.transfer_data) {
+        ch_dragen_files = DRAGEN_ALIGN.out.dragen_output
+                            .map{
+                                meta, files ->
+                                    def extensions = [".bw", ".bam", ".gff3", ".json", ".vcf", ".csv", ".bed"]
+                                    def aws_files = files.findAll{
+                                        file ->
+                                            extensions.any{ file.toString().contains(it) }
+                                    }
+                                return aws_files
+                            }
+
         TRANSFER_DATA_AWS (
-            DRAGEN_ALIGN.out.dragen_output,
-            ch_joint_vcf_files.map{ meta, file -> file }.collect(),
-            ch_joint_metric_files.collect()
+            ch_dragen_files.collect(),
+            BCFTOOLS_SPLIT_VCF.out.split_vcf.map{ meta, file -> file }.collect(),
+            ch_joint_metric_files.collect(),
+            PARSE_QC_METRICS.out.qc_metrics.collect()
         )
         ch_versions = ch_versions.mix(TRANSFER_DATA_AWS.out.versions)
     }
