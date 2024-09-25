@@ -48,6 +48,11 @@
                     "description": "The output directory where the QC metrics will be saved. You have to use absolute paths to storage on Cloud infrastructure.",
                     "fa_icon": "fas fa-folder-open"
                 },
+                "transfer_data": {
+                    "type": "boolean",
+                    "description": "Transfer data to AWS S3 bucket.",
+                    "default": true
+                },
                 "email": {
                     "type": "string",
                     "description": "Email address for completion summary.",

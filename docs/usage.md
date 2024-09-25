@@ -11,6 +11,7 @@ Table of contents:
     - [Start from FastQ list](#start-from-fastq-list)
     - [Batch joint genotyping](#batch-joint-genotyping)
     - [Save QC metrics in different location](#save-qc-metrics-in-different-location)
+    - [Transfer data to AWS S3](#transfer-data-to-aws-s3)
   - [Running the pipeline](#running-the-pipeline)
   - [Core Nextflow arguments](#core-nextflow-arguments)
     - [`-profile`](#-profile)
@@ -210,6 +211,15 @@ Use the following parameters to turn on or off joint genotyping:
 --joint_genotype_sv false
 --joint_genotype_cnv false
 --joint_genotype_small_variants true
+### Transfer data to AWS S3
+
+> [!NOTE]
+> This requires Nextflow secrets to be set. For more information, see the [AWS: Data transfers](#aws-data-transfers) section.
+
+After the analysis is complete, the specified files can be synchronized to an AWS S3 bucket. This option is enabled by default, but can be configured by using the following parameter:
+
+```bash
+--transfer_data true
 ```
 
 ## Running the pipeline
