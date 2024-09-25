@@ -146,7 +146,14 @@ process DRAGEN_ALIGN {
         --variant-annotation-assembly GRCh38
     END_CMDS
 
-    cp -rf ${projectDir}/assets/test_data/dragen_path/${meta.id}/* dragen/
+    # Copy data
+    cp -rf ${projectDir}/assets/test_data/dragen_path/GM24385/* dragen/
+
+    # Rename files
+    find dragen/ \
+        -type f \
+        -name "GM24385*" \
+        -exec bash -c 'mv "{}" \$(echo "{}" | sed "s/GM24385/${meta.id}/")' \\;
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
