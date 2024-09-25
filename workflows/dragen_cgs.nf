@@ -110,26 +110,19 @@ workflow DRAGEN_CGS {
         ch_samples  = DEMULTIPLEX.out.samples
         ch_versions = ch_versions.mix(DEMULTIPLEX.out.versions)
 
-        ch_input_samples
-            .collect()
-            .map{ it != [] }
-            .subscribe {
-                isNotEmpty ->
-                    if (isNotEmpty) {
-                        ch_merged_samples    = ch_samples.mix(ch_input_samples)
+        // Merge demultiplex samples and samples parsed from `--fastq_list` parameter (if exists)
+        ch_merged_samples    = ch_samples.mix(ch_input_samples)
                                                 .map{ meta, file -> meta }
                                                 .unique()
 
-                        ch_merged_fastq_list = ch_samples.mix(ch_input_samples)
+        ch_merged_fastq_list = ch_samples.mix(ch_input_samples)
                                                 .map{ meta, file -> file }
                                                 .collectFile()
                                                 .splitText(keepHeader: true)
                                                 .unique()
                                                 .collectFile(name: "merged_fastq_list.csv")
 
-                        ch_samples = ch_merged_samples.combine(ch_merged_fastq_list)
-                    }
-            }
+        ch_samples = ch_merged_samples.combine(ch_merged_fastq_list)
     } else {
         ch_samples = ch_input_samples
     }
