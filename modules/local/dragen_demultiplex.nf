@@ -28,7 +28,7 @@ process DRAGEN_DEMULTIPLEX {
         --strict-mode true \\
         --sample-sheet ${samplesheet} \\
         --bcl-input-directory ${rundir} \\
-        --output-directory ${prefix.id}
+        --output-directory "\$PWD/${prefix.id}"
 
     # Copy RunParameters.xml to ${prefix.id}/Reports
     find ${rundir} \\
@@ -46,9 +46,17 @@ process DRAGEN_DEMULTIPLEX {
     def dragen_version = "4.3.6"
     def prefix         = task.ext.prefix
     """
-    mkdir -p ${prefix.id}
+    cp -r ${projectDir}/assets/test_data/demux_fastq/ ${prefix.id}
 
-    cp -r ${projectDir}/assets/test_data/demux_fastq/* ${prefix.id}/
+    cat <<-END_CMDS > "${prefix.id}_cmds.txt"
+        /opt/dragen/4.3.6/bin/dragen \\
+            --bcl-conversion-only true \\
+            --bcl-only-matched-reads true \\
+            --strict-mode true \\
+            --sample-sheet ${samplesheet} \\
+            --bcl-input-directory ${rundir} \\
+            --output-directory "\$PWD/${prefix.id}"
+    END_CMDS
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
