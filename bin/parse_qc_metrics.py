@@ -343,10 +343,11 @@ def save_genoox_metrics(mgi_worksheet, mapping_metrics, filename_prefix, outdir)
     )
 
     # Check if all values in SAMPLE ID column are None
-    if None in list(set(cleaned_mgi_worksheet["SAMPLE ID"])):
-        cleaned_mgi_worksheet = cleaned_mgi_worksheet.merge(
-            mapping_metrics["SAMPLE ID"], on="SAMPLE ID", how="outer"
-        )
+    if (
+        None in list(set(cleaned_mgi_worksheet["SAMPLE ID"]))
+        or cleaned_mgi_worksheet.empty
+    ):
+        cleaned_mgi_worksheet["SAMPLE ID"] = mapping_metrics["SAMPLE ID"]
 
     # Save as Excel spreadsheet
     cleaned_mgi_worksheet.to_excel(
