@@ -29,6 +29,7 @@ def parseArgs():
         "-m",
         "--mgi_worksheet",
         help="Path to MGI worksheet that contains sequencing information for each sample.",
+        default="",
     )
     parser.add_argument(
         "-i",
