@@ -5,8 +5,8 @@ process PARSE_QC_METRICS {
 
     input:
     path(mgi_worksheet)
-    path(single_sample_metrics), stageAs: "single_sample_metrics/*"
-    path(joint_sample_metrics) , stageAs: "joint_sample_metrics/*"
+    path(single_sample_metrics), stageAs: "single_sample_metrics/"
+    path(joint_sample_metrics) , stageAs: "joint_sample_metrics/"
 
     output:
     path("*.xlsx")      , emit: qc_metrics
@@ -20,11 +20,18 @@ process PARSE_QC_METRICS {
     def mgi_samplesheet = mgi_worksheet ? "--mgi_worksheet ${mgi_worksheet}" : ""
     """
     # Remove single sample metrics if joint called metrics
-    for file in joint_sample_metrics/*; do
-        find single_sample_metrics/ -name "\$(basename \$file)" -delete
-    done
+    if [[ -d joint_sample_metrics ]]; then
+        find joint_sample_metrics \\
+            -type f \\
+            -exec basename "{}" \\; \\
+            | while read file; do
+                if [[ -f "single_sample_metrics/\${file}" ]]; then
+                    rm "single_sample_metrics/\${file}"
+                fi
+            done
+    fi
 
-    # Create metric files
+    # Create metric summary files
     parse_qc_metrics.py \\
         ${mgi_samplesheet} \\
         --inputdir \$PWD \\
@@ -42,11 +49,18 @@ process PARSE_QC_METRICS {
     def mgi_samplesheet = mgi_worksheet ? "--mgi_worksheet ${mgi_worksheet}" : ""
     """
     # Remove single sample metrics if joint called metrics
-    for file in joint_sample_metrics/*; do
-        find single_sample_metrics/ -name "\$(basename \$file)" -delete
-    done
+    if [[ -d joint_sample_metrics ]]; then
+        find joint_sample_metrics \\
+            -type f \\
+            -exec basename "{}" \\; \\
+            | while read file; do
+                if [[ -f "single_sample_metrics/\${file}" ]]; then
+                    rm "single_sample_metrics/\${file}"
+                fi
+            done
+    fi
 
-    # Create metric files
+    # Create metric summary files
     parse_qc_metrics.py \\
         ${mgi_samplesheet} \\
         --inputdir \$PWD \\
