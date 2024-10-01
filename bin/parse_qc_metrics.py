@@ -3,13 +3,10 @@
 import argparse
 import glob
 import os
-import re
-import sys
 from datetime import datetime
 from functools import reduce
 
 import pandas as pd
-import xlsxwriter
 
 
 def parseArgs():
