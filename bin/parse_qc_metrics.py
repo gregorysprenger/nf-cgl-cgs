@@ -330,24 +330,25 @@ def save_genoox_metrics(mgi_worksheet, mapping_metrics, filename_prefix, outdir)
     :param outdir: Output directory to save file
     """
     # Use only specified columns from MGI worksheet
+    required_columns = [
+        "ACCESSION NUMBER",
+        "RUN ID",
+        "SAMPLE ID",
+        "Total DNA yield (ng)",
+        "260/280",
+        "Library Input (ng)",
+    ]
     cleaned_mgi_worksheet = get_columns(
         mgi_worksheet,
-        [
-            "ACCESSION NUMBER",
-            "RUN ID",
-            "SAMPLE ID",
-            "Total DNA yield (ng)",
-            "260/280",
-            "Library Input (ng)",
-        ],
+        required_columns,
     )
 
     # Check if all values in SAMPLE ID column are None
-    if (
-        None in list(set(cleaned_mgi_worksheet["SAMPLE ID"]))
-        or cleaned_mgi_worksheet.empty
-    ):
-        cleaned_mgi_worksheet["SAMPLE ID"] = mapping_metrics["SAMPLE ID"]
+    if cleaned_mgi_worksheet["SAMPLE ID"].isnull().all() or cleaned_mgi_worksheet.empty:
+        cleaned_mgi_worksheet = cleaned_mgi_worksheet.merge(
+            mapping_metrics, on="SAMPLE ID", how="right"
+        )
+        cleaned_mgi_worksheet = cleaned_mgi_worksheet[required_columns]
 
     # Save as Excel spreadsheet
     cleaned_mgi_worksheet.to_excel(
