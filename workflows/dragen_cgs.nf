@@ -117,10 +117,13 @@ workflow DRAGEN_CGS {
 
         ch_merged_fastq_list = ch_samples.mix(ch_input_samples)
                                                 .map{ meta, file -> file }
-                                                .collectFile()
-                                                .splitText(keepHeader: true)
+                                                .splitText()
                                                 .unique()
-                                                .collectFile(name: "merged_fastq_list.csv")
+                                                .flatten()
+                                                .collectFile(
+                                                    name: "merged_fastq_list.csv",
+                                                    sort: 'index'
+                                                )
 
         ch_samples = ch_merged_samples.combine(ch_merged_fastq_list)
     } else {
