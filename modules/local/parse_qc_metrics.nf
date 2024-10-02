@@ -21,7 +21,7 @@ process PARSE_QC_METRICS {
     """
     # Remove single sample metrics if joint called metrics
     if [[ -d joint_sample_metrics ]]; then
-        find joint_sample_metrics \\
+        find -L joint_sample_metrics \\
             -type f \\
             -exec basename "{}" \\; \\
             | while read file; do
@@ -50,7 +50,7 @@ process PARSE_QC_METRICS {
     """
     # Remove single sample metrics if joint called metrics
     if [[ -d joint_sample_metrics ]]; then
-        find joint_sample_metrics \\
+        find -L joint_sample_metrics \\
             -type f \\
             -exec basename "{}" \\; \\
             | while read file; do
