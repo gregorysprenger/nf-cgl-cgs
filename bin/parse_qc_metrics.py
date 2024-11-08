@@ -413,29 +413,30 @@ def main():
     # Create output files
     ## MGI metrics
     save_mgi_metrics(
-        mgi_worksheet.copy(),
-        mapping_metrics.copy(),
-        wgs_coverage_metrics.copy(),
+        mgi_worksheet,
+        mapping_metrics,
+        wgs_coverage_metrics,
+        qc_coverage_region,
         filename_prefix,
         outdir,
     )
 
     ## Genoox metrics
     save_genoox_metrics(
-        mgi_worksheet.copy(),
-        mapping_metrics.copy(),
+        mgi_worksheet,
+        mapping_metrics,
         filename_prefix,
         outdir,
     )
 
     ## All metrics
     all_qc_dataframes = [
-        mgi_worksheet.copy(),
-        mapping_metrics.copy(),
-        wgs_coverage_metrics.copy(),
-        qc_coverage_region.copy(),
-        vc_metrics.copy(),
-        cnv_metrics.copy(),
+        mgi_worksheet,
+        mapping_metrics,
+        wgs_coverage_metrics,
+        qc_coverage_region,
+        vc_metrics,
+        cnv_metrics,
     ]
     save_all_metrics(all_qc_dataframes, f"{filename_prefix}_All", outdir)
 
