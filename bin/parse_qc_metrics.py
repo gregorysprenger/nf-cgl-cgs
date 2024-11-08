@@ -139,6 +139,7 @@ def parse_wgs_coverage_metrics(metric_files):
     """
     metric_dict = {
         "Average alignment coverage over genome": 3,
+        "Average autosomal coverage over genome": 3,
         "PCT of genome with coverage [  20x: inf)": 3,
         "PCT of genome with coverage [  10x: inf)": 3,
         "PCT Aligned reads in genome": 4,
@@ -161,6 +162,7 @@ def parse_qc_coverage_region_metrics(metric_files):
     """
     metric_dict = {
         "Average alignment coverage over QC coverage region": 3,
+        "Average autosomal coverage over QC coverage region": 3,
         "PCT of QC coverage region with coverage [  20x: inf)": 3,
         "PCT of QC coverage region with coverage [  10x: inf)": 3,
         "Uniformity of coverage (PCT > 0.2*mean) over QC coverage region": 3,
@@ -245,7 +247,12 @@ def parse_metrics(files, metric_dict, line_startswith):
 
 
 def save_mgi_metrics(
-    mgi_worksheet, mapping_metrics, wgs_coverage_metrics, filename_prefix, outdir
+    mgi_worksheet,
+    mapping_metrics,
+    wgs_coverage_metrics,
+    qc_coverage_region,
+    filename_prefix,
+    outdir,
 ):
     """
     Save required QC metrics for MGI.
@@ -253,10 +260,16 @@ def save_mgi_metrics(
     :param mgi_worksheet: QC metrics sheet from the MGI worksheet input
     :param mapping_metrics: Metrics pulled from '*.mapping_metrics.csv' files
     :param wgs_coverage_metrics: Metrics pulled from '*.wgs_coverage_metrics.csv' files
+    :param qc_coverage_region: Metrics pulled from '*.qc-coverage-region-1_coverage_metrics.csv' files
     :param filename_prefix: Prefix for output filenames
     :param outdir: Output directory to save file
     """
-    qc_dataframes = [mgi_worksheet, mapping_metrics, wgs_coverage_metrics]
+    qc_dataframes = [
+        mgi_worksheet,
+        mapping_metrics,
+        wgs_coverage_metrics,
+        qc_coverage_region,
+    ]
     df = reduce(
         lambda left, right: pd.merge(left, right, on=["SAMPLE ID"], how="outer"),
         qc_dataframes,
@@ -274,10 +287,13 @@ def save_mgi_metrics(
         "PCT Q30 bases R2": "PCT_Q30_BASES_2",
         "Insert length: mean": "MEAN_INS_SIZE",
         "Average alignment coverage over genome": "AVG_ALIGN_GENOME_COVERAGE",
-        "Uniformity of coverage (PCT > 0.2*mean) over genome": "PCT_UNIFORM_COVERAGE",
-        "PCT Aligned reads in genome": "PCT_GENOME_ALIGNED_READS",
+        "Average autosomal coverage over genome": "AVG_AUTOSOMAL_GENOME_COVERAGE",
         "PCT of genome with coverage [  20x: inf)": "PCT_GENOME_20x",
         "PCT of genome with coverage [  10x: inf)": "PCT_GENOME_10x",
+        "Average autosomal coverage over QC coverage region": "AVG_AUTOSOMAL_EXOME_COVERAGE",
+        "PCT of QC coverage region with coverage [  20x: inf)": "PCT_EXOME_20x",
+        "Uniformity of coverage (PCT > 0.2*mean) over genome": "PCT_UNIFORM_COVERAGE",
+        "PCT Aligned reads in genome": "PCT_GENOME_ALIGNED_READS",
     }
 
     df.rename(columns=columns_to_rename, inplace=True)
