@@ -91,9 +91,9 @@ workflow INPUT_CHECK {
     }
 
     emit:
-    samples         = ch_samples.ifEmpty([])         // channel: [ val(meta), path(file) ]
-    mgi_samplesheet = ch_mgi_samplesheet.ifEmpty([]) // channel: [ path(file) ]
-    versions        = ch_versions                    // channel: [ path(file) ]
+    samples         = ch_samples         // channel: [ val(meta), path(file) ]
+    mgi_samplesheet = ch_mgi_samplesheet // channel: [ path(file) ]
+    versions        = ch_versions        // channel: [ path(file) ]
 
 }
 
