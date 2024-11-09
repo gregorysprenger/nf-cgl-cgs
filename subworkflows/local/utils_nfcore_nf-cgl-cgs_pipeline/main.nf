@@ -89,9 +89,9 @@ workflow PIPELINE_INITIALISATION {
     ch_versions = ch_versions.mix(INPUT_CHECK.out.versions)
 
     emit:
-    samples  = INPUT_CHECK.out.samples // channel: [ val(meta), path(file) ]
+    samples         = INPUT_CHECK.out.samples         // channel: [ val(meta), path(file) ]
     mgi_samplesheet = INPUT_CHECK.out.mgi_samplesheet
-    versions = ch_versions             // channel: [ path(file) ]
+    versions        = ch_versions                     // channel: [ path(file) ]
 
 }
 
