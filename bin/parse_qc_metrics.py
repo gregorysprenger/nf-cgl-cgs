@@ -375,14 +375,24 @@ def save_genoox_metrics(mgi_worksheet, mapping_metrics, filename_prefix, outdir)
 
 
 def read_file_to_dataframe(file):
-    if file.endswith("tsv"):
-        df = pd.read_csv(file, sep="\t")
-    elif file.endswith("csv"):
-        df = pd.read_csv(file, sep=",")
-    elif file.endswith("xlsx"):
-        df = pd.read_excel(file, sheet_name="QC Metrics")
-    else:
+    file_readers = {
+        ".tsv": lambda f: pd.read_csv(f, sep="\t"),
+        ".csv": lambda f: pd.read_csv(f, sep=","),
+        ".xlsx": lambda f: pd.read_excel(f, sheet_name="QC Metrics"),
+    }
+
+    _, file_extension = os.path.splitext(file)
+
+    try:
+        df = file_readers.get(file_extension, lambda f: pd.DataFrame())(file)
+    except ValueError:
         df = pd.DataFrame()
+
+    if "Content_Desc" in df:
+        if "SAMPLE ID" not in df:
+            df.rename(columns={"Content_Desc": "SAMPLE ID"}, inplace=True)
+        elif df["SAMPLE ID"].apply(lambda x: x == "" or pd.isna(x)).all():
+            df["SAMPLE ID"] = df["Content_Desc"]
 
     cols = [
         "ACCESSION NUMBER",
@@ -397,7 +407,7 @@ def read_file_to_dataframe(file):
         if col not in df:
             df[col] = None
 
-    return df
+    return df[cols]
 
 
 def main():
