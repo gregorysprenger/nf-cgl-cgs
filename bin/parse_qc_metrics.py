@@ -5,11 +5,12 @@ import glob
 import os
 from datetime import datetime
 from functools import reduce
+from typing import Any, List
 
 import pandas as pd
 
 
-def parseArgs():
+def parseArgs() -> argparse.Namespace:
     """
     Parse input parameters.
 
@@ -44,7 +45,7 @@ def parseArgs():
     return parser.parse_args()
 
 
-def get_output_directory(outdir):
+def get_output_directory(outdir: str) -> str:
     """
     Get absolute path of output directory if specified. If not specified, set it to the current working directory.
 
@@ -62,7 +63,7 @@ def get_output_directory(outdir):
     return output_dir
 
 
-def get_list_value(lst, sep, index, value):
+def get_list_value(lst: list, sep: str, index: int, value: str) -> Any | None:
     """
     Find the first string match in provided list, and then split based on provided separator and index.
 
@@ -75,7 +76,7 @@ def get_list_value(lst, sep, index, value):
     return next((s.split(sep)[index] for s in lst if value in s), None)
 
 
-def get_columns(df, col_list):
+def get_columns(df: pd.DataFrame, col_list: list) -> pd.DataFrame:
     """
     Subset a DataFrame from a list of columns if those columns are present in the DataFrame.
 
@@ -83,10 +84,10 @@ def get_columns(df, col_list):
     :param col_list: List of column names to subset DataFrame
     :return: DataFrame with a specified subset of columns if they exist
     """
-    return df[[col for col in col_list if col in df.columns]].copy()
+    return df[[col for col in col_list if col in df.columns]]
 
 
-def parse_mapping_metrics(metric_files):
+def parse_mapping_metrics(metric_files: List[str]) -> pd.DataFrame:
     """
     Parse metrics out of all files that end with `mapping_metrics.csv`.
 
@@ -130,7 +131,7 @@ def parse_mapping_metrics(metric_files):
     return df
 
 
-def parse_wgs_coverage_metrics(metric_files):
+def parse_wgs_coverage_metrics(metric_files: List[str]) -> pd.DataFrame:
     """
     Parse metrics out of all files that end with `wgs_coverage_metrics.csv`.
 
@@ -153,7 +154,7 @@ def parse_wgs_coverage_metrics(metric_files):
     return parse_metrics(metrics_files, metric_dict, "COVERAGE SUMMARY")
 
 
-def parse_qc_coverage_region_metrics(metric_files):
+def parse_qc_coverage_region_metrics(metric_files: List[str]) -> pd.DataFrame:
     """
     Parse metrics out of all files that end with `qc-coverage-region-1_coverage_metrics.csv`.
 
@@ -177,7 +178,7 @@ def parse_qc_coverage_region_metrics(metric_files):
     return parse_metrics(metrics_files, metric_dict, "COVERAGE SUMMARY")
 
 
-def parse_vc_metrics(metric_files):
+def parse_vc_metrics(metric_files: List[str]) -> pd.DataFrame:
     """
     Parse metrics out of all files that end with `vc_metrics.csv`.
 
@@ -195,7 +196,7 @@ def parse_vc_metrics(metric_files):
     return parse_metrics(metrics_files, metric_dict, "CALLER POSTFILTER")
 
 
-def parse_cnv_metrics(metric_files):
+def parse_cnv_metrics(metric_files: List[str]) -> pd.DataFrame:
     """
     Parse metrics out of all files that end with `cnv_metrics.csv`.
 
@@ -209,7 +210,9 @@ def parse_cnv_metrics(metric_files):
     return parse_metrics(metrics_files, metric_dict, "")
 
 
-def parse_metrics(files, metric_dict, line_startswith):
+def parse_metrics(
+    files: List[str], metric_dict: dict, line_startswith: str
+) -> pd.DataFrame:
     """
     Parse list of files for items in dictionary.
 
@@ -247,13 +250,13 @@ def parse_metrics(files, metric_dict, line_startswith):
 
 
 def save_mgi_metrics(
-    mgi_worksheet,
-    mapping_metrics,
-    wgs_coverage_metrics,
-    qc_coverage_region,
-    filename_prefix,
-    outdir,
-):
+    mgi_worksheet: pd.DataFrame,
+    mapping_metrics: pd.DataFrame,
+    wgs_coverage_metrics: pd.DataFrame,
+    qc_coverage_region: pd.DataFrame,
+    filename_prefix: str,
+    outdir: str,
+) -> None:
     """
     Save required QC metrics for MGI.
 
@@ -319,7 +322,9 @@ def save_mgi_metrics(
     )
 
 
-def save_all_metrics(all_qc_dataframes, filename_prefix, outdir):
+def save_all_metrics(
+    all_qc_dataframes: List[pd.DataFrame], filename_prefix: str, outdir: str
+) -> None:
     """
     Save all QC metrics.
 
@@ -336,7 +341,12 @@ def save_all_metrics(all_qc_dataframes, filename_prefix, outdir):
     )
 
 
-def save_genoox_metrics(mgi_worksheet, mapping_metrics, filename_prefix, outdir):
+def save_genoox_metrics(
+    mgi_worksheet: pd.DataFrame,
+    mapping_metrics: pd.DataFrame,
+    filename_prefix: str,
+    outdir: str,
+) -> None:
     """
     Create Excel workbook that contains the following sheets: QC Metrics - qPCR.
 
@@ -374,7 +384,7 @@ def save_genoox_metrics(mgi_worksheet, mapping_metrics, filename_prefix, outdir)
     )
 
 
-def read_file_to_dataframe(file):
+def read_file_to_dataframe(file: str) -> pd.DataFrame:
     file_readers = {
         ".tsv": lambda f: pd.read_csv(f, sep="\t"),
         ".csv": lambda f: pd.read_csv(f, sep=","),
@@ -410,7 +420,7 @@ def read_file_to_dataframe(file):
     return df[cols]
 
 
-def main():
+def main() -> None:
     """
     Parse QC metrics for all files and save to Excel workbooks.
     """
