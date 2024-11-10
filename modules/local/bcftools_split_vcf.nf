@@ -25,7 +25,9 @@ process BCFTOOLS_SPLIT_VCF {
         ${joint_vcf_file}
 
     # Index VCF file
-    tabix -p vcf "\${output_filename}"
+    bcftools index \\
+        --tbi \\
+        "\${output_filename}"
 
     # Create MD5SUM of VCF file
     md5sum "\${output_filename}" > "\${output_filename}.md5sum"
