@@ -18,6 +18,13 @@ include { TRANSFER_DATA_AWS           } from '../modules/local/transfer_data_aws
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
+// Original input file -has not gone through XLSX -> CSV conversion
+if (params.input) {
+    ch_input_file = Channel.fromPath(params.input).collect()
+} else {
+    ch_input_file = Channel.empty()
+}
+
 // Illumina run directory
 if (params.illumina_rundir) {
     ch_illumina_run_dir = Channel.fromPath(params.illumina_rundir, type: 'dir', checkIfExists: true).collect()
@@ -306,7 +313,7 @@ workflow DRAGEN_CGS {
     // MODULE: Parse QC metrics
     //
     PARSE_QC_METRICS (
-        ch_mgi_samplesheet.collect().ifEmpty([]),
+        ch_input_file.ifEmpty([]),
         DRAGEN_ALIGN.out.metrics.collect(),
         ch_joint_metric_files.collect().ifEmpty([])
     )
