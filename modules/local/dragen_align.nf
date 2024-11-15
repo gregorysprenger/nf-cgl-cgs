@@ -19,8 +19,8 @@ process DRAGEN_ALIGN {
     output:
     tuple val(meta), path ("dragen/*")          , emit: dragen_output
     path("dragen/*.hard-filtered.gvcf.gz")      , emit: hard_filtered_gvcf       , optional: true
+    path("dragen/${meta.id}_usage.txt")         , emit: usage                    , optional: true
     path("dragen/*_metrics.csv")                , emit: metrics
-    path("${meta.id}_usage.txt")                , emit: usage                    , optional: true
     path("dragen/*.tn.tsv.gz")                  , emit: tangent_normalized_counts, optional: true
     path("dragen/*.bam")                        , emit: bam
     path("versions.yml")                        , emit: versions
@@ -88,7 +88,7 @@ process DRAGEN_ALIGN {
     find dragen/ \\
         -type f \\
         -name "*_usage.txt" \\
-        -exec cp "{}" "${meta.id}_usage.txt" \\;
+        -exec mv "{}" "dragen/${meta.id}_usage.txt" \\;
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
