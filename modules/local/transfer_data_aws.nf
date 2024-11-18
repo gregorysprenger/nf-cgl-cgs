@@ -58,6 +58,7 @@ process TRANSFER_DATA_AWS {
         --include "*.gff3*" \\
         --include "*.vcf.gz*" \\
         --include "*.bed.gz*" \\
+        --include "*_usage.txt" \\
         &> aws_log.txt
 
     cat <<-END_VERSIONS > versions.yml
@@ -107,6 +108,7 @@ process TRANSFER_DATA_AWS {
         --include "*.gff3*" \\
         --include "*.vcf.gz*" \\
         --include "*.bed.gz*" \\
+        --include "*_usage.txt" \\
         --dryrun \\
         &> aws_log.txt
 
