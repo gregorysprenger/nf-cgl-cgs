@@ -12,6 +12,7 @@ process TRANSFER_DATA_AWS {
     path(qc_metrics)
 
     output:
+    path("aws_log.txt") , emit: aws_log
     path("versions.yml"), emit: versions
 
     when:
@@ -59,6 +60,7 @@ process TRANSFER_DATA_AWS {
         --include "*.vcf.gz*" \\
         --include "*.bed.gz*" \\
         --include "*_usage.txt" \\
+        --only-show-errors \\
         &> aws_log.txt
 
     cat <<-END_VERSIONS > versions.yml
@@ -109,6 +111,7 @@ process TRANSFER_DATA_AWS {
         --include "*.vcf.gz*" \\
         --include "*.bed.gz*" \\
         --include "*_usage.txt" \\
+        --only-show-errors \\
         --dryrun \\
         &> aws_log.txt
 
