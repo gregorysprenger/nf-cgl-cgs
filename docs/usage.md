@@ -42,7 +42,7 @@ nextflow secrets set GNX_ACCESS_KEY <KEY>
 #### AWS: Data transfers
 
 | Secret         | Description                                                                              |
-|----------------|------------------------------------------------------------------------------------------|
+| -------------- | ---------------------------------------------------------------------------------------- |
 | GNX_DATA       | The first directory in the AWS S3 bucket to save files to (ex. `s3://bucket/<GNX_DATA>`) |
 | GNX_BUCKET     | Name of AWS S3 bucket                                                                    |
 | GNX_REGION     | AWS S3 region                                                                            |
@@ -55,7 +55,7 @@ nextflow secrets set GNX_ACCESS_KEY <KEY>
 > The following Nextflow secrets are only required if using Compute on AWS.
 
 | Secret         | Description            |
-|----------------|------------------------|
+| -------------- | ---------------------- |
 | AWS_ACCESS_KEY | AWS Compute access key |
 | AWS_SECRET_KEY | AWS Compute secret key |
 
@@ -65,7 +65,7 @@ nextflow secrets set GNX_ACCESS_KEY <KEY>
 > The following Nextflow secrets are only required if using the Illumina DRAGEN on AWS.
 
 | Secret              | Description                                 |
-|---------------------|---------------------------------------------|
+| ------------------- | ------------------------------------------- |
 | AWS_DRAGEN_USER     | Username to access Illumina's DRAGEN on AWS |
 | AWS_DRAGEN_PASSWORD | Password to access Illumina's DRAGEN on AWS |
 
@@ -174,7 +174,7 @@ Lane    Flowcell ID    Content_Desc    Index    Exceptions
 ```
 
 | Column          | Description                                                                         |
-|-----------------|-------------------------------------------------------------------------------------|
+| --------------- | ----------------------------------------------------------------------------------- |
 | `Run Directory` | The path to the Illumina run directory.                                             |
 | `Lane`          | The lane number used on the instrument for each sample.                             |
 | `Flowcell ID`   | The ID of the flowcell used.                                                        |
@@ -199,7 +199,7 @@ AGC-CAG.2,Sample_2,UnknownLibrary,2,/path/to/Sample_2_R1.fastq.gz,/path/to/Sampl
 ```
 
 | Column      | Description                              |
-|-------------|------------------------------------------|
+| ----------- | ---------------------------------------- |
 | `RGID`      | The read group for the sample.           |
 | `RGSM`      | Sample ID                                |
 | `RGLB`      | Library information                      |
