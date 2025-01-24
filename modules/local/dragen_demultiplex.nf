@@ -31,7 +31,7 @@ process DRAGEN_DEMULTIPLEX {
         --output-directory "\$PWD/${prefix.id}"
 
     # Copy RunParameters.xml to ${prefix.id}/Reports
-    find ${rundir} \\
+    find -L ${rundir} \\
         -type f \\
         -name "RunParameters.xml" \\
         -exec cp "{}" ${prefix.id}/Reports/ \\;
