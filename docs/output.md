@@ -24,18 +24,18 @@ Samples can be demultiplexed when the following parameters are used: `--input <m
 <details markdown="1">
 <summary>Output files</summary>
 
-- `<params.demux_outdir>/`
+- `<params.demux_outdir>/<params.batch_name>`
 
   - `dragen.time_metrics.csv`: Runtime log
   - `dragen-replay.json`: Log of commands and DRAGEN configurations for demultiplexing samples.
   - `*.fastq.gz`: File that contains biological sequence data and its corresponding quality scores.
 
-- `<params.demux_outdir>/Logs/`
+- `<params.demux_outdir>/<params.batch_name>/Logs/`
 
   - `*.log`: DRAGEN output logs.
   - `FastqComplete.txt`: Contains timestamp of when FastQ generation is complete.
 
-- `<params.demux_outdir>/Reports/`
+- `<params.demux_outdir>/<params.batch_name>/Reports/`
   - `*_{Metrics,Stats,Counts,Barcodes}.csv`: Various QC metrics.
   - `RunInfo.xml`: Run information for sample demultiplexing.
   - `SampleSheet.csv`: Contains sample information and their corresponding indexes.
