@@ -78,9 +78,10 @@ process DRAGEN_ALIGN {
     # Create md5sum of files
     find dragen/ \\
         -type f \\
-        -name "*.gz*"  -o \\
+        -name "*.gz*" -o \\
         -name "*.gff3" -o \\
         -name "*.bam*" \\
+        ! -name "*.md5sum" \\
         | xargs -I "{}" \\
             bash -c "md5sum {} | sed 's|dragen/||g' > {}.md5sum"
 
