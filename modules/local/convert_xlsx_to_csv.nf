@@ -23,13 +23,21 @@ process CONVERT_XLSX_TO_CSV {
     import subprocess
     import pandas as pd
 
-    batch = pd.read_excel("${spreadsheet}".replace("\\\\", ""), engine="openpyxl", skiprows=1)
+    batch = pd.read_excel(
+        "${spreadsheet}".replace("\\\\", ""),
+        engine="openpyxl",
+        skiprows=1
+        if pd.read_excel("${spreadsheet}", nrows=1, engine="openpyxl")
+        .columns[0]
+        .startswith("Run")
+        else 0,
+    )
     batch.to_csv("${prefix.id}.csv", index=False)
 
     # Output version information
     with open("versions.yml", "w") as f:
         f.write(f'"{subprocess.getoutput("echo ${task.process}")}":\\n')
-        f.write(f'    python: {platform.python_version()}\\n')
+        f.write(f"    python: {platform.python_version()}\\n")
     """
 
     stub:
@@ -41,12 +49,20 @@ process CONVERT_XLSX_TO_CSV {
     import subprocess
     import pandas as pd
 
-    batch = pd.read_excel("${spreadsheet}".replace("\\\\", ""), engine="openpyxl", skiprows=1)
+    batch = pd.read_excel(
+        "${spreadsheet}".replace("\\\\", ""),
+        engine="openpyxl",
+        skiprows=1
+        if pd.read_excel("${spreadsheet}", nrows=1, engine="openpyxl")
+        .columns[0]
+        .startswith("Run")
+        else 0,
+    )
     batch.to_csv("${prefix.id}.csv", index=False)
 
     # Output version information
     with open("versions.yml", "w") as f:
         f.write(f'"{subprocess.getoutput("echo ${task.process}")}":\\n')
-        f.write(f'    python: {platform.python_version()}\\n')
+        f.write(f"    python: {platform.python_version()}\\n")
     """
 }
