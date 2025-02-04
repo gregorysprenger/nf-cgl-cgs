@@ -11,7 +11,7 @@ include { INPUT_CHECK as VERIFY_FASTQ_LIST } from '../../subworkflows/local/inpu
 
 /*
 ========================================================================================
-    SUBWORKFLOW TO CHECK INPUTS
+    SUBWORKFLOW TO DEMULTIPLEX DATA
 ========================================================================================
 */
 
@@ -78,7 +78,7 @@ workflow DEMULTIPLEX {
     }
 
     emit:
-    samples  = VERIFY_FASTQ_LIST.out.samples
-    versions = ch_versions
+    samples  = VERIFY_FASTQ_LIST.out.samples  // channel: [ val(meta), path(file) ]
+    versions = ch_versions                    // channel: [ path(file) ]
 
 }
