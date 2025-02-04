@@ -75,7 +75,7 @@ workflow INPUT_CHECK {
                                     def R1   = row.Read1File ? file(row.Read1File, checkIfExists: true) : error("Missing or invalid 'Read1File' file!")
                                     def R2   = row.Read2File ? file(row.Read2File, checkIfExists: true) : error("Missing or invalid 'Read2File' file!")
 
-                                    def regexPattern = /\w\d{2}-\d{4}/
+                                    def regexPattern = /\w\d{2}-\d+/
                                     def meta = [:]
                                     meta['id'] = row.RGSM
                                     meta['acc'] = row.RGSM.findAll(regexPattern)[0] ?: row.RGSM
