@@ -137,6 +137,7 @@ workflow DRAGEN_CGS {
         ch_samples = ch_input_samples
     }
 
+    // Fetch gender for samples
     if (params.sample_info) {
         ch_align_samples = ch_samples.map{
                                 meta, fastq_list ->
@@ -372,6 +373,7 @@ workflow DRAGEN_CGS {
 
     emit:
     versions = ch_versions
+
 }
 
 /*
