@@ -73,7 +73,7 @@ workflow DEMULTIPLEX {
             .collectFile(
                 name      : "fastq_list.csv",
                 keepHeader: true,
-                storeDir  : "${params.demux_outdir}/${batch_name}/"
+                storeDir  : "${params.demux_outdir}/${batch_name}/Reports/"
             )
     }
 

@@ -17,7 +17,6 @@ process CREATE_DEMULTIPLEX_SAMPLESHEET {
     task.ext.when == null || task.ext.when
 
     script:
-    def prefix = task.ext.prefix
     """
     prepare_dragen_demux.py \\
         -r ${illumina_run_dir} \\
@@ -32,7 +31,9 @@ process CREATE_DEMULTIPLEX_SAMPLESHEET {
     stub:
     def prefix = task.ext.prefix
     """
-    touch ${prefix.id}.demux_samplesheet.csv ${prefix.id}.runinfo.csv
+    touch \\
+        ${prefix.id}.demux_samplesheet.csv \\
+        ${prefix.id}.runinfo.csv
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
