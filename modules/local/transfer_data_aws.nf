@@ -63,6 +63,12 @@ process TRANSFER_DATA_AWS {
         --only-show-errors \\
         &> aws_log.txt
 
+    if [ \$? -eq 0 ]; then
+        echo "AWS sync completed successfully." >> aws_log.txt
+    else
+        error "AWS sync failed. Check 'aws_log.txt' for details."
+    fi
+
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
         aws: \$(aws --version 2>&1 | awk '{print \$1}' | cut -d '/' -f2)
