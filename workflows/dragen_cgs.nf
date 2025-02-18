@@ -352,8 +352,8 @@ workflow DRAGEN_CGS {
 
         TRANSFER_DATA_AWS (
             ch_dragen_files.collect(),
-            BCFTOOLS_SPLIT_VCF.out.split_vcf.map{ meta, file -> file }.collect(),
-            ch_joint_metric_files.collect(),
+            BCFTOOLS_SPLIT_VCF.out.split_vcf.map{ meta, file -> file }.collect().ifEmpty([]),
+            ch_joint_metric_files.collect().ifEmpty([]),
             PARSE_QC_METRICS.out.qc_metrics.collect()
         )
         ch_versions = ch_versions.mix(TRANSFER_DATA_AWS.out.versions)
