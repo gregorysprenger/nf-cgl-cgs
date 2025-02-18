@@ -29,17 +29,18 @@ process DRAGEN_ALIGN {
     task.ext.when == null || task.ext.when
 
     script:
-    def args_license     = task.ext.dragen_license_args                  ?: ""
-    def sample_sex       = meta.sex?.toLowerCase() in ['male', 'female'] ? "--sample-sex ${meta.sex}"                             : ""
-    def dbsnp            = dbsnp_file                                    ? "--dbsnp ${dbsnp_file}"                                : ""
-    def create_gvcf      = params.create_gvcf                            ? "--vc-emit-ref-confidence GVCF"                        : ""
-    def ref_dir          = reference_directory                           ? "--ref-dir ${reference_directory}"                     : ""
-    def adapter1         = adapter1_file                                 ? "--trim-adapter-read1 ${adapter1_file}"                : ""
-    def adapter2         = adapter2_file                                 ? "--trim-adapter-read2 ${adapter2_file}"                : ""
-    def qc_cont_vcf      = qc_cross_contamination_file                   ? "--qc-cross-cont-vcf ${qc_cross_contamination_file}"   : ""
-    def qc_cov_region1   = qc_coverage_region_file                       ? "--qc-coverage-region-1 ${qc_coverage_region_file}"    : ""
-    def intermediate_dir = intermediate_directory.canWrite()             ? "--intermediate-results-dir ${intermediate_directory}" : ""
-
+    def alignment_args = [
+        task.ext.dragen_license_args                  ?: "",
+        meta.sex?.toLowerCase() in ['male', 'female'] ? "--sample-sex ${meta.sex}"                             : "",
+        dbsnp_file                                    ? "--dbsnp ${dbsnp_file}"                                : "",
+        params.create_gvcf                            ? "--vc-emit-ref-confidence GVCF"                        : "",
+        reference_directory                           ? "--ref-dir ${reference_directory}"                     : "",
+        adapter1_file                                 ? "--trim-adapter-read1 ${adapter1_file}"                : "",
+        adapter2_file                                 ? "--trim-adapter-read2 ${adapter2_file}"                : "",
+        qc_cross_contamination_file                   ? "--qc-cross-cont-vcf ${qc_cross_contamination_file}"   : "",
+        qc_coverage_region_file                       ? "--qc-coverage-region-1 ${qc_coverage_region_file}"    : "",
+        intermediate_directory                        ? "--intermediate-results-dir ${intermediate_directory}" : ""
+    ].join(' ').trim()
     """
     mkdir -p dragen
 
@@ -49,19 +50,10 @@ process DRAGEN_ALIGN {
         --output-file-prefix ${meta.id} \\
         --output-directory dragen \\
         --force \\
-        ${dbsnp} \\
-        ${ref_dir} \\
-        ${adapter1} \\
-        ${adapter2} \\
-        ${sample_sex} \\
-        ${qc_cont_vcf} \\
-        ${create_gvcf} \\
-        ${args_license} \\
+        ${alignment_args} \\
         --enable-sv true \\
-        ${qc_cov_region1} \\
         --enable-cnv true \\
         --enable-sort true \\
-        ${intermediate_dir} \\
         --output-format BAM \\
         --enable-map-align true \\
         --read-trimmers adapter \\
@@ -98,20 +90,27 @@ process DRAGEN_ALIGN {
     """
 
     stub:
-    def dragen_version   = "4.3.6"
-    def args_license     = task.ext.dragen_license_args                  ?: ""
-    def sample_sex       = meta.sex?.toLowerCase() in ['male', 'female'] ? "--sample-sex ${meta.sex}"                             : ""
-    def dbsnp            = dbsnp_file                                    ? "--dbsnp ${dbsnp_file}"                                : ""
-    def create_gvcf      = params.create_gvcf                            ? "--vc-emit-ref-confidence GVCF"                        : ""
-    def ref_dir          = reference_directory                           ? "--ref-dir ${reference_directory}"                     : ""
-    def adapter1         = adapter1_file                                 ? "--trim-adapter-read1 ${adapter1_file}"                : ""
-    def adapter2         = adapter2_file                                 ? "--trim-adapter-read2 ${adapter2_file}"                : ""
-    def qc_cont_vcf      = qc_cross_contamination_file                   ? "--qc-cross-cont-vcf ${qc_cross_contamination_file}"   : ""
-    def qc_cov_region1   = qc_coverage_region_file                       ? "--qc-coverage-region-1 ${qc_coverage_region_file}"    : ""
-    def intermediate_dir = intermediate_directory.canWrite()             ? "--intermediate-results-dir ${intermediate_directory}" : ""
-
+    def alignment_args = [
+        task.ext.dragen_license_args                  ?: "",
+        meta.sex?.toLowerCase() in ['male', 'female'] ? "--sample-sex ${meta.sex}"                             : "",
+        dbsnp_file                                    ? "--dbsnp ${dbsnp_file}"                                : "",
+        params.create_gvcf                            ? "--vc-emit-ref-confidence GVCF"                        : "",
+        reference_directory                           ? "--ref-dir ${reference_directory}"                     : "",
+        adapter1_file                                 ? "--trim-adapter-read1 ${adapter1_file}"                : "",
+        adapter2_file                                 ? "--trim-adapter-read2 ${adapter2_file}"                : "",
+        qc_cross_contamination_file                   ? "--qc-cross-cont-vcf ${qc_cross_contamination_file}"   : "",
+        qc_coverage_region_file                       ? "--qc-coverage-region-1 ${qc_coverage_region_file}"    : "",
+        intermediate_directory                        ? "--intermediate-results-dir ${intermediate_directory}" : ""
+    ].join(' ').trim()
     """
     mkdir -p dragen
+
+    touch \\
+        "dragen/*.bam" \\
+        "dragen/*.tn.tsv.gz" \\
+        "dragen/*_metrics.csv" \\
+        "dragen/${meta.id}_usage.txt" \\
+        "dragen/*.hard-filtered.gvcf.gz"
 
     cat <<-END_CMDS > "dragen/${meta.id}.txt"
     /opt/dragen/4.3.6/bin/dragen \\
@@ -120,19 +119,10 @@ process DRAGEN_ALIGN {
         --output-file-prefix ${meta.id} \\
         --output-directory dragen \\
         --force \\
-        ${dbsnp} \\
-        ${ref_dir} \\
-        ${adapter1} \\
-        ${adapter2} \\
-        ${sample_sex} \\
-        ${qc_cont_vcf} \\
-        ${create_gvcf} \\
-        ${args_license} \\
+        ${alignment_args} \\
         --enable-sv true \\
-        ${qc_cov_region1} \\
         --enable-cnv true \\
         --enable-sort true \\
-        ${intermediate_dir} \\
         --output-format BAM \\
         --enable-map-align true \\
         --read-trimmers adapter \\
@@ -146,15 +136,6 @@ process DRAGEN_ALIGN {
         --cnv-enable-self-normalization true \\
         --variant-annotation-assembly GRCh38
     END_CMDS
-
-    # Copy data
-    cp -rf ${projectDir}/assets/test_data/dragen_path/GM24385/* dragen/
-
-    # Rename files
-    find \$PWD \\
-        -type f \\
-        -name "GM24385*" \\
-        -exec bash -c 'mv "{}" \$(echo "{}" | sed "s/GM24385/${meta.id}/")' \\;
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
