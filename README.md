@@ -68,12 +68,12 @@ nextflow run \
 > provided by the `-c` Nextflow option can be used to provide any configuration _**except for parameters**_;
 > see [docs](https://nf-co.re/usage/configuration#custom-configuration-files).
 
-For more details and further functionality, please refer to the [usage documentation](https://nf-co.re/dragenmultiworkflow/usage) and the [parameter documentation](https://nf-co.re/dragenmultiworkflow/parameters).
+For more details and further functionality, please refer to the [usage documentation](docs/usage) and the [parameter documentation](docs/parameters).
 
 ## Pipeline output
 
 For more details about the output files and reports, please refer to the
-[output documentation](https://nf-co.re/dragenmultiworkflow/output).
+[output documentation](docs/output).
 
 ## Contributions and Support
 

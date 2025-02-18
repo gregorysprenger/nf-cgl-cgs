@@ -3,7 +3,7 @@
   <Side>B</Side>
   <Application>NovaSeqXSeries Control Software</Application>
   <SystemSuiteVersion>1.2.0.28691</SystemSuiteVersion>
-  <OutputFolder>//storage1.ris.wustl.edu/gtac-mgi/Active/Illumina_production/Data/20231211_LH00195_0065_B22GLYYLT3</OutputFolder>
+  <OutputFolder>20231211_LH00195_0065_B22GLYYLT3</OutputFolder>
   <CloudUploadMode>RunMonitoring</CloudUploadMode>
   <RunSetupMode>LocalOrchestrated</RunSetupMode>
   <SecondaryAnalysisMode>LocalAnalysis</SecondaryAnalysisMode>
