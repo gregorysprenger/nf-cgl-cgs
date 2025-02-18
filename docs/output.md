@@ -13,6 +13,7 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
 - [Demultiplex samples (optional)](#demultiplex-samples-optional) - Demultiplex input samples if specified
 - [Alignment and mapping](#alignment-and-mapping) - Samples are aligned and mapped to the reference input
 - [Batch joint genotyping](#batch-joint-genotyping) - Gather and joint genotype all samples
+- [Pipeline information](#pipeline-information)
 
 ### Demultiplex samples (optional)
 
