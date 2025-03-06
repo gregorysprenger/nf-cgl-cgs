@@ -24,19 +24,20 @@ process TRANSFER_DATA_AWS {
     export AWS_ACCESS_KEY_ID=\${GNX_ACCESS_KEY}
     export AWS_SECRET_ACCESS_KEY=\${GNX_SECRET_KEY}
 
-    # Gather all BAM files
-    files=( \$(find -L dragen_align_files/ -type f -name "*.bam") )
-
-    # Make directories and move files
-    for file in \${files[@]}; do
-        base=\$(basename \${file%%.*})
-        mkdir -p "${prefix.id}/\${base}"
+    # Organize files for upload
+    for file in \$(find -L dragen_align_files/ -type f -name "*.bam"); do
+        base=\$(basename "\${file%%.*}")
+        target_dir="${prefix.id}/\${base}"
+        mkdir -p "\$target_dir"
 
         for dir in dragen_align_files joint_called_files; do
-            find -L \$dir \\
+            [ -d "\$dir" ] && \\
+            find \\
+                -L \\
+                "\$dir" \\
                 -type f \\
                 -name "\${base}*" \\
-                -exec mv -f "{}" "${prefix.id}/\${base}" \\;
+                -exec mv -f {} "\$target_dir" \\;
         done
     done
 
@@ -81,19 +82,20 @@ process TRANSFER_DATA_AWS {
     export AWS_ACCESS_KEY_ID=\${GNX_ACCESS_KEY}
     export AWS_SECRET_ACCESS_KEY=\${GNX_SECRET_KEY}
 
-    # Gather all BAM files
-    files=( \$(find -L dragen_align_files/ -type f -name "*.bam") )
-
-    # Make directories and move files
-    for file in \${files[@]}; do
-        base=\$(basename \${file%%.*})
-        mkdir -p "${prefix.id}/\${base}"
+    # Organize files for upload
+    for file in \$(find -L dragen_align_files/ -type f -name "*.bam"); do
+        base=\$(basename "\${file%%.*}")
+        target_dir="${prefix.id}/\${base}"
+        mkdir -p "\$target_dir"
 
         for dir in dragen_align_files joint_called_files; do
-            find -L \$dir \\
+            [ -d "\$dir" ] && \\
+            find \\
+                -L \\
+                "\$dir" \\
                 -type f \\
                 -name "\${base}*" \\
-                -exec mv -f "{}" "${prefix.id}/\${base}" \\;
+                -exec mv -f {} "\$target_dir" \\;
         done
     done
 
