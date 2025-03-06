@@ -27,6 +27,7 @@ env:
 
 jobs:
   download:
+    if: false # TODO: Disable the workflow by default for now
     runs-on: ubuntu-latest
     steps:
       - name: Install Nextflow
