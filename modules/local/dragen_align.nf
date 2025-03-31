@@ -17,13 +17,13 @@ process DRAGEN_ALIGN {
     path(dbsnp_file)
 
     output:
-    tuple val(meta), path ("dragen/*")          , emit: dragen_output
-    path("dragen/*.hard-filtered.gvcf.gz")      , emit: hard_filtered_gvcf       , optional: true
-    path("dragen/${meta.id}_usage.txt")         , emit: usage                    , optional: true
-    path("dragen/*_metrics.csv")                , emit: metrics
-    path("dragen/*.tn.tsv.gz")                  , emit: tangent_normalized_counts, optional: true
-    path("dragen/*.bam")                        , emit: bam
-    path("versions.yml")                        , emit: versions
+    tuple val(meta), path ("dragen/*")    , emit: dragen_output
+    path("dragen/*.hard-filtered.gvcf.gz"), emit: hard_filtered_gvcf       , optional: true
+    path("dragen/${meta.id}_usage.txt")   , emit: usage                    , optional: true
+    path("dragen/*_metrics.csv")          , emit: metrics
+    path("dragen/*.tn.tsv.gz")            , emit: tangent_normalized_counts, optional: true
+    path("dragen/*.bam")                  , emit: bam
+    path("versions.yml")                  , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -33,7 +33,7 @@ process DRAGEN_ALIGN {
         task.ext.dragen_license_args                  ?: "",
         meta.sex?.toLowerCase() in ['male', 'female'] ? "--sample-sex ${meta.sex}"                             : "",
         dbsnp_file                                    ? "--dbsnp ${dbsnp_file}"                                : "",
-        params.create_gvcf                            ? "--vc-emit-ref-confidence GVCF"                        : "",
+        meta.create_gvcf                              ? "--vc-emit-ref-confidence GVCF"                        : "",
         reference_directory                           ? "--ref-dir ${reference_directory}"                     : "",
         adapter1_file                                 ? "--trim-adapter-read1 ${adapter1_file}"                : "",
         adapter2_file                                 ? "--trim-adapter-read2 ${adapter2_file}"                : "",
@@ -71,9 +71,9 @@ process DRAGEN_ALIGN {
     find dragen/ \\
         -type f \\
         \\( \\
-        -name "*.gz*" -o \\
-        -name "*.gff3" -o \\
-        -name "*.bam*" \\
+            -name "*.gz*" -o \\
+            -name "*.gff3" -o \\
+            -name "*.bam*" \\
         \\) \\
         ! -name "*.md5sum" \\
         | xargs -I "{}" \\
@@ -96,7 +96,7 @@ process DRAGEN_ALIGN {
         task.ext.dragen_license_args                  ?: "",
         meta.sex?.toLowerCase() in ['male', 'female'] ? "--sample-sex ${meta.sex}"                             : "",
         dbsnp_file                                    ? "--dbsnp ${dbsnp_file}"                                : "",
-        params.create_gvcf                            ? "--vc-emit-ref-confidence GVCF"                        : "",
+        meta.create_gvcf                              ? "--vc-emit-ref-confidence GVCF"                        : "",
         reference_directory                           ? "--ref-dir ${reference_directory}"                     : "",
         adapter1_file                                 ? "--trim-adapter-read1 ${adapter1_file}"                : "",
         adapter2_file                                 ? "--trim-adapter-read2 ${adapter2_file}"                : "",
@@ -108,11 +108,11 @@ process DRAGEN_ALIGN {
     mkdir -p dragen
 
     touch \\
-        "dragen/*.bam" \\
-        "dragen/*.tn.tsv.gz" \\
-        "dragen/*_metrics.csv" \\
+        "dragen/${meta.id}.bam" \\
+        "dragen/${meta.id}.tn.tsv.gz" \\
+        "dragen/${meta.id}_metrics.csv" \\
         "dragen/${meta.id}_usage.txt" \\
-        "dragen/*.hard-filtered.gvcf.gz"
+        "dragen/${meta.id}.hard-filtered.gvcf.gz"
 
     cat <<-END_CMDS > "dragen/${meta.id}.txt"
     /opt/dragen/4.3.6/bin/dragen \\
@@ -141,7 +141,7 @@ process DRAGEN_ALIGN {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        dragen: ${dragen_version}
+        dragen: \$(/opt/dragen/4.3.6/bin/dragen --version | head -n 1 | cut -d ' ' -f 3)
     END_VERSIONS
     """
 }

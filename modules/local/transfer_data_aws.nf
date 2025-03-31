@@ -1,4 +1,5 @@
 process TRANSFER_DATA_AWS {
+    tag "${task.ext.prefix.id}"
     label 'process_low'
     label 'gnx_aws'
 

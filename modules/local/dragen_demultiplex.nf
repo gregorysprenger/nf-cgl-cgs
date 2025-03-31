@@ -12,8 +12,8 @@ process DRAGEN_DEMULTIPLEX {
 
     output:
     path("${task.ext.prefix.id}/Reports/fastq_list.csv"), emit: fastq_list
-    path("${task.ext.prefix.id}/*")                     , emit: demux_files
-    path("versions.yml")                                , emit: versions
+    path("${task.ext.prefix.id}/*")                      , emit: demux_files
+    path("versions.yml")                                 , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -43,24 +43,23 @@ process DRAGEN_DEMULTIPLEX {
     """
 
     stub:
-    def dragen_version = "4.3.6"
-    def prefix         = task.ext.prefix
+    def prefix = task.ext.prefix
     """
     cp -r ${projectDir}/assets/test_data/demux_fastq/ ${prefix.id}
 
     cat <<-END_CMDS > "${prefix.id}_cmds.txt"
-        /opt/dragen/4.3.6/bin/dragen \\
-            --bcl-conversion-only true \\
-            --bcl-only-matched-reads true \\
-            --strict-mode true \\
-            --sample-sheet ${samplesheet} \\
-            --bcl-input-directory ${rundir} \\
-            --output-directory "\$PWD/${prefix.id}"
+    /opt/dragen/4.3.6/bin/dragen \\
+        --bcl-conversion-only true \\
+        --bcl-only-matched-reads true \\
+        --strict-mode true \\
+        --sample-sheet ${samplesheet} \\
+        --bcl-input-directory ${rundir} \\
+        --output-directory "\$PWD/${prefix.id}"
     END_CMDS
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        dragen: ${dragen_version}
+        dragen: \$(/opt/dragen/4.3.6/bin/dragen --version | head -n 1 | cut -d ' ' -f 3)
     END_VERSIONS
     """
 }

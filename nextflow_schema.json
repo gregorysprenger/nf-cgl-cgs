@@ -17,6 +17,11 @@
                     "format": "file-path",
                     "description": "Path to samplesheet file with the following columns: Lane, Flowcell ID, Content_Desc, and Index."
                 },
+                "reseq_input": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Path to reseq samplesheet file with the following columns: Lane, Flowcell ID, Content_Desc, and Index."
+                },
                 "fastq_list": {
                     "type": "string",
                     "format": "file-path",
@@ -35,6 +40,11 @@
                     "type": "string",
                     "format": "directory-path",
                     "description": "Path to Illumina run directory."
+                },
+                "reseq_illumina_rundir": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "description": "Path to reseq Illumina run directory."
                 },
                 "outdir": {
                     "type": "string",

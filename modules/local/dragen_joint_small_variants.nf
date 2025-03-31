@@ -11,11 +11,11 @@ process DRAGEN_JOINT_SMALL_VARIANTS {
     path(reference_directory)
 
     output:
-    tuple val(task.ext.prefix), path("${task.ext.prefix.id}.vcf.gz"), emit: joint_small_variants
-    tuple val(task.ext.prefix), path("*hard-filtered.vcf.gz")       , emit: joint_small_variants_filtered
-    path("joint_small_variants_usage.txt")                          , emit: usage                        , optional: true
-    path("*.vc_metrics.csv")                                        , emit: metrics
-    path("versions.yml")                                            , emit: versions
+    path("${task.ext.prefix.id}.vcf.gz")  , emit: joint_small_variants
+    path("*hard-filtered.vcf.gz")         , emit: joint_small_variants_filtered
+    path("joint_small_variants_usage.txt"), emit: usage                        , optional: true
+    path("*.vc_metrics.csv")              , emit: metrics
+    path("versions.yml")                  , emit: versions
 
     when:
     task.ext.when == null || task.ext.when

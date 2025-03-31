@@ -11,10 +11,10 @@ process DRAGEN_JOINT_SV {
     path(reference_directory)
 
     output:
-    tuple val(task.ext.prefix), path("*.vcf.gz"), emit: joint_sv
-    path("joint_sv_usage.txt")                  , emit: usage     , optional: true
-    path("*.sv_metrics.csv")                    , emit: metrics
-    path("versions.yml")                        , emit: versions
+    path("*.vcf.gz")          , emit: joint_sv
+    path("joint_sv_usage.txt"), emit: usage     , optional: true
+    path("*.sv_metrics.csv")  , emit: metrics
+    path("versions.yml")      , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
