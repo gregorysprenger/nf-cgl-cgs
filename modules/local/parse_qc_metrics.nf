@@ -1,10 +1,12 @@
 process PARSE_QC_METRICS {
+    tag "${task.ext.prefix.id}"
     label 'process_low'
 
     container 'docker.io/gregorysprenger/pandas-excel:v2.2.2'
 
     input:
-    path(mgi_worksheet)
+    path(samplesheet)
+    path(reseq_samplesheet)
     path(single_sample_metrics), stageAs: "single_sample_metrics/"
     path(joint_sample_metrics) , stageAs: "joint_sample_metrics/"
 
@@ -16,8 +18,11 @@ process PARSE_QC_METRICS {
     task.ext.when == null || task.ext.when
 
     script:
-    def prefix          = task.ext.prefix
-    def mgi_samplesheet = mgi_worksheet ? "--mgi_worksheet ${mgi_worksheet}" : ""
+    def prefix       = task.ext.prefix
+    def samplesheets = [
+        samplesheet       ? "--mgi_worksheet ${samplesheet}"             : "",
+        reseq_samplesheet ? "--mgi_reseq_worksheet ${reseq_samplesheet}" : ""
+    ].join(' ').trim()
     """
     # Remove single sample metrics if joint called metrics
     if [[ -d joint_sample_metrics ]]; then
@@ -33,7 +38,7 @@ process PARSE_QC_METRICS {
 
     # Create metric summary files
     parse_qc_metrics.py \\
-        ${mgi_samplesheet} \\
+        ${samplesheets} \\
         --inputdir \$PWD \\
         --outdir \$PWD \\
         --prefix ${prefix.id}
@@ -45,8 +50,11 @@ process PARSE_QC_METRICS {
     """
 
     stub:
-    def prefix          = task.ext.prefix
-    def mgi_samplesheet = mgi_worksheet ? "--mgi_worksheet ${mgi_worksheet}" : ""
+    def prefix       = task.ext.prefix
+    def samplesheets = [
+        samplesheet       ? "--mgi_worksheet ${samplesheet}"             : "",
+        reseq_samplesheet ? "--mgi_reseq_worksheet ${reseq_samplesheet}" : ""
+    ].join(' ').trim()
     """
     # Remove single sample metrics if joint called metrics
     if [[ -d joint_sample_metrics ]]; then
@@ -62,7 +70,7 @@ process PARSE_QC_METRICS {
 
     # Create metric summary files
     parse_qc_metrics.py \\
-        ${mgi_samplesheet} \\
+        ${samplesheets} \\
         --inputdir \$PWD \\
         --outdir \$PWD \\
         --prefix ${prefix.id}

@@ -4,13 +4,14 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { DEMULTIPLEX                 } from '../subworkflows/local/demultiplex'
-include { DRAGEN_ALIGN                } from '../modules/local/dragen_align'
-include { DRAGEN_JOINT_CNV            } from '../modules/local/dragen_joint_cnv'
-include { DRAGEN_JOINT_SMALL_VARIANTS } from '../modules/local/dragen_joint_small_variants'
-include { PARSE_QC_METRICS            } from '../modules/local/parse_qc_metrics'
-include { BCFTOOLS_SPLIT_VCF          } from '../modules/local/bcftools_split_vcf'
-include { TRANSFER_DATA_AWS           } from '../modules/local/transfer_data_aws'
+include { DEMULTIPLEX                      } from '../subworkflows/local/demultiplex'
+include { DEMULTIPLEX as RESEQ_DEMULTIPLEX } from '../subworkflows/local/demultiplex'
+include { DRAGEN_ALIGN                     } from '../modules/local/dragen_align'
+include { DRAGEN_JOINT_CNV                 } from '../modules/local/dragen_joint_cnv'
+include { DRAGEN_JOINT_SMALL_VARIANTS      } from '../modules/local/dragen_joint_small_variants'
+include { PARSE_QC_METRICS                 } from '../modules/local/parse_qc_metrics'
+include { BCFTOOLS_SPLIT_VCF               } from '../modules/local/bcftools_split_vcf'
+include { TRANSFER_DATA_AWS                } from '../modules/local/transfer_data_aws'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -18,18 +19,32 @@ include { TRANSFER_DATA_AWS           } from '../modules/local/transfer_data_aws
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-// Original input file -has not gone through XLSX -> CSV conversion
+// Original input file - has not gone through XLSX -> CSV conversion
 if (params.input) {
     ch_input_file = Channel.fromPath(params.input).collect()
 } else {
     ch_input_file = Channel.empty()
 }
 
+// Original input reseq file - has not gone through XLSX -> CSV conversion
+if (params.reseq_input) {
+    ch_reseq_input_file = Channel.fromPath(params.reseq_input).collect()
+} else {
+    ch_reseq_input_file = Channel.empty()
+}
+
 // Illumina run directory
 if (params.illumina_rundir) {
-    ch_illumina_run_dir = Channel.fromPath(params.illumina_rundir, type: 'dir', checkIfExists: true).collect()
+    ch_illumina_rundir = Channel.fromPath(params.illumina_rundir, type: 'dir', checkIfExists: true).collect()
 } else {
-    ch_illumina_run_dir = Channel.empty()
+    ch_illumina_rundir = Channel.empty()
+}
+
+// Reseq Illumina run directory
+if (params.reseq_illumina_rundir) {
+    ch_reseq_illumina_rundir = Channel.fromPath(params.reseq_illumina_rundir, type: 'dir', checkIfExists: true).collect()
+} else {
+    ch_reseq_illumina_rundir = Channel.empty()
 }
 
 // Sample information
@@ -97,8 +112,9 @@ if (params.qc_cross_contamination) {
 workflow DRAGEN_CGS {
 
     take:
-    ch_mgi_samplesheet    // channel: [ path(file) ]
-    ch_input_samples      // channel: [ val(meta), path(file) ]
+    ch_samplesheet        // channel: [ path(file) ]
+    ch_reseq_samplesheet  // channel: [ path(file) ]
+    ch_samples            // channel: [ val(meta), path(file) ]
 
     main:
     ch_versions           = Channel.empty()
@@ -106,67 +122,88 @@ workflow DRAGEN_CGS {
     ch_joint_vcf_files    = Channel.empty()
     ch_joint_metric_files = Channel.empty()
 
+    if (params.reseq_input && !params.fastq_list) {
+        error("Cannot use '--reseq_input' without providing '--fastq_list' parameter!")
+    }
+
     //
     // SUBWORKFLOW: Demultiplex samples
     //
     if (params.input && params.illumina_rundir) {
         DEMULTIPLEX (
-            ch_mgi_samplesheet,
-            ch_illumina_run_dir
+            ch_samplesheet,
+            ch_illumina_rundir
         )
-        ch_samples  = DEMULTIPLEX.out.samples
         ch_versions = ch_versions.mix(DEMULTIPLEX.out.versions)
-
-        // Merge demultiplex samples and samples parsed from `--fastq_list` parameter (if exists)
-        ch_merged_samples    = ch_samples.mix(ch_input_samples)
-                                                .map{ meta, file -> meta }
-                                                .unique()
-
-        ch_merged_fastq_list = ch_samples.mix(ch_input_samples)
-                                                .map{ meta, file -> file }
-                                                .splitText()
-                                                .unique()
-                                                .flatten()
-                                                .collectFile(
-                                                    name: "merged_fastq_list.csv",
-                                                    sort: 'index'
-                                                )
-
-        ch_samples = ch_merged_samples.combine(ch_merged_fastq_list)
-    } else {
-        ch_samples = ch_input_samples
+        ch_samples  = ch_samples.mix(DEMULTIPLEX.out.samples)
     }
+
+    //
+    // SUBWORKFLOW: Demultiplex resequenced samples
+    //
+    if (params.reseq_input && params.reseq_illumina_rundir) {
+        RESEQ_DEMULTIPLEX (
+            ch_reseq_samplesheet,
+            ch_reseq_illumina_rundir
+        )
+        ch_versions = ch_versions.mix(RESEQ_DEMULTIPLEX.out.versions)
+        ch_samples  = ch_samples.mix(RESEQ_DEMULTIPLEX.out.samples)
+    }
+
+    ch_unique_samples = ch_samples
+                            .map{ meta, file -> meta }
+                            .unique()
+
+    ch_unique_fastq_list = ch_samples
+                            .map{ meta, file -> file }
+                            .splitText()
+                            .unique()
+                            .flatten()
+                            .collectFile(
+                                name: 'merged_fastq_list.csv',
+                                sort: 'index'
+                            )
+
+    ch_align_samples = ch_unique_samples.combine(ch_unique_fastq_list)
 
     // Fetch gender for samples
     if (params.sample_info) {
-        ch_align_samples = ch_samples.map{
-                                meta, fastq_list ->
-                                    [ meta['acc'], meta['id'] ]
-                            }
-                            .join(
-                                ch_sample_information
-                                    .splitCsv( header: true )
-                                    .map{ row -> [ row.Accession, row.gender ] },
-                                remainder: true
-                            )
-                            .map{
-                                acc, id, gender ->
-                                    if (id) {
-                                        def meta = [:]
-                                        meta['id'] = id
-                                        meta['acc'] = acc
+        ch_align_samples = ch_align_samples
+                                .map{ meta, fastq_list -> [ meta['acc'], meta, fastq_list ] }
+                                .join(
+                                    ch_sample_information
+                                        .splitCsv(header: true)
+                                        .map{ row ->
+                                            row.Accession.join('').toString().startsWith("G") ?
+                                            [ row.Accession.join(''), row.gender.join('').toLowerCase() ] :
+                                            null
+                                        }
+                                )
+                                .map{
+                                    acc, meta, fastq_list, gender ->
+                                        def meta_new = meta.clone()
 
-                                        gender = gender ? gender.toLowerCase() : ""
-                                        meta['sex'] = gender in ["male", "female"] ? gender :
-                                                        (gender == "m") ? "male" :
-                                                        (gender == "f") ? "female" : ""
-                                        [ meta ]
-                                    }
-                            }
-                            .combine(ch_samples.map{ meta, fastq_list -> fastq_list }.first())
-    } else {
-        ch_align_samples = ch_samples
+                                        meta_new['sex'] = gender in ["male", "female"] ? gender :
+                                                            (gender == "m") ? "male" :
+                                                            (gender == "f") ? "female" : ""
+
+                                        [ meta_new, fastq_list ]
+                                }
     }
+
+    // Automatically determine if GVCF should be created
+    ch_create_gvcf = ch_align_samples
+                        .count()
+                        .map{ it > 1 && params.create_gvcf }
+
+    ch_align_samples = ch_align_samples
+                        .combine(ch_create_gvcf)
+                        .map{ meta, fastq_list, create_gvcf ->
+                            def meta_new = meta.clone()
+                            meta_new['create_gvcf'] = create_gvcf
+
+                            [ meta_new, fastq_list ]
+                        }
 
     //
     // MODULE: DRAGEN alignment
@@ -231,8 +268,11 @@ workflow DRAGEN_CGS {
         )
         ch_versions        = ch_versions.mix(DRAGEN_JOINT_SMALL_VARIANTS.out.versions)
         ch_dragen_usage    = ch_dragen_usage.mix(DRAGEN_JOINT_SMALL_VARIANTS.out.usage)
-        ch_joint_vcf_files = ch_joint_vcf_files.mix(DRAGEN_JOINT_SMALL_VARIANTS.out.joint_small_variants)
-        ch_joint_vcf_files = ch_joint_vcf_files.mix(DRAGEN_JOINT_SMALL_VARIANTS.out.joint_small_variants_filtered)
+        ch_joint_vcf_files = ch_joint_vcf_files
+                                .mix(
+                                    DRAGEN_JOINT_SMALL_VARIANTS.out.joint_small_variants,
+                                    DRAGEN_JOINT_SMALL_VARIANTS.out.joint_small_variants_filtered
+                                )
 
         // Get values from single sample and joint called '*.vc_metrics.csv' files
         // and get all lines with sample name from joint called '*.vc_metrics.csv' file
@@ -315,6 +355,7 @@ workflow DRAGEN_CGS {
     //
     PARSE_QC_METRICS (
         ch_input_file.ifEmpty([]),
+        ch_reseq_input_file.ifEmpty([]),
         DRAGEN_ALIGN.out.metrics.collect(),
         ch_joint_metric_files.collect().ifEmpty([])
     )
@@ -324,14 +365,7 @@ workflow DRAGEN_CGS {
     // MODULE: Split joint genotyped VCF files by sample
     //
     BCFTOOLS_SPLIT_VCF (
-        ch_joint_vcf_files
-            .combine( ch_samples.map{ meta, file -> meta } )
-            .map{
-                vcf_meta, vcf, sample_meta ->
-                    new_meta = sample_meta.clone()
-                    new_meta['batch'] = vcf_meta['id']
-                    [ new_meta, vcf ]
-            }
+        ch_align_samples.map{ meta, file -> meta }.combine(ch_joint_vcf_files)
     )
     ch_versions = ch_versions.mix(BCFTOOLS_SPLIT_VCF.out.versions)
 

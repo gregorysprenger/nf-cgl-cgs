@@ -15,8 +15,9 @@ process BCFTOOLS_SPLIT_VCF {
     task.ext.when == null || task.ext.when
 
     script:
+    def prefix = task.ext.prefix
     """
-    output_filename=\$(echo "${joint_vcf_file}" | sed "s|${meta.batch}|${meta.id}|1")
+    output_filename=\$(echo "${joint_vcf_file}" | sed "s|${prefix.id}|${meta.id}|1")
 
     bcftools view \\
         --output-type z \\
@@ -39,8 +40,11 @@ process BCFTOOLS_SPLIT_VCF {
     """
 
     stub:
+    def prefix = task.ext.prefix
     """
-    output_filename=\$(echo "${joint_vcf_file}" | sed "s|${meta.batch}|${meta.id}|1")
+    output_filename=\$(echo "${joint_vcf_file}" | sed "s|${prefix.id}|${meta.id}|1")
+
+    touch "\$output_filename"
 
     cat <<-END_CMDS > ${meta.id}_cmds.txt
     bcftools view \\
@@ -49,8 +53,6 @@ process BCFTOOLS_SPLIT_VCF {
         --output "\${output_filename}" \\
         ${joint_vcf_file}
     END_CMDS
-
-    touch "\${output_filename}"
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

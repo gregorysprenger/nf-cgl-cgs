@@ -8,7 +8,6 @@ include { CREATE_DEMULTIPLEX_SAMPLESHEET   } from '../../modules/local/create_de
 include { DRAGEN_DEMULTIPLEX               } from '../../modules/local/dragen_demultiplex'
 include { INPUT_CHECK as VERIFY_FASTQ_LIST } from '../../subworkflows/local/input_check'
 
-
 /*
 ========================================================================================
     SUBWORKFLOW TO DEMULTIPLEX DATA
