@@ -6,23 +6,20 @@ process PARSE_QC_METRICS {
 
     input:
     path(samplesheet)
-    path(reseq_samplesheet)
     path(single_sample_metrics), stageAs: "single_sample_metrics/"
     path(joint_sample_metrics) , stageAs: "joint_sample_metrics/"
 
     output:
     path("*.xlsx")      , emit: qc_metrics
+    path("*Genoox.xlsx"), emit: genoox_metrics
     path("versions.yml"), emit: versions
 
     when:
     task.ext.when == null || task.ext.when
 
     script:
-    def prefix       = task.ext.prefix
-    def samplesheets = [
-        samplesheet       ? "--mgi_worksheet ${samplesheet}"             : "",
-        reseq_samplesheet ? "--mgi_reseq_worksheet ${reseq_samplesheet}" : ""
-    ].join(' ').trim()
+    def prefix        = task.ext.prefix
+    def mgi_worksheet = samplesheet ? "--mgi_worksheet ${samplesheet}" : ""
     """
     # Remove single sample metrics if joint called metrics
     if [[ -d joint_sample_metrics ]]; then
@@ -38,7 +35,7 @@ process PARSE_QC_METRICS {
 
     # Create metric summary files
     parse_qc_metrics.py \\
-        ${samplesheets} \\
+        ${mgi_worksheet} \\
         --inputdir \$PWD \\
         --outdir \$PWD \\
         --prefix ${prefix.id}
@@ -50,11 +47,8 @@ process PARSE_QC_METRICS {
     """
 
     stub:
-    def prefix       = task.ext.prefix
-    def samplesheets = [
-        samplesheet       ? "--mgi_worksheet ${samplesheet}"             : "",
-        reseq_samplesheet ? "--mgi_reseq_worksheet ${reseq_samplesheet}" : ""
-    ].join(' ').trim()
+    def prefix        = task.ext.prefix
+    def mgi_worksheet = samplesheet ? "--mgi_worksheet ${samplesheet}" : ""
     """
     # Remove single sample metrics if joint called metrics
     if [[ -d joint_sample_metrics ]]; then
@@ -70,7 +64,7 @@ process PARSE_QC_METRICS {
 
     # Create metric summary files
     parse_qc_metrics.py \\
-        ${samplesheets} \\
+        ${mgi_worksheet} \\
         --inputdir \$PWD \\
         --outdir \$PWD \\
         --prefix ${prefix.id}

@@ -8,19 +8,18 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { UTILS_NFVALIDATION_PLUGIN        } from '../../nf-core/utils_nfvalidation_plugin'
-include { paramsSummaryMap                 } from 'plugin/nf-validation'
-include { fromSamplesheet                  } from 'plugin/nf-validation'
-include { UTILS_NEXTFLOW_PIPELINE          } from '../../nf-core/utils_nextflow_pipeline'
-include { completionEmail                  } from '../../nf-core/utils_nfcore_pipeline'
-include { completionSummary                } from '../../nf-core/utils_nfcore_pipeline'
-include { dashedLine                       } from '../../nf-core/utils_nfcore_pipeline'
-include { nfCoreLogo                       } from '../../nf-core/utils_nfcore_pipeline'
-include { imNotification                   } from '../../nf-core/utils_nfcore_pipeline'
-include { UTILS_NFCORE_PIPELINE            } from '../../nf-core/utils_nfcore_pipeline'
-include { workflowCitation                 } from '../../nf-core/utils_nfcore_pipeline'
-include { INPUT_CHECK                      } from '../input_check'
-include { INPUT_CHECK as RESEQ_INPUT_CHECK } from '../input_check'
+include { UTILS_NFVALIDATION_PLUGIN } from '../../nf-core/utils_nfvalidation_plugin'
+include { paramsSummaryMap          } from 'plugin/nf-validation'
+include { fromSamplesheet           } from 'plugin/nf-validation'
+include { UTILS_NEXTFLOW_PIPELINE   } from '../../nf-core/utils_nextflow_pipeline'
+include { completionEmail           } from '../../nf-core/utils_nfcore_pipeline'
+include { completionSummary         } from '../../nf-core/utils_nfcore_pipeline'
+include { dashedLine                } from '../../nf-core/utils_nfcore_pipeline'
+include { nfCoreLogo                } from '../../nf-core/utils_nfcore_pipeline'
+include { imNotification            } from '../../nf-core/utils_nfcore_pipeline'
+include { UTILS_NFCORE_PIPELINE     } from '../../nf-core/utils_nfcore_pipeline'
+include { workflowCitation          } from '../../nf-core/utils_nfcore_pipeline'
+include { INPUT_CHECK               } from '../input_check'
 
 /*
 ========================================================================================
@@ -39,7 +38,6 @@ workflow PIPELINE_INITIALISATION {
     outdir            //  string: The output directory where the results will be saved
     demux_outdir      //  string: The output directory where the demultiplexed data will be saved
     input             //  string: Path to input MGI samplesheet
-    reseq_input       //  string: Path to input reseq MGI samplesheet
     fastq_list        //  string: Path to input fastq_list.csv
 
     main:
@@ -86,23 +84,14 @@ workflow PIPELINE_INITIALISATION {
     //
     INPUT_CHECK (
         input ?: [],
-        fastq_list ? Channel.fromPath(fastq_list, checkIfExists: true) : []
+        fastq_list ? Channel.fromPath(fastq_list, checkIfExists: true) : Channel.empty().ifEmpty([])
     )
     ch_versions = ch_versions.mix(INPUT_CHECK.out.versions)
 
-    //
-    // Create channel from input file provided through params.reseq_input
-    //
-    RESEQ_INPUT_CHECK (
-        reseq_input ?: [],
-        []
-    )
-
     emit:
-    samples               = INPUT_CHECK.out.samples                // channel: [ val(meta), path(file) ]
-    mgi_samplesheet       = INPUT_CHECK.out.mgi_samplesheet        // channel: [ path(file) ]
-    reseq_mgi_samplesheet = RESEQ_INPUT_CHECK.out.mgi_samplesheet  // channel: [ path(file) ]
-    versions              = ch_versions                            // channel: [ path(file) ]
+    samples         = INPUT_CHECK.out.samples          // channel: [ val(meta), path(reads), path(fastq_list) ]
+    mgi_samplesheet = INPUT_CHECK.out.mgi_samplesheet  // channel: [ path(file) ]
+    versions        = ch_versions                      // channel: [ path(file) ]
 
 }
 

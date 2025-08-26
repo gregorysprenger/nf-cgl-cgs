@@ -4,14 +4,12 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { DEMULTIPLEX                      } from '../subworkflows/local/demultiplex'
-include { DEMULTIPLEX as RESEQ_DEMULTIPLEX } from '../subworkflows/local/demultiplex'
-include { DRAGEN_ALIGN                     } from '../modules/local/dragen_align'
-include { DRAGEN_JOINT_CNV                 } from '../modules/local/dragen_joint_cnv'
-include { DRAGEN_JOINT_SMALL_VARIANTS      } from '../modules/local/dragen_joint_small_variants'
-include { PARSE_QC_METRICS                 } from '../modules/local/parse_qc_metrics'
-include { BCFTOOLS_SPLIT_VCF               } from '../modules/local/bcftools_split_vcf'
-include { TRANSFER_DATA_AWS                } from '../modules/local/transfer_data_aws'
+include { DEMULTIPLEX                          } from '../subworkflows/local/demultiplex'
+include { DRAGEN_ALIGN                         } from '../modules/local/dragen_align'
+include { DRAGEN_ALIGN as DRAGEN_ALIGN_CONTROL } from '../modules/local/dragen_align'
+include { JOINT_GENOTYPING                     } from '../subworkflows/local/joint_genotyping'
+include { PARSE_QC_METRICS                     } from '../modules/local/parse_qc_metrics'
+include { TRANSFER_DATA_AWS                    } from '../modules/local/transfer_data_aws'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -25,28 +23,6 @@ if (params.input) {
 } else {
     ch_input_file = Channel.empty()
 }
-
-// Original input reseq file - has not gone through XLSX -> CSV conversion
-if (params.reseq_input) {
-    ch_reseq_input_file = Channel.fromPath(params.reseq_input).collect()
-} else {
-    ch_reseq_input_file = Channel.empty()
-}
-
-// Illumina run directory
-if (params.illumina_rundir) {
-    ch_illumina_rundir = Channel.fromPath(params.illumina_rundir, type: 'dir', checkIfExists: true).collect()
-} else {
-    ch_illumina_rundir = Channel.empty()
-}
-
-// Reseq Illumina run directory
-if (params.reseq_illumina_rundir) {
-    ch_reseq_illumina_rundir = Channel.fromPath(params.reseq_illumina_rundir, type: 'dir', checkIfExists: true).collect()
-} else {
-    ch_reseq_illumina_rundir = Channel.empty()
-}
-
 // Sample information
 if (params.sample_info) {
     ch_sample_information = Channel.fromPath(params.sample_info, checkIfExists: true).collect()
@@ -83,10 +59,12 @@ if (params.adapter2) {
 }
 
 // DRAGEN intermediate directory
-if (params.intermediate_dir) {
-    ch_intermediate_dir = Channel.fromPath(params.intermediate_dir).collect()
+if (params.intermediate_dir?.toString()?.startsWith('/staging')) {
+    ch_intermediate_dir = Channel.of(params.intermediate_dir).map{ [ it, [] ] }.collect()
+} else if (params.intermediate_dir) {
+    ch_intermediate_dir = Channel.fromPath(params.intermediate_dir).map{ [ [], it ] }.collect()
 } else {
-    ch_intermediate_dir = []
+    ch_intermediate_dir = [ [], [] ]
 }
 
 // DRAGEN QC coverage over custom region
@@ -97,10 +75,12 @@ if (params.qc_coverage_region) {
 }
 
 // DRAGEN QC cross-sample contamination
-if (params.qc_cross_contamination) {
-    ch_qc_cross_contamination = Channel.fromPath(params.qc_cross_contamination).collect()
+if (params.qc_cross_contamination?.toString()?.startsWith('resources/')) {
+    ch_qc_cross_contamination = Channel.of(params.qc_cross_contamination).map{ [ it, [] ] }.collect()
+} else if (params.qc_cross_contamination) {
+    ch_qc_cross_contamination = Channel.fromPath(params.qc_cross_contamination).map{ [ [], it ] }.collect()
 } else {
-    ch_qc_cross_contamination = []
+    ch_qc_cross_contamination = [ [], [] ]
 }
 
 /*
@@ -112,242 +92,121 @@ if (params.qc_cross_contamination) {
 workflow DRAGEN_CGS {
 
     take:
-    ch_samplesheet        // channel: [ path(file) ]
-    ch_reseq_samplesheet  // channel: [ path(file) ]
-    ch_samples            // channel: [ val(meta), path(file) ]
+    ch_samplesheet  // channel: [ path(file) ]
+    ch_samples      // channel: [ val(meta), path(file) ]
 
     main:
-    ch_versions           = Channel.empty()
-    ch_dragen_usage       = Channel.empty()
-    ch_joint_vcf_files    = Channel.empty()
-    ch_joint_metric_files = Channel.empty()
-
-    if (params.reseq_input && !params.fastq_list) {
-        error("Cannot use '--reseq_input' without providing '--fastq_list' parameter!")
-    }
+    ch_versions       = Channel.empty()
+    ch_dragen_usage   = Channel.empty()
+    ch_dragen_metrics = Channel.empty()
 
     //
     // SUBWORKFLOW: Demultiplex samples
     //
     if (params.input && params.illumina_rundir) {
         DEMULTIPLEX (
-            ch_samplesheet,
-            ch_illumina_rundir
+            ch_samplesheet
         )
         ch_versions = ch_versions.mix(DEMULTIPLEX.out.versions)
         ch_samples  = ch_samples.mix(DEMULTIPLEX.out.samples)
     }
 
-    //
-    // SUBWORKFLOW: Demultiplex resequenced samples
-    //
-    if (params.reseq_input && params.reseq_illumina_rundir) {
-        RESEQ_DEMULTIPLEX (
-            ch_reseq_samplesheet,
-            ch_reseq_illumina_rundir
-        )
-        ch_versions = ch_versions.mix(RESEQ_DEMULTIPLEX.out.versions)
-        ch_samples  = ch_samples.mix(RESEQ_DEMULTIPLEX.out.samples)
-    }
-
-    ch_unique_samples = ch_samples
-                            .map{ meta, file -> meta }
-                            .unique()
-
-    ch_unique_fastq_list = ch_samples
-                            .map{ meta, file -> file }
-                            .splitText()
-                            .unique()
-                            .flatten()
-                            .collectFile(
-                                name: 'merged_fastq_list.csv',
-                                sort: 'index'
-                            )
-
-    ch_align_samples = ch_unique_samples.combine(ch_unique_fastq_list)
-
     // Fetch gender for samples
     if (params.sample_info) {
-        ch_align_samples = ch_align_samples
-                                .map{ meta, fastq_list -> [ meta['acc'], meta, fastq_list ] }
-                                .join(
-                                    ch_sample_information
-                                        .splitCsv(header: true)
-                                        .map{ row ->
-                                            row.Accession.join('').toString().startsWith("G") ?
-                                            [ row.Accession.join(''), row.gender.join('').toLowerCase() ] :
-                                            null
-                                        }
-                                )
-                                .map{
-                                    acc, meta, fastq_list, gender ->
-                                        def meta_new = meta.clone()
+        ch_samples = ch_samples
+                        .map{ meta, reads, fastq_list -> [ meta?.acc ?: meta?.id, meta, reads, fastq_list ] }
+                        .join(
+                            ch_sample_information
+                                .splitCsv(header: true)
+                                .map{ [ it['Accession'].join(''), it['gender'].join('').toLowerCase() ] },
+                            remainder: true
+                        )
+                        .filter{ it[1] != null }
+                        .map{
+                            acc, meta, reads, fastq_list, gender ->
+                                if (meta) {
+                                    def meta_new = meta.clone()
+                                    meta_new['sex'] = (gender == 'm' || gender == 'male')   ? 'male'   :
+                                                      (gender == 'f' || gender == 'female') ? 'female' : ''
 
-                                        meta_new['sex'] = gender in ["male", "female"] ? gender :
-                                                            (gender == "m") ? "male" :
-                                                            (gender == "f") ? "female" : ""
-
-                                        [ meta_new, fastq_list ]
+                                    [ meta_new, reads, fastq_list ]
                                 }
+                        }
     }
 
     // Automatically determine if GVCF should be created
-    ch_create_gvcf = ch_align_samples
-                        .count()
-                        .map{ it > 1 && params.create_gvcf }
-
-    ch_align_samples = ch_align_samples
-                        .combine(ch_create_gvcf)
-                        .map{ meta, fastq_list, create_gvcf ->
+    ch_samples = ch_samples
+                    .combine(ch_samples.count().map{ it > 1 && params.create_gvcf })
+                    .map{
+                        meta, reads, fastq_list, create_gvcf ->
                             def meta_new = meta.clone()
                             meta_new['create_gvcf'] = create_gvcf
 
-                            [ meta_new, fastq_list ]
-                        }
+                            [ meta_new, reads, fastq_list ]
+                    }
+
+    // Verify no duplicate samples exist
+    ch_samples
+        .map{ meta, reads, fastq_list -> [ reads ] }
+        .collect()
+        .map{
+            def duplicates = it.findAll{ sample -> it.count(sample) > 1 }.unique()
+            if (duplicates) {
+                error "Duplicate entries found in channel:\n${duplicates.flatten()}"
+            }
+        }
 
     //
-    // MODULE: DRAGEN alignment
+    // MODULE: DRAGEN alignment for clinical samples
     //
     DRAGEN_ALIGN (
-        ch_align_samples,
-        ch_qc_cross_contamination,
-        ch_qc_coverage_region,
+        ch_samples.filter{ meta, reads, fastq_list -> params.validation_samples || meta?.acc.startsWith("G") },
         ch_intermediate_dir,
-        ch_reference_dir,
+        ch_qc_cross_contamination,
         ch_adapter1_file,
         ch_adapter2_file,
-        ch_dbsnp_file
+        ch_dbsnp_file,
+        ch_qc_coverage_region,
+        ch_reference_dir
     )
     ch_versions     = ch_versions.mix(DRAGEN_ALIGN.out.versions)
     ch_dragen_usage = ch_dragen_usage.mix(DRAGEN_ALIGN.out.usage)
+    ch_dragen_metrics = ch_dragen_metrics.mix(DRAGEN_ALIGN.out.metrics)
 
     //
-    // MODULE: Batch joint genotype CNV
+    // SUBWORKFLOW: Joint genotyping
     //
-    if (params.joint_genotype_cnv) {
-        DRAGEN_JOINT_CNV (
-            DRAGEN_ALIGN.out.tangent_normalized_counts.collect(),
+    JOINT_GENOTYPING (
+        DRAGEN_ALIGN.out.dragen_output.map{ meta, files -> files },
+        ch_reference_dir
+    )
+    ch_versions     = ch_versions.mix(JOINT_GENOTYPING.out.versions)
+    ch_dragen_usage = ch_dragen_usage.mix(JOINT_GENOTYPING.out.dragen_usage)
+
+    if (!params.validation_samples) {
+        //
+        // MODULE: DRAGEN alignment for control samples
+        //
+        DRAGEN_ALIGN_CONTROL (
+            JOINT_GENOTYPING.out.dragen_usage
+                    .collect()
+                    .combine(ch_samples.filter{ meta, reads, fastq_list -> !meta?.acc.startsWith("G") })
+                    .map{
+                        done, meta, reads, fastq_list ->
+                            meta['create_gvcf'] = false
+                            [ meta, reads, fastq_list ]
+                    },
+            ch_intermediate_dir,
+            ch_qc_cross_contamination,
+            ch_adapter1_file,
+            ch_adapter2_file,
+            ch_dbsnp_file,
+            ch_qc_coverage_region,
             ch_reference_dir
         )
-        ch_versions        = ch_versions.mix(DRAGEN_JOINT_CNV.out.versions)
-        ch_dragen_usage    = ch_dragen_usage.mix(DRAGEN_JOINT_CNV.mix.usage)
-        ch_joint_vcf_files = ch_joint_vcf_files.mix(DRAGEN_JOINT_CNV.out.joint_cnv)
-
-        // Replace lines in '<sample name>.cnv_metrics.csv' file
-        // with values from joint called metrics
-        ch_cnv_metrics = DRAGEN_JOINT_CNV.out.metrics.collect()
-                            .combine(DRAGEN_ALIGN.out.metrics.flatten().filter( ~/.*cnv_metrics.csv/ ))
-                            .map{
-                                joint, sample ->
-                                    joint_lines = joint.readLines()
-                                    sample_lines = sample.readLines()
-
-                                    joint_lines.each{
-                                        def pattern = it.split(',')[0..2].join(',')
-                                        sample_lines.toString().replaceAll(("${pattern}.+"), (it)) as List
-                                    }
-                                    [ sample.getSimpleName(), sample_lines.join('\n') ]
-                            }
-                            .collectFile{
-                                sample, output ->
-                                    def outdir = file("${params.outdir}/DRAGEN_output/${sample}")
-                                    outdir.mkdirs()
-                                    [ "${outdir}/${sample}.cnv_metrics.csv", output ]
-                            }
-
-        ch_joint_metric_files = ch_joint_metric_files.mix(ch_cnv_metrics)
-    }
-
-    //
-    // MODULE: Batch joint genotype SNV/InDel
-    //
-    if (params.joint_genotype_small_variants) {
-        DRAGEN_JOINT_SMALL_VARIANTS (
-            DRAGEN_ALIGN.out.hard_filtered_gvcf.collect(),
-            ch_reference_dir
-        )
-        ch_versions        = ch_versions.mix(DRAGEN_JOINT_SMALL_VARIANTS.out.versions)
-        ch_dragen_usage    = ch_dragen_usage.mix(DRAGEN_JOINT_SMALL_VARIANTS.out.usage)
-        ch_joint_vcf_files = ch_joint_vcf_files
-                                .mix(
-                                    DRAGEN_JOINT_SMALL_VARIANTS.out.joint_small_variants,
-                                    DRAGEN_JOINT_SMALL_VARIANTS.out.joint_small_variants_filtered
-                                )
-
-        // Get values from single sample and joint called '*.vc_metrics.csv' files
-        // and get all lines with sample name from joint called '*.vc_metrics.csv' file
-        // and save to <sample name>.vc_metrics.csv file
-        ch_small_variant_metrics = DRAGEN_JOINT_SMALL_VARIANTS.out.metrics.collect()
-                                    .combine(DRAGEN_ALIGN.out.metrics.flatten().filter( ~/.*vc_metrics.csv/ ))
-                                    .map{
-                                        joint, sample ->
-                                            def sample_name = sample.getSimpleName()
-                                            def joint_sample_lines = joint.text.findAll(".+${sample_name}.+")
-
-                                            // Find values in joint vc_metrics.csv file
-                                            def number_samples = joint.text.findAll("VARIANT CALLER SUMMARY,,Number of samples,.+")
-                                            def indels_list = joint_sample_lines.findAll{
-                                                                                    it.contains("Insertions") ||
-                                                                                    it.contains("Deletions") ||
-                                                                                    it.contains("Indels")
-                                                                                }
-
-                                            // Calculate number of indels
-                                            def indel_count = 0
-                                            def indel_percent = 0.0
-                                            indels_list.each{
-                                                indel_count += it.split(',')[3].toInteger()
-                                                indel_percent += it.split(',')[4].toFloat()
-                                            }
-
-                                            def number_of_indels = ["JOINT CALLER POSTFILTER,${sample_name},Number of Indels,${indel_count},${indel_percent.round(2)}"]
-
-                                            // Find values in single sample vc_metrics.csv file
-                                            def reads_processed = sample.text.findAll("VARIANT CALLER SUMMARY,,Reads Processed,.+")
-                                            def child_sample = sample.text.findAll("VARIANT CALLER SUMMARY,,Child Sample,.+")
-                                            def autosome_callability = sample.text.findAll("VARIANT CALLER POSTFILTER,.+,Percent Autosome Callability,.+")[0]
-
-                                            // Replace autosome callability in joint_sample_lines and create output
-                                            def updated_lines = joint_sample_lines.collect{ it.replaceAll(/.+,Percent Autosome Callability,.+/, autosome_callability) }
-
-                                            // Create output and return values
-                                            def output = number_samples + reads_processed + child_sample + updated_lines + number_of_indels
-                                            [ sample_name, output.join('\n') ]
-                                    }
-                                    .collectFile{
-                                        sample, output ->
-                                            def outdir = file("${params.outdir}/DRAGEN_output/${sample}")
-                                            outdir.mkdirs()
-                                            [ "${outdir}/${sample}.vc_metrics.csv", output ]
-                                    }
-
-        ch_joint_metric_files = ch_joint_metric_files.mix(ch_small_variant_metrics)
-    }
-
-    //
-    // MODULE: Batch joint genotype SV
-    //
-    if (params.joint_genotype_sv) {
-        DRAGEN_JOINT_SV (
-            DRAGEN_ALIGN.out.bam.collect(),
-            ch_reference_dir
-        )
-        ch_versions        = ch_versions.mix(DRAGEN_JOINT_SV.out.versions)
-        ch_dragen_usage    = ch_dragen_usage.mix(DRAGEN_JOINT_SV.out.usage)
-        ch_joint_vcf_files = ch_joint_vcf_files.mix(DRAGEN_JOINT_SV.out.joint_sv)
-
-        // Parse metrics for each sample
-        // from joint called '*.sv_metrics.csv' file
-        ch_sv_metrics = DRAGEN_JOINT_SV.out.metrics
-                            .splitText(elem: 0)
-                            .collectFile{
-                                def sample = it.split(",")[1]
-                                def outdir = file("${params.outdir}/${sample}")
-                                outdir.mkdirs()
-                                [ "${outdir}/${sample}.sv_metrics.csv", it ]
-                            }
-
-        ch_joint_metric_files = ch_joint_metric_files.mix(ch_sv_metrics)
+        ch_versions     = ch_versions.mix(DRAGEN_ALIGN_CONTROL.out.versions)
+        ch_dragen_usage = ch_dragen_usage.mix(DRAGEN_ALIGN_CONTROL.out.usage)
+        ch_dragen_metrics = ch_dragen_metrics.mix(DRAGEN_ALIGN_CONTROL.out.metrics)
     }
 
     //
@@ -355,40 +214,44 @@ workflow DRAGEN_CGS {
     //
     PARSE_QC_METRICS (
         ch_input_file.ifEmpty([]),
-        ch_reseq_input_file.ifEmpty([]),
-        DRAGEN_ALIGN.out.metrics.collect(),
-        ch_joint_metric_files.collect().ifEmpty([])
+        ch_dragen_metrics.collect(),
+        JOINT_GENOTYPING.out.metrics.collect().ifEmpty([])
     )
     ch_versions = ch_versions.mix(PARSE_QC_METRICS.out.versions)
 
-    //
-    // MODULE: Split joint genotyped VCF files by sample
-    //
-    BCFTOOLS_SPLIT_VCF (
-        ch_align_samples.map{ meta, file -> meta }.combine(ch_joint_vcf_files)
-    )
-    ch_versions = ch_versions.mix(BCFTOOLS_SPLIT_VCF.out.versions)
-
-    //
-    // MODULE: Transfer data to AWS bucket
-    //
+    // Transfer data to AWS bucket
     if (params.transfer_data) {
-        ch_dragen_files = DRAGEN_ALIGN.out.dragen_output
-                            .map{
-                                meta, files ->
-                                    def extensions = [".bw", ".bam", ".gff3", ".json", ".vcf", ".csv", ".bed"]
-                                    def aws_files = files.findAll{
-                                        file ->
-                                            extensions.any{ file.toString().contains(it) }
-                                    }
-                                return aws_files
-                            }
+        ch_upload_files = DRAGEN_ALIGN.out.dragen_output
+            .map{
+                meta, files ->
+                    def extensions = [
+                        ".bam",
+                        ".bed",
+                        ".bw",
+                        ".csv",
+                        ".gff3",
+                        ".json",
+                        ".vcf",
+                    ]
+                    return files.findAll{ file -> extensions.any{ file.toString().toLowerCase().contains(it) } }
+            }
+            .collect()
+            .toList()
+            .combine(JOINT_GENOTYPING.out.vcf_files.collect().ifEmpty([]).toList())
+            .combine(JOINT_GENOTYPING.out.metrics.collect().ifEmpty([]).toList())
+            .map{
+                dragen, vcf, metrics ->
+                    def exclude_filenames = (vcf + metrics).collect { it.name }
+                    dragen.findAll { !exclude_filenames.contains(it.name) } + vcf + metrics
+            }
+            .view()
 
+        //
+        // MODULE: Transfer data to AWS bucket
+        //
         TRANSFER_DATA_AWS (
-            ch_dragen_files.collect(),
-            BCFTOOLS_SPLIT_VCF.out.split_vcf.map{ meta, file -> file }.collect().ifEmpty([]),
-            ch_joint_metric_files.collect().ifEmpty([]),
-            PARSE_QC_METRICS.out.qc_metrics.collect()
+            ch_upload_files,
+            PARSE_QC_METRICS.out.genoox_metrics
         )
         ch_versions = ch_versions.mix(TRANSFER_DATA_AWS.out.versions)
     }
