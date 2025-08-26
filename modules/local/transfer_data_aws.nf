@@ -1,19 +1,17 @@
 process TRANSFER_DATA_AWS {
     tag "${task.ext.prefix.id}"
-    label 'process_low'
+    label 'process_high'
     label 'gnx_aws'
 
-    conda "conda-forge::awscli=2.15.39"
-    container "docker.io/gregorysprenger/aws-cli:v2.15.39"
+    conda "conda-forge::rclone=1.71.0"
+    container "docker.io/gregorysprenger/rclone@sha256:3ad0d26b504902bfe8016932a31491fb354f2ef47072c100edfd74cff6537577"
 
     input:
     path(dragen_align_files), stageAs: "dragen_align_files/*"
-    path(joint_vcf_files)   , stageAs: "joint_called_files/*"
-    path(joint_metric_files), stageAs: "joint_called_files/*"
-    path(qc_metrics)
+    path(genoox_metrics)
 
     output:
-    path("aws_log.txt") , emit: aws_log
+    path("*log.txt")    , emit: transfer_logs
     path("versions.yml"), emit: versions
 
     when:
@@ -22,111 +20,91 @@ process TRANSFER_DATA_AWS {
     script:
     def prefix = task.ext.prefix
     """
-    export AWS_ACCESS_KEY_ID=\${GNX_ACCESS_KEY}
-    export AWS_SECRET_ACCESS_KEY=\${GNX_SECRET_KEY}
+    export AWS_ACCESS_KEY_ID='\$GNX_ACCESS_KEY'
+    export AWS_SECRET_ACCESS_KEY='\$GNX_SECRET_KEY'
+    export AWS_REGION='\$GNX_REGION'
 
-    # Organize files for upload
-    for file in \$(find -L dragen_align_files/ -type f -name "*.bam"); do
-        base=\$(basename "\${file%%.*}")
-        target_dir="${prefix.id}/\${base}"
-        mkdir -p "\$target_dir"
+    export RCLONE_CONFIG_S3_TYPE=s3
+    export RCLONE_CONFIG_S3_PROVIDER=AWS
+    export RCLONE_CONFIG_S3_ENV_AUTH=true
 
-        for dir in dragen_align_files joint_called_files; do
-            [ -d "\$dir" ] && \\
-            find \\
-                -L \\
-                "\$dir" \\
-                -type f \\
-                -name "\${base}*" \\
-                -exec mv -f {} "\$target_dir" \\;
+    # Structure data for S3 bucket
+    find -L dragen_align_files/ -type f \\
+        | while read -r file; do
+            base=\$(basename \${file%%.*})
+            mkdir -p "${prefix.id}/\${base}"
+            mv -f "\${file}" "${prefix.id}/\${base}/"
         done
-    done
 
-    # Move Genoox excel spreadsheet
-    find -L \$PWD \\
-        -type f \\
-        -name "*Genoox.xlsx" \\
-        -exec mv -f "{}" "${prefix.id}" \\;
+    mv -f ${genoox_metrics} "${prefix.id}/"
 
-    # Sync files with the following extensions
-    aws s3 sync \\
+    # Copy files to S3 bucket
+    rclone copy \\
         "${prefix.id}" \\
         "s3://\${GNX_BUCKET}/\${GNX_DATA}/${prefix.id}/" \\
-        --exclude "*" \\
-        --include "*.bw*" \\
-        --include "*.csv" \\
-        --include "*.bam*" \\
-        --include "*.json" \\
-        --include "*.xlsx" \\
-        --include "*.gff3*" \\
-        --include "*.vcf.gz*" \\
-        --include "*.bed.gz*" \\
-        --include "*_usage.txt" \\
-        --only-show-errors \\
-        &> aws_log.txt
+        --copy-links \\
+        --log-file=rclone_log.txt \\
+        --log-level INFO \\
+        --progress \\
+        --s3-region="\${AWS_REGION}" \\
+        --transfers=${task.cpus} \\
+        --retries 5
 
     if [ \$? -eq 0 ]; then
-        echo "AWS sync completed successfully." >> aws_log.txt
+        echo "AWS sync completed successfully." > aws_log.txt
     else
-        error "AWS sync failed. Check 'aws_log.txt' for details."
+        error "AWS sync failed. Check 'rclone_log.txt' for details." > aws_log.txt
     fi
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        aws: \$(aws --version 2>&1 | awk '{print \$1}' | cut -d '/' -f2)
+        rclone: $(rclone --version | head -n 1 | cut -d ' ' -f2)
     END_VERSIONS
     """
 
     stub:
     def prefix = task.ext.prefix
     """
-    export AWS_ACCESS_KEY_ID=\${GNX_ACCESS_KEY}
-    export AWS_SECRET_ACCESS_KEY=\${GNX_SECRET_KEY}
+    export AWS_ACCESS_KEY_ID='\$GNX_ACCESS_KEY'
+    export AWS_SECRET_ACCESS_KEY='\$GNX_SECRET_KEY'
+    export AWS_REGION='\$GNX_REGION'
 
-    # Organize files for upload
-    for file in \$(find -L dragen_align_files/ -type f -name "*.bam"); do
-        base=\$(basename "\${file%%.*}")
-        target_dir="${prefix.id}/\${base}"
-        mkdir -p "\$target_dir"
+    export RCLONE_CONFIG_S3_TYPE=s3
+    export RCLONE_CONFIG_S3_PROVIDER=AWS
+    export RCLONE_CONFIG_S3_ENV_AUTH=true
 
-        for dir in dragen_align_files joint_called_files; do
-            [ -d "\$dir" ] && \\
-            find \\
-                -L \\
-                "\$dir" \\
-                -type f \\
-                -name "\${base}*" \\
-                -exec mv -f {} "\$target_dir" \\;
+    # Structure data for S3 bucket
+    find -L dragen_align_files/ -type f \\
+        | while read -r file; do
+            base=\$(basename \${file%%.*})
+            mkdir -p "${prefix.id}/\${base}"
+            mv -f "\${file}" "${prefix.id}/\${base}/"
         done
-    done
 
-    # Move Genoox excel spreadsheet
-    find -L \$PWD \\
-        -type f \\
-        -name "*Genoox.xlsx" \\
-        -exec mv -f "{}" "${prefix.id}" \\;
+    mv -f ${genoox_metrics} "${prefix.id}/"
 
-    # Sync files with the following extensions
-    aws s3 sync \\
+    # Copy files to S3 bucket
+    rclone copy \\
         "${prefix.id}" \\
         "s3://\${GNX_BUCKET}/\${GNX_DATA}/${prefix.id}/" \\
-        --exclude "*" \\
-        --include "*.bw*" \\
-        --include "*.csv" \\
-        --include "*.bam*" \\
-        --include "*.json" \\
-        --include "*.xlsx" \\
-        --include "*.gff3*" \\
-        --include "*.vcf.gz*" \\
-        --include "*.bed.gz*" \\
-        --include "*_usage.txt" \\
-        --only-show-errors \\
-        --dryrun \\
-        &> aws_log.txt
+        --copy-links \\
+        --log-file=rclone_log.txt \\
+        --log-level INFO \\
+        --progress \\
+        --s3-region="\${AWS_REGION}" \\
+        --transfers=${task.cpus} \\
+        --retries 5 \\
+        --dry-run
+
+    if [ \$? -eq 0 ]; then
+        echo "AWS sync completed successfully." > aws_log.txt
+    else
+        error "AWS sync failed. Check 'rclone_log.txt' for details." > aws_log.txt
+    fi
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        aws: \$(aws --version 2>&1 | awk '{print \$1}' | cut -d '/' -f2)
+        rclone: $(rclone --version | head -n 1 | cut -d ' ' -f2)
     END_VERSIONS
     """
 }
