@@ -3,8 +3,8 @@ process TRANSFER_DATA_AWS {
     label 'process_high'
     label 'gnx_aws'
 
-    conda "conda-forge::rclone=1.71.0"
-    container "docker.io/gregorysprenger/rclone@sha256:3ad0d26b504902bfe8016932a31491fb354f2ef47072c100edfd74cff6537577"
+    conda "conda-forge::rclone=1.70.1"
+    container "dockerreg01.accounts.ad.wustl.edu/cgl/rclone@sha256:985f6fe68bdc6eabe931212d1b5a7f15984963539af9fb210d30ebc858731070"
 
     input:
     path(dragen_align_files), stageAs: "dragen_align_files/*"
