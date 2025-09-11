@@ -25,14 +25,19 @@ process BCFTOOLS_SPLIT_VCF {
         --output split_vcf/ \\
         ${joint_vcf_file}
 
-    # Compress and index each VCF file, then create MD5SUM
+    # Remove homozygous reference genotypes, compress, index, and create MD5sum
     find split_vcf/ -name "*.vcf" \
         | xargs -P ${task.cpus} -I {} bash -c '
             base=\$(basename "{}" .vcf)
             ext=\$(echo "${joint_vcf_file}" | sed "s|${prefix.id}||1")
             out="split_vcf/\${base}\${ext}"
 
-            bcftools view -Oz -o "\${out}" "{}"
+            bcftools view \\
+                -i 'GT!="." && GT!="0/0"' \\
+                -Oz \\
+                -o "\${out}" \\
+                "{}"
+
             rm "{}"
 
             bcftools index --tbi "\${out}"
@@ -70,7 +75,12 @@ process BCFTOOLS_SPLIT_VCF {
             ext=\$(echo "${joint_vcf_file}" | sed "s|${prefix.id}||1")
             out="split_vcf/\${base}\${ext}"
 
-            bcftools view -Oz -o "\${out}" "{}"
+            bcftools view \\
+                -i 'GT!="." && GT!="0/0"' \\
+                -Oz \\
+                -o "\${out}" \\
+                "{}"
+
             rm "{}"
 
             bcftools index --tbi "\${out}"
