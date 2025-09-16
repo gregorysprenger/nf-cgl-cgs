@@ -113,8 +113,8 @@ workflow JOINT_GENOTYPING {
                                                 joint.text.findAll("VARIANT CALLER SUMMARY,,Number of samples,.+"),
                                                 sample.text.findAll("VARIANT CALLER SUMMARY,,Reads Processed,.+"),
                                                 sample.text.findAll("VARIANT CALLER SUMMARY,,Child Sample,.+"),
-                                                joint_sample_lines.collect{ 
-                                                    it.replaceAll(/.+,Percent Autosome Callability,.+/, sample.text.findAll("VARIANT CALLER POSTFILTER,.+,Percent Autosome Callability,.+")[0]) 
+                                                joint_sample_lines.collect{
+                                                    it.replaceAll(/.+,Percent Autosome Callability,.+/, sample.text.findAll("VARIANT CALLER POSTFILTER,.+,Percent Autosome Callability,.+")[0])
                                                 },
                                                 "JOINT CALLER POSTFILTER,${sample_name},Number of Indels,${indel_count},${indel_percent.round(2)}"
                                             ].flatten()

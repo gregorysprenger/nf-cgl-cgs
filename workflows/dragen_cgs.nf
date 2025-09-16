@@ -126,8 +126,8 @@ workflow DRAGEN_CGS {
                             acc, meta, reads, fastq_list, gender ->
                                 if (meta) {
                                     def meta_new = meta.clone()
-                                    meta_new['sex'] = (gender == 'm' || gender == 'male')   ? 'male'   :
-                                                      (gender == 'f' || gender == 'female') ? 'female' : ''
+                                    meta_new['sex']   = (gender == 'm' || gender == 'male')   ? 'male'   :
+                                                        (gender == 'f' || gender == 'female') ? 'female' : ''
 
                                     [ meta_new, reads, fastq_list ]
                                 }
