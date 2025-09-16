@@ -1,4 +1,5 @@
 lint:
+  actions_awsfulltest: false
   files_exist:
     - .github/ISSUE_TEMPLATE/config.yml
     - .github/workflows/awsfulltest.yml
@@ -22,15 +23,23 @@ lint:
     - docs/images/nf-core-nf-cgl-cgs_logo_dark.png
     - docs/images/nf-core-nf-cgl-cgs_logo_light.png
     - subworkflows/nf-core/utils_nfcore_pipeline/main.nf
+    - .github/workflows/linting_comment.yml
+  included_configs: false
   multiqc_config: false
   nextflow_config:
     - manifest.homePage
     - manifest.name
+    - params.max_cpus
+    - params.max_memory
+    - params.max_time
+    - custom_config
+  nf_test_content: false
   pipeline_name_conventions: false
   readme:
     - nextflow_badge
-nf_core_version: 2.14.1
+  subworkflow_changes: false
 module_tests: false
+nf_core_version: 2.14.1
 repository_type: pipeline
 template:
   name: Clinical-Genomics-Laboratory/nf-cgl-cgs

@@ -151,7 +151,7 @@
                     "description": "Path to VCF file that includes marker sites (RSIDs) with population allele frequencies that are close to 0.5.",
                     "pattern": "^\\S+\\.vcf?(\\.gz)?$",
                     "format": "file-path",
-                    "default": "/opt/dragen/4.3.6/resources/qc/sample_cross_contamination_resource_hg38.vcf.gz"
+                    "default": "resources/qc/sample_cross_contamination_resource_hg38.vcf.gz"
                 },
                 "intermediate_dir": {
                     "type": "string",
@@ -169,8 +169,7 @@
             "properties": {
                 "host": {
                     "type": "string",
-                    "description": "Specify a host from the provided queue.",
-                    "default": "compute1-exec-235"
+                    "description": "Specify a host from the provided queue."
                 },
                 "queue": {
                     "type": "string",
