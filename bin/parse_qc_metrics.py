@@ -5,7 +5,7 @@ import glob
 import os
 from datetime import datetime
 from functools import reduce
-from typing import Any, List
+from typing import Any, List, Optional
 
 import pandas as pd
 
@@ -414,7 +414,7 @@ def save_genoox_metrics(
     )
 
 
-def read_file_to_dataframe(file: str) -> pd.DataFrame:
+def read_file_to_dataframe(file: Optional[str]) -> pd.DataFrame:
     """
     Read input file to DataFrame.
 
@@ -424,18 +424,21 @@ def read_file_to_dataframe(file: str) -> pd.DataFrame:
     Returns:
         DataFrame containing data from input file.
     """
-    file_readers = {
-        ".tsv": lambda f: pd.read_csv(f, sep="\t"),
-        ".csv": lambda f: pd.read_csv(f, sep=","),
-        ".xlsx": lambda f: pd.read_excel(f, sheet_name="QC Metrics"),
-    }
-
-    _, file_extension = os.path.splitext(file)
-
-    try:
-        df = file_readers.get(file_extension, lambda f: pd.DataFrame())(file)
-    except ValueError:
+    if not file:
         df = pd.DataFrame()
+    else:
+        file_readers = {
+            ".tsv": lambda f: pd.read_csv(f, sep="\t"),
+            ".csv": lambda f: pd.read_csv(f, sep=","),
+            ".xlsx": lambda f: pd.read_excel(f, sheet_name="QC Metrics"),
+        }
+
+        _, file_extension = os.path.splitext(file)
+
+        try:
+            df = file_readers.get(file_extension, lambda f: pd.DataFrame())(file)
+        except ValueError:
+            df = pd.DataFrame()
 
     if "Content_Desc" in df:
         if "SAMPLE ID" not in df:
