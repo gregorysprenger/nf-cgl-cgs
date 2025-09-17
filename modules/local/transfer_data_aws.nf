@@ -4,7 +4,7 @@ process TRANSFER_DATA_AWS {
     label 'gnx_aws'
 
     conda "conda-forge::rclone=1.70.1"
-    container "dockerreg01.accounts.ad.wustl.edu/cgl/rclone@sha256:985f6fe68bdc6eabe931212d1b5a7f15984963539af9fb210d30ebc858731070"
+    container "dockerreg01.accounts.ad.wustl.edu/cgl/rclone@sha256:1d82d564b8da03893be1b8c6e16557d45e10b496080fd7569a89f312e55c2bfe"
 
     input:
     path(dragen_align_files), stageAs: "dragen_align_files/*"
@@ -20,9 +20,9 @@ process TRANSFER_DATA_AWS {
     script:
     def prefix = task.ext.prefix
     """
-    export AWS_ACCESS_KEY_ID='\$GNX_ACCESS_KEY'
-    export AWS_SECRET_ACCESS_KEY='\$GNX_SECRET_KEY'
-    export AWS_REGION='\$GNX_REGION'
+    export AWS_ACCESS_KEY_ID=\$GNX_ACCESS_KEY
+    export AWS_SECRET_ACCESS_KEY=\$GNX_SECRET_KEY
+    export AWS_REGION=\$GNX_REGION
 
     export RCLONE_CONFIG_S3_TYPE=s3
     export RCLONE_CONFIG_S3_PROVIDER=AWS
@@ -46,8 +46,8 @@ process TRANSFER_DATA_AWS {
         --log-file=rclone_log.txt \\
         --log-level INFO \\
         --progress \\
-        --s3-region="\${AWS_REGION}" \\
         --transfers=${task.cpus} \\
+        --no-check-certificate \\
         --retries 5
 
     if [ \$? -eq 0 ]; then
@@ -58,7 +58,7 @@ process TRANSFER_DATA_AWS {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        rclone: $(rclone --version | head -n 1 | cut -d ' ' -f2)
+        rclone: \$(rclone --version | head -n 1 | cut -d ' ' -f2)
     END_VERSIONS
     """
 
@@ -104,7 +104,7 @@ process TRANSFER_DATA_AWS {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        rclone: $(rclone --version | head -n 1 | cut -d ' ' -f2)
+        rclone: \$(rclone --version | head -n 1 | cut -d ' ' -f2)
     END_VERSIONS
     """
 }
