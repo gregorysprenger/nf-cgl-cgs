@@ -13,24 +13,20 @@ RUN apt-get update \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-RUN wget -q "https://github.com/rclone/rclone/releases/download/v1.70.1/rclone-v${RCLONE_VERSION}.tar.gz" \
+# Download, build, and optimize the rclone binary
+RUN wget -q "https://github.com/rclone/rclone/releases/download/v${RCLONE_VERSION}/rclone-v${RCLONE_VERSION}.tar.gz" \
     && tar -xzf "rclone-v${RCLONE_VERSION}.tar.gz" \
     && rm "rclone-v${RCLONE_VERSION}.tar.gz" \
     && cd "rclone-v${RCLONE_VERSION}" \
-    && go build \
-    && mv rclone /usr/local/bin
+    && go build -v -ldflags "-s -w" \
+    && mv rclone /usr/local/bin/
 
-FROM ubuntu:noble
-
-LABEL base.image="ubuntu:noble"
-LABEL description="rclone with Ubuntu noble base image"
-LABEL dockerfile.version="1.0.0"
-LABEL software="rclone"
-LABEL maintainer="Gregory Sprenger"
+FROM ubuntu:noble AS app
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-COPY --from=builder /usr/local/bin/rclone /usr/local/bin/rclone
+RUN apt-get update && \
+    apt-get install --no-install-recommends -y ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
-RUN apt-get update \
-    && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /usr/local/bin/ /usr/local/bin/
