@@ -244,7 +244,6 @@ workflow DRAGEN_CGS {
                     def exclude_filenames = (vcf + metrics).collect { it.name }
                     dragen.findAll { !exclude_filenames.contains(it.name) } + vcf + metrics
             }
-            .view()
 
         //
         // MODULE: Transfer data to AWS bucket
