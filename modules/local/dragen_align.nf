@@ -17,7 +17,7 @@ process DRAGEN_ALIGN {
     path(reference_directory)
 
     output:
-    tuple val(meta), path ("${meta.id}/*") , emit: dragen_output
+    tuple val(meta), path("${meta.id}/*")  , emit: dragen_output
     path("${meta.id}/${meta.id}_usage.txt"), emit: usage        , optional: true
     path("${meta.id}/*_metrics.csv")       , emit: metrics
     path("versions.yml")                   , emit: versions
