@@ -233,26 +233,40 @@ workflow DRAGEN_CGS {
                         ".json",
                         ".vcf",
                     ]
-                    return files.findAll{ file -> extensions.any{ file.toString().toLowerCase().contains(it) } }
+
+                    [ meta.id, [files.findAll{ f -> extensions.any{ f.toString().toLowerCase().contains(it) } }] ]
             }
-            .collect()
-            .toList()
-            .combine(JOINT_GENOTYPING.out.vcf_files.collect().ifEmpty([]).toList())
-            .combine(JOINT_GENOTYPING.out.metrics.collect().ifEmpty([]).toList())
+            .join(
+                DRAGEN_ALIGN.out.dragen_output.map{ meta, files -> meta.id }
+                    .combine(JOINT_GENOTYPING.out.vcf_files.collect().toList().ifEmpty([]))
+                    .combine(JOINT_GENOTYPING.out.metrics.collect().toList().ifEmpty([]))
+                    .map{
+                        id, vcf_files, metric_files ->
+                            [ id, [(vcf_files + metric_files).findAll{ f -> f.toString().toLowerCase().contains(id.toLowerCase()) }] ]
+                    }
+            )
             .map{
-                dragen, vcf, metrics ->
-                    def exclude_filenames = (vcf + metrics).collect { it.name }
-                    dragen.findAll { !exclude_filenames.contains(it.name) } + vcf + metrics
+                sample_name, dragen_files, joint_files ->
+                    def filtered = [dragen_files + joint_files].flatten().collectEntries{ [ (file(it).name): it ] }.values()
+
+                    def local_files = filtered.findAll{ file(it.toString()).exists() && file(it.toString()).isFile() }
+                    def s3_files    = (filtered - local_files).collect{ it.toString().replaceFirst("/", "source_s3:") }
+                    [ ["id": sample_name], s3_files ?: [], local_files ?: [] ]
             }
+            .mix(PARSE_QC_METRICS.out.genoox_metrics.map{ [ ["id": "Genoox_Metrics"], [], it ] })
 
         //
-        // MODULE: Transfer data to AWS bucket
+        // MODULE: Transfer AWS data to GNX AWS bucket
         //
         TRANSFER_DATA_AWS (
-            ch_upload_files,
-            PARSE_QC_METRICS.out.genoox_metrics
+            ch_upload_files
         )
         ch_versions = ch_versions.mix(TRANSFER_DATA_AWS.out.versions)
+
+        ch_transfer_logs = TRANSFER_DATA_AWS.out.transfer_logs.collectFile(
+            name: "transfer_data_aws.log",
+            storeDir: "${params.outdir}/pipeline_info"
+        )
     }
 
     // Output DRAGEN usage information
