@@ -19,31 +19,39 @@ process BCFTOOLS_SPLIT_VCF {
     """
     mkdir -p split_vcf
 
+    process_vcf() {
+        local vcf_file="\$1"
+        local base=\$(basename "\$vcf_file" .vcf)
+        local ext=\$(echo "${joint_vcf_file}" | sed "s|${prefix.id}||1")
+        local out="split_vcf/\${base}\${ext}"
+
+        # Filter out homozygous reference calls and compress
+        bcftools view \\
+            -i 'GT!="." && GT!="0/0"' \\
+            -Oz \\
+            -o "\$out" \\
+            "\$vcf_file"
+
+        # Remove the original uncompressed VCF
+        rm "\$vcf_file"
+
+        # Index the VCF file
+        bcftools index --tbi "\$out"
+
+        # Create an MD5 checksum for the new file
+        md5sum "\$out" | sed "s|split_vcf/||g" > "\${out}.md5sum"
+    }
+    export -f process_vcf
+
     # Split joint VCF file into individual sample VCF files
     bcftools +split \\
         --output-type v \\
         --output split_vcf/ \\
         ${joint_vcf_file}
 
-    # Remove homozygous reference genotypes, compress, index, and create MD5sum
-    find split_vcf/ -name "*.vcf" \
-        | xargs -P ${task.cpus} -I {} bash -c '
-            base=\$(basename "{}" .vcf)
-            ext=\$(echo "${joint_vcf_file}" | sed "s|${prefix.id}||1")
-            out="split_vcf/\${base}\${ext}"
-
-            bcftools view \\
-                -i 'GT!="." && GT!="0/0"' \\
-                -Oz \\
-                -o "\${out}" \\
-                "{}"
-
-            rm "{}"
-
-            bcftools index --tbi "\${out}"
-
-            md5sum "\${out}" | sed "s|split_vcf/||g" > "\${out}.md5sum"
-        '
+    # Process split VCF files in parallel using the function
+    find split_vcf/ -name "*.vcf" \\
+        | xargs -P ${task.cpus} -I {} bash -c 'process_vcf "{}"'
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -55,38 +63,47 @@ process BCFTOOLS_SPLIT_VCF {
     def prefix = task.ext.prefix
     """
     mkdir -p split_vcf
-
+    ext=\$(echo "${joint_vcf_file}" | sed "s|${prefix.id}||1")
     for sample in \$(bcftools query -l ${joint_vcf_file}); do
         touch "split_vcf/\${sample}\${ext}" \\
             "split_vcf/\${sample}\${ext}.tbi"
+        touch "split_vcf/\${sample}\${ext}.md5sum"
     done
 
     cat <<-END_CMDS > ${prefix.id}_cmds.txt
+    process_vcf() {
+        local vcf_file="\$1"
+        local base=\$(basename "\$vcf_file" .vcf)
+        local ext=\$(echo "${joint_vcf_file}" | sed "s|${prefix.id}||1")
+        local out="split_vcf/\${base}\${ext}"
+
+        # Filter out homozygous reference calls and compress
+        bcftools view \\
+            -i 'GT!="." && GT!="0/0"' \\
+            -Oz \\
+            -o "\$out" \\
+            "\$vcf_file"
+
+        # Remove the original uncompressed VCF
+        rm "\$vcf_file"
+
+        # Index the VCF file
+        bcftools index --tbi "\$out"
+
+        # Create an MD5 checksum for the new file
+        md5sum "\$out" | sed "s|split_vcf/||g" > "\${out}.md5sum"
+    }
+    export -f process_vcf
+
     # Split joint VCF file into individual sample VCF files
     bcftools +split \\
         --output-type v \\
         --output split_vcf/ \\
         ${joint_vcf_file}
 
-    # Compress and index each VCF file, then create MD5SUM
-    find split_vcf/ -name "*.vcf" \
-        | xargs -P ${task.cpus} -I {} bash -c '
-            base=\$(basename "{}" .vcf)
-            ext=\$(echo "${joint_vcf_file}" | sed "s|${prefix.id}||1")
-            out="split_vcf/\${base}\${ext}"
-
-            bcftools view \\
-                -i 'GT!="." && GT!="0/0"' \\
-                -Oz \\
-                -o "\${out}" \\
-                "{}"
-
-            rm "{}"
-
-            bcftools index --tbi "\${out}"
-
-            md5sum "\${out}" | sed "s|split_vcf/||g" > "\${out}.md5sum"
-        '
+    # Process split VCF files in parallel using the function
+    find split_vcf/ -name "*.vcf" \\
+        | xargs -P ${task.cpus} -I {} bash -c 'process_vcf "{}"'
     END_CMDS
 
     cat <<-END_VERSIONS > versions.yml
