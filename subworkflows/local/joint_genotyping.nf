@@ -65,9 +65,19 @@ workflow JOINT_GENOTYPING {
                                     [ sample.getSimpleName(), sample_lines.join('\n') ]
                             }
 
-        saveMetricFile(ch_cnv_metrics, 'cnv_metrics.csv', "${params.outdir}/DRAGEN_output/")
+        saveMetricFile(
+            ch_cnv_metrics,
+            'cnv_metrics.csv',
+            "${params.outdir}/DRAGEN_output/"
+        )
 
-        ch_metric_files = ch_metric_files.mix(saveMetricFile(ch_cnv_metrics, 'cnv_metrics.csv', "${workDir}/cnv_metrics"))
+        ch_metric_files = ch_metric_files.mix(
+                            saveMetricFile(
+                                ch_cnv_metrics,
+                                'cnv_metrics.csv',
+                                "${workDir}/cnv_metrics"
+                            )
+                        )
     }
 
     //
@@ -134,9 +144,19 @@ workflow JOINT_GENOTYPING {
                                             [ sample_name, output.join('\n') ]
                                     }
 
-        saveMetricFile(ch_small_variant_metrics, 'vc_metrics.csv', "${params.outdir}/DRAGEN_output/")
+        saveMetricFile(
+            ch_small_variant_metrics,
+            'vc_metrics.csv',
+            "${params.outdir}/DRAGEN_output/"
+        )
 
-        ch_metric_files = ch_metric_files.mix(saveMetricFile(ch_small_variant_metrics, 'vc_metrics.csv', "${workDir}/small_variants_metrics"))
+        ch_metric_files = ch_metric_files.mix(
+                            saveMetricFile(
+                                ch_small_variant_metrics,
+                                'vc_metrics.csv',
+                                "${workDir}/small_variants_metrics"
+                                )
+                            )
     }
 
     //
@@ -157,9 +177,19 @@ workflow JOINT_GENOTYPING {
                             .splitText(elem: 0)
                             .map{ [ it.split(",")[1], it ] }
 
-        saveMetricFile(ch_sv_metrics, 'sv_metrics.csv', "${params.outdir}/DRAGEN_output/")
+        saveMetricFile(
+            ch_sv_metrics,
+            'sv_metrics.csv',
+            "${params.outdir}/DRAGEN_output/"
+        )
 
-        ch_metric_files = ch_metric_files.mix(saveMetricFile(ch_sv_metrics, 'sv_metrics.csv', "${workDir}/sv_metrics"))
+        ch_metric_files = ch_metric_files.mix(
+                            saveMetricFile(
+                                ch_sv_metrics,
+                                'sv_metrics.csv',
+                                "${workDir}/sv_metrics"
+                            )
+                        )
     }
 
     //
