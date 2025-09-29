@@ -106,19 +106,15 @@ workflow JOINT_GENOTYPING {
                                             def sample_name = sample.getSimpleName()
                                             def joint_sample_lines = joint.text.findAll(".+${sample_name}.+")
 
-                                            // Find values in joint vc_metrics.csv file
-                                            // def number_samples = joint.text.findAll("VARIANT CALLER SUMMARY,,Number of samples,.+")
                                             def indels_list = joint_sample_lines.findAll{
                                                                                     it.contains("Insertions") ||
                                                                                     it.contains("Deletions") ||
                                                                                     it.contains("Indels")
                                                                                 }
 
-                                            // Calculate number of indels
                                             def indel_count = indels_list.collect{ it.split(',')[3].toInteger() }.sum()
                                             def indel_percent = indels_list.collect{ it.split(',')[4].toFloat() }.sum()
 
-                                            // Create output
                                             def output = [
                                                 joint.text.findAll("VARIANT CALLER SUMMARY,,Number of samples,.+"),
                                                 sample.text.findAll("VARIANT CALLER SUMMARY,,Reads Processed,.+"),
@@ -129,18 +125,6 @@ workflow JOINT_GENOTYPING {
                                                 "JOINT CALLER POSTFILTER,${sample_name},Number of Indels,${indel_count},${indel_percent.round(2)}"
                                             ].flatten()
 
-                                            // def number_of_indels = ["JOINT CALLER POSTFILTER,${sample_name},Number of Indels,${indel_count},${indel_percent.round(2)}"]
-
-                                            // // Find values in single sample vc_metrics.csv file
-                                            // def reads_processed = sample.text.findAll("VARIANT CALLER SUMMARY,,Reads Processed,.+")
-                                            // def child_sample = sample.text.findAll("VARIANT CALLER SUMMARY,,Child Sample,.+")
-                                            // def autosome_callability = sample.text.findAll("VARIANT CALLER POSTFILTER,.+,Percent Autosome Callability,.+")[0]
-
-                                            // // Replace autosome callability in joint_sample_lines and create output
-                                            // def updated_lines = joint_sample_lines.collect{ it.replaceAll(/.+,Percent Autosome Callability,.+/, autosome_callability) }
-
-                                            // Create output and return values
-                                            // def output = number_samples + reads_processed + child_sample + updated_lines + number_of_indels
                                             [ sample_name, output.join('\n') ]
                                     }
 
@@ -171,8 +155,7 @@ workflow JOINT_GENOTYPING {
         ch_dragen_usage    = ch_dragen_usage.mix(DRAGEN_JOINT_SV.out.usage)
         ch_joint_vcf_files = ch_joint_vcf_files.mix(DRAGEN_JOINT_SV.out.joint_sv)
 
-        // Parse metrics for each sample
-        // from joint called '*.sv_metrics.csv' file
+        // Parse metrics for each sample from joint called '*.sv_metrics.csv' file
         ch_sv_metrics = DRAGEN_JOINT_SV.out.metrics
                             .splitText(elem: 0)
                             .map{ [ it.split(",")[1], it ] }
