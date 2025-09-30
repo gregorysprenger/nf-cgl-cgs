@@ -49,7 +49,7 @@ process TRANSFER_DATA_AWS {
             : > "\$list_file"
         fi
 
-        printf '%s\n' "\$file" >> "\${listfiles[\$dir]}"
+        printf '%s\\n' "\$file" >> "\${listfiles[\$dir]}"
     done
 
     # Copy each directory’s files
@@ -130,7 +130,7 @@ process TRANSFER_DATA_AWS {
             : > "\$list_file"
         fi
 
-        printf '%s\n' "\$file" >> "\${listfiles[\$dir]}"
+        printf '%s\\n' "\$file" >> "\${listfiles[\$dir]}"
     done
 
     # Copy each directory’s files
