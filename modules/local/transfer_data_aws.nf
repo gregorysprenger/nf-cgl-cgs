@@ -73,11 +73,11 @@ process TRANSFER_DATA_AWS {
     done
 
     # Copy local files if present
-    if [ -d "${local_files}" ] || [ -f "${local_files}" ]; then
-        echo "Uploading local files from ${local_files}"
+    if [[ -d "local_files" ]] && [[ -n "${local_files}" ]]; then
+        echo "Uploading local files from local_files/"
 
         rclone copy \\
-            "${local_files}/" \\
+            "local_files/" \\
             "\$BATCH_DEST_S3_FOLDER" \\
             --progress \\
             --retries 10 \\
@@ -155,11 +155,11 @@ process TRANSFER_DATA_AWS {
     done
 
     # Copy local files if present
-    if [ -d "${local_files}" ] || [ -f "${local_files}" ]; then
-        echo "Uploading local files from ${local_files}"
+    if [[ -d "local_files" ]] && [[ -n "${local_files}" ]]; then
+        echo "Uploading local files from local_files/"
 
         rclone copy \\
-            "${local_files}/" \\
+            "local_files/" \\
             "\$BATCH_DEST_S3_FOLDER" \\
             --progress \\
             --retries 10 \\

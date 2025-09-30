@@ -243,13 +243,14 @@ workflow DRAGEN_CGS {
                     .map{
                         id, vcf_files, metric_files ->
                             [ id, [(vcf_files + metric_files).findAll{ f -> f.toString().toLowerCase().contains(id.toLowerCase()) }] ]
-                    }
+                    },
+                remainder: true
             )
             .map{
                 sample_name, dragen_files, joint_files ->
-                    def filtered = [dragen_files + joint_files].flatten().collectEntries{ [ (file(it).name): it ] }.values()
+                    def filtered = [dragen_files + joint_files ?: []].flatten().collectEntries{ [ (file(it).name): it ] }.values()
 
-                    def local_files = filtered.findAll{ file(it.toString()).exists() && file(it.toString()).isFile() }
+                    def local_files = filtered.findAll{ file(it.toString()).exists() && file(it.toString()).isFile() } ?: []
                     def s3_files    = (filtered - local_files).collect{ it.toString().replaceFirst("/", "source_s3:") }
                     [ ["id": sample_name], s3_files ?: [], local_files ?: [] ]
             }
@@ -263,10 +264,11 @@ workflow DRAGEN_CGS {
         )
         ch_versions = ch_versions.mix(TRANSFER_DATA_AWS.out.versions)
 
-        ch_transfer_logs = TRANSFER_DATA_AWS.out.transfer_logs.collectFile(
-            name: "transfer_data_aws.log",
-            storeDir: "${params.outdir}/pipeline_info"
-        )
+        ch_transfer_logs = TRANSFER_DATA_AWS.out.transfer_logs
+                            .collectFile(
+                                name: "transfer_data_aws.log",
+                                storeDir: "${params.outdir}/pipeline_info"
+                            )
     }
 
     // Output DRAGEN usage information
