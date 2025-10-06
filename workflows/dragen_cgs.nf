@@ -169,8 +169,8 @@ workflow DRAGEN_CGS {
         ch_qc_coverage_region,
         ch_reference_dir
     )
-    ch_versions     = ch_versions.mix(DRAGEN_ALIGN.out.versions)
-    ch_dragen_usage = ch_dragen_usage.mix(DRAGEN_ALIGN.out.usage)
+    ch_versions       = ch_versions.mix(DRAGEN_ALIGN.out.versions)
+    ch_dragen_usage   = ch_dragen_usage.mix(DRAGEN_ALIGN.out.usage)
     ch_dragen_metrics = ch_dragen_metrics.mix(DRAGEN_ALIGN.out.metrics)
 
     //
@@ -204,8 +204,8 @@ workflow DRAGEN_CGS {
             ch_qc_coverage_region,
             ch_reference_dir
         )
-        ch_versions     = ch_versions.mix(DRAGEN_ALIGN_CONTROL.out.versions)
-        ch_dragen_usage = ch_dragen_usage.mix(DRAGEN_ALIGN_CONTROL.out.usage)
+        ch_versions       = ch_versions.mix(DRAGEN_ALIGN_CONTROL.out.versions)
+        ch_dragen_usage   = ch_dragen_usage.mix(DRAGEN_ALIGN_CONTROL.out.usage)
         ch_dragen_metrics = ch_dragen_metrics.mix(DRAGEN_ALIGN_CONTROL.out.metrics)
     }
 
