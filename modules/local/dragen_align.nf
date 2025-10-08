@@ -2,12 +2,12 @@ process DRAGEN_ALIGN {
     tag "${meta.id}"
     label 'dragen'
 
-    container "${ workflow.profile == 'dragenaws' ?
-        'ghcr.io/dhslab/docker-dragen:el8.4.3.6' :
-        'dockerreg01.accounts.ad.wustl.edu/cgl/dragen:v4.3.6' }"
+    container "${ ['dragenaws'].any{ workflow.profile.contains(it) }
+        ? 'job-definition://dragen-v4-3-6:1'
+        : 'dockerreg01.accounts.ad.wustl.edu/cgl/dragen:v4.3.6' }"
 
     input:
-    tuple val(meta), path(fastq_list)
+    tuple val(meta), path(read1), path(read2)
     path(qc_cross_contamination_file)
     path(qc_coverage_region_file)
     path(intermediate_directory)
@@ -17,18 +17,16 @@ process DRAGEN_ALIGN {
     path(dbsnp_file)
 
     output:
-    tuple val(meta), path ("dragen/*")    , emit: dragen_output
-    path("dragen/*.hard-filtered.gvcf.gz"), emit: hard_filtered_gvcf       , optional: true
-    path("dragen/${meta.id}_usage.txt")   , emit: usage                    , optional: true
-    path("dragen/*_metrics.csv")          , emit: metrics
-    path("dragen/*.tn.tsv.gz")            , emit: tangent_normalized_counts, optional: true
-    path("dragen/*.bam")                  , emit: bam
-    path("versions.yml")                  , emit: versions
+    tuple val(meta), path ("${meta.id}/*") , emit: dragen_output
+    path("${meta.id}/${meta.id}_usage.txt"), emit: usage        , optional: true
+    path("${meta.id}/*_metrics.csv")       , emit: metrics
+    path("versions.yml")                   , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
 
     script:
+    def exe_path       = ['dragenaws'].any{ workflow.profile.contains(it) } ? "/opt/edico" : "/opt/dragen/4.3.6"
     def alignment_args = [
         task.ext.dragen_license_args                  ?: "",
         meta.sex?.toLowerCase() in ['male', 'female'] ? "--sample-sex ${meta.sex}"                             : "",
@@ -42,13 +40,15 @@ process DRAGEN_ALIGN {
         intermediate_directory                        ? "--intermediate-results-dir ${intermediate_directory}" : ""
     ].join(' ').trim()
     """
-    mkdir -p dragen
+    mkdir -p ${meta.id}
 
-    /opt/dragen/4.3.6/bin/dragen \\
-        --fastq-list ${fastq_list} \\
-        --fastq-list-sample-id ${meta.id} \\
+    ${exe_path}/bin/dragen \\
+        --fastq-file1 ${read1} \\
+        --fastq-file2 ${read2} \\
+        --RGSM ${meta.RGSM} \\
+        --RGID ${meta.RGID} \\
         --output-file-prefix ${meta.id} \\
-        --output-directory dragen \\
+        --output-directory ${meta.id} \\
         --force \\
         ${alignment_args} \\
         --enable-sv true \\
@@ -67,31 +67,26 @@ process DRAGEN_ALIGN {
         --cnv-enable-self-normalization true \\
         --variant-annotation-assembly GRCh38
 
-    # Create md5sum of files
-    find dragen/ \\
+    # Create md5sum for files
+    find ${meta.id}/ \\
         -type f \\
-        \\( \\
-            -name "*.gz*" -o \\
-            -name "*.gff3" -o \\
-            -name "*.bam*" \\
-        \\) \\
         ! -name "*.md5sum" \\
-        | xargs -I "{}" \\
-            bash -c "md5sum {} | sed 's|dragen/||g' > {}.md5sum"
+        -exec bash -c 'md5sum "{}" | sed "s| .*/| |" > "{}.md5sum"' \\;
 
     # Copy and rename DRAGEN usage
-    find dragen/ \\
+    find ${meta.id}/ \\
         -type f \\
         -name "*_usage.txt" \\
-        -exec mv "{}" "dragen/${meta.id}_usage.txt" \\;
+        -exec mv "{}" "${meta.id}/${meta.id}_usage.txt" \\;
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        dragen: \$(/opt/dragen/4.3.6/bin/dragen --version | head -n 1 | cut -d ' ' -f 3)
+        dragen: \$(${exe_path}/bin/dragen --version | head -n 1 | cut -d ' ' -f 3)
     END_VERSIONS
     """
 
     stub:
+    def exe_path       = ['dragenaws'].any{ workflow.profile.contains(it) } ? "/opt/edico" : "/opt/dragen/4.3.6"
     def alignment_args = [
         task.ext.dragen_license_args                  ?: "",
         meta.sex?.toLowerCase() in ['male', 'female'] ? "--sample-sex ${meta.sex}"                             : "",
@@ -105,21 +100,28 @@ process DRAGEN_ALIGN {
         intermediate_directory                        ? "--intermediate-results-dir ${intermediate_directory}" : ""
     ].join(' ').trim()
     """
-    mkdir -p dragen
+    mkdir -p ${meta.id}
 
     touch \\
-        "dragen/${meta.id}.bam" \\
-        "dragen/${meta.id}.tn.tsv.gz" \\
-        "dragen/${meta.id}_metrics.csv" \\
-        "dragen/${meta.id}_usage.txt" \\
-        "dragen/${meta.id}.hard-filtered.gvcf.gz"
+        "${meta.id}/${meta.id}.bam" \\
+        "${meta.id}/${meta.id}.tn.tsv.gz" \\
+        "${meta.id}/${meta.id}_metrics.csv" \\
+        "${meta.id}/${meta.id}_usage.txt" \\
+        "${meta.id}/${meta.id}.hard-filtered.gvcf.gz"
 
-    cat <<-END_CMDS > "dragen/${meta.id}.txt"
-    /opt/dragen/4.3.6/bin/dragen \\
-        --fastq-list ${fastq_list} \\
-        --fastq-list-sample-id ${meta.id} \\
+    find ${meta.id}/ \\
+        -type f \\
+        ! -name "*.md5sum" \\
+        -exec bash -c 'md5sum "{}" | sed "s| .*/| |" > "{}.md5sum"' \\;
+
+    cat <<-END_CMDS > "${meta.id}/${meta.id}.txt"
+    ${exe_path}/bin/dragen \\
+        --fastq-file1 ${read1} \\
+        --fastq-file2 ${read2} \\
+        --RGSM ${meta.RGSM} \\
+        --RGID ${meta.RGID} \\
         --output-file-prefix ${meta.id} \\
-        --output-directory dragen \\
+        --output-directory ${meta.id} \\
         --force \\
         ${alignment_args} \\
         --enable-sv true \\
@@ -137,11 +139,23 @@ process DRAGEN_ALIGN {
         --qc-coverage-ignore-overlaps true \\
         --cnv-enable-self-normalization true \\
         --variant-annotation-assembly GRCh38
+
+    # Create md5sum for files
+    find ${meta.id}/ \\
+        -type f \\
+        ! -name "*.md5sum" \\
+        -exec bash -c 'md5sum "{}" | sed "s| .*/| |" > "{}.md5sum"' \\;
+
+    # Copy and rename DRAGEN usage
+    find ${meta.id}/ \\
+        -type f \\
+        -name "*_usage.txt" \\
+        -exec mv "{}" "${meta.id}/${meta.id}_usage.txt" \\;
     END_CMDS
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        dragen: \$(/opt/dragen/4.3.6/bin/dragen --version | head -n 1 | cut -d ' ' -f 3)
+        dragen: \$(${exe_path}/bin/dragen --version | head -n 1 | cut -d ' ' -f 3)
     END_VERSIONS
     """
 }

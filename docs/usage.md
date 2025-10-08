@@ -150,37 +150,18 @@ To demultiplex samples, the demultiplexing parameter must be turned on and the l
 
 #### Illumina run directory
 
-The Illumina run directory that contains base call information of samples that need demultiplexing has to be specified. Use the following parameter to specify its location:
+The Illumina run directory that contains base call information of samples that need demultiplexing has to be specified. Multiple Illumina run directories can be specified by separating them with a comma. Use the following parameter to specify its location:
 
 ```bash
---illumina_rundir '[path to Illumina run directory]'
-```
-
-#### Illumina reseq run directory
-
-The Illumina reseq run directory that contains base call information of resequenced samples that need demultiplexing has to be specified. Use the following parameter to specify its location:
-
-```bash
---reseq_illumina_rundir '[path to Illumina reseq run directory]'
+--illumina_rundir '[path to Illumina run directory],[path to second Illumina run directory]'
 ```
 
 #### MGI samplesheet
 
-An Excel (.xlsx) samplesheet with information about the samples that needs to be demuliplexed must be created before running this pipeline. Use the following parameter to specify its location:
+An Excel (.xlsx) samplesheet with information about the samples that needs to be demuliplexed must be created before running this pipeline. Multiple samplesheets can be specified by separating them with a comma. Use the following parameter to specify its location:
 
 ```bash
---input '[path to samplesheet file]'
-```
-
-#### MGI reseq samplesheet
-
-> [!NOTE]
-> The '--fastq_list' parameter is required if '--reseq_input' is specified.
-
-An Excel (.xlsx) samplesheet with information about resequenced samples that needs to be demuliplexed. Use the following parameter to specify its location:
-
-```bash
---reseq_input '[path to reseq samplesheet file]'
+--input '[path to samplesheet file],[path to second samplesheet file]'
 ```
 
 ##### MGI samplesheet example

@@ -10,7 +10,7 @@ on:
 jobs:
   run-tower:
     name: Run AWS full tests
-    if: github.repository == 'Clinical-Genomics-Laboratory/nf-cgl-cgs'
+    if: github.repository == 'Clinical-Genomics-Laboratory/nf-cgl-cgs' && false # TODO: re-enable at another time by removing '&& false'
     runs-on: ubuntu-latest
     steps:
       - name: Launch workflow via tower

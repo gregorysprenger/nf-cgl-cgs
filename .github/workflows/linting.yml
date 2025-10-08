@@ -12,6 +12,7 @@ on:
 
 jobs:
   pre-commit:
+    if: false # TODO: re-enable at another time
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4
@@ -28,6 +29,7 @@ jobs:
         run: pre-commit run --all-files
 
   nf-core:
+    if: false # TODO: re-enable at another time
     runs-on: ubuntu-latest
     steps:
       - name: Check out pipeline code

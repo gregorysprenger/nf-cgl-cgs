@@ -1,15 +1,15 @@
 process BCFTOOLS_SPLIT_VCF {
-    tag "${meta.id}"
+    tag "${joint_vcf_file}"
     label 'process_medium'
 
     container "docker.io/mgibio/bcftools-cwl:1.12"
 
     input:
-    tuple val(meta), path(joint_vcf_file)
+    path(joint_vcf_file)
 
     output:
-    tuple val(meta), path("*.vcf.gz*"), emit: split_vcf
-    path("versions.yml")              , emit: versions
+    path("split_vcf/*") , emit: split_vcf
+    path("versions.yml"), emit: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -17,21 +17,30 @@ process BCFTOOLS_SPLIT_VCF {
     script:
     def prefix = task.ext.prefix
     """
-    output_filename=\$(echo "${joint_vcf_file}" | sed "s|${prefix.id}|${meta.id}|1")
+    mkdir -p split_vcf
 
-    bcftools view \\
-        --output-type z \\
-        --samples ${meta.id} \\
-        --output "\${output_filename}" \\
+    # Split joint VCF file into individual sample VCF files
+    bcftools +split \\
+        --output-type v \\
+        --output split_vcf/ \\
         ${joint_vcf_file}
 
-    # Index VCF file
-    bcftools index \\
-        --tbi \\
-        "\${output_filename}"
+    # Get the file extension from the joint VCF file
+    ext=\$(echo "${joint_vcf_file}" | sed "s|${prefix.id}||1")
 
-    # Create MD5SUM of VCF file
-    md5sum "\${output_filename}" > "\${output_filename}.md5sum"
+    # Compress and index each VCF file, then create MD5SUM
+    find split_vcf/ -name "*.vcf" \\
+        | xargs -I {} -P ${task.cpus} bash -c '
+            base=\$(basename "\${0}" .vcf)
+            out="split_vcf/\${base}\${ext}"
+
+            bcftools view -Oz -o "\${out}" "\${0}"
+            rm "\${0}"
+
+            bcftools index --tbi "\${out}"
+
+            md5sum "\${out}" | sed "s|split_vcf/||g" > "\${out}.md5sum"
+        ' _ {} \\;
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -42,16 +51,36 @@ process BCFTOOLS_SPLIT_VCF {
     stub:
     def prefix = task.ext.prefix
     """
-    output_filename=\$(echo "${joint_vcf_file}" | sed "s|${prefix.id}|${meta.id}|1")
+    mkdir -p split_vcf
 
-    touch "\$output_filename"
+    # Get the file extension from the joint VCF file
+    ext=\$(echo "${joint_vcf_file}" | sed "s|${prefix.id}||1")
 
-    cat <<-END_CMDS > ${meta.id}_cmds.txt
-    bcftools view \\
-        --output-type z \\
-        --samples ${meta.id} \\
-        --output "\${output_filename}" \\
+    for sample in \$(bcftools query -l ${joint_vcf_file}); do
+        touch "split_vcf/\${sample}\${ext}" \\
+            "split_vcf/\${sample}\${ext}.tbi"
+    done
+
+    cat <<-END_CMDS > ${prefix.id}_cmds.txt
+    # Split joint VCF file into individual sample VCF files
+    bcftools +split \\
+        --output-type v \\
+        --output split_vcf/ \\
         ${joint_vcf_file}
+
+    # Compress and index each VCF file, then create MD5SUM
+    find split_vcf/ -name "*.vcf" \\
+        | xargs -I {} -P ${task.cpus} bash -c '
+            base=\$(basename "\${0}" .vcf)
+            out="split_vcf/\${base}\${ext}"
+
+            bcftools view -Oz -o "\${out}" "\${0}"
+            rm "\${0}"
+
+            bcftools index --tbi "\${out}"
+
+            md5sum "\${out}" | sed "s|split_vcf/||g" > "\${out}.md5sum"
+        ' _ {} \;
     END_CMDS
 
     cat <<-END_VERSIONS > versions.yml

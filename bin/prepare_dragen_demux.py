@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 
 import argparse
-import os
 import csv
+import os
 import sys
-import pandas as pd
 import xml.etree.ElementTree as ET
+
+import pandas as pd
 
 __version__ = "1.0.0"
 
@@ -127,7 +128,11 @@ def main():
 
     # create samplesheet
     # read the samplesheet into a dataframe:
-    df = pd.read_csv(args.samplesheet, header=0)
+    df = pd.read_csv(
+        args.samplesheet,
+        header=0,
+        sep="\t" if args.samplesheet.endswith(".tsv") else ",",
+    )
 
     # rename columns in df called lane and id to Lane and Sample:
     df.rename(columns={"Content_Desc": "Sample_ID"}, inplace=True)

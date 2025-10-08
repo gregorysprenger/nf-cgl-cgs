@@ -30,11 +30,6 @@ def parseArgs() -> argparse.Namespace:
         help="Path to MGI worksheet that contains sequencing information for each sample.",
     )
     parser.add_argument(
-        "-r",
-        "--mgi_reseq_worksheet",
-        help="Path to MGI reseq worksheet that contains sequencing information for each sample.",
-    )
-    parser.add_argument(
         "-i",
         "--inputdir",
         help="Directory to search for QC metric files.",
@@ -411,6 +406,8 @@ def save_genoox_metrics(
         )
         cleaned_mgi_worksheet = cleaned_mgi_worksheet[required_columns]
 
+    cleaned_mgi_worksheet = cleaned_mgi_worksheet[cleaned_mgi_worksheet["SAMPLE ID"].str.startswith("G")]
+
     # Save as Excel spreadsheet
     cleaned_mgi_worksheet.to_excel(
         f"{outdir}/{filename_prefix}_Genoox.xlsx",
@@ -474,10 +471,6 @@ def main() -> None:
     inputdir = os.path.abspath(args.inputdir)
     mgi_worksheet = read_file_to_dataframe(args.mgi_worksheet)
     outdir = get_output_directory(args.outdir)
-
-    if args.mgi_reseq_worksheet:
-        reseq_mgi_worksheet = read_file_to_dataframe(args.mgi_reseq_worksheet)
-        mgi_worksheet = pd.concat([mgi_worksheet, reseq_mgi_worksheet])
 
     if args.prefix:
         filename_prefix = args.prefix

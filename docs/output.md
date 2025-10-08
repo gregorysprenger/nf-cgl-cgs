@@ -20,6 +20,9 @@ The pipeline is built using [Nextflow](https://www.nextflow.io/) and processes d
 > [!NOTE]
 > Demultiplexing is an optional step. If FastQ files exist, input a `fastq_list.csv` to the `--fastq_list` parameter.
 
+> [!NOTE]
+> Multiple samplesheets and run directories can be specified by separating them with a comma. If multiple Illumina run directories are specified, the flowcell ID will be appended to the output directory name, such as `<params.demux_outdir>/<params.batch_name>_<flowcell_id>`.
+
 Samples can be demultiplexed when the following parameters are used: `--input <mgi_samplesheet>` and `--illumina_rundir <run_dir>`. To save the demultiplexed data, use `--demux_outdir <dir_path>`.
 
 <details markdown="1">

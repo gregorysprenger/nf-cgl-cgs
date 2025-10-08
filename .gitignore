@@ -6,3 +6,13 @@ results/
 testing/
 testing*
 *.pyc
+assets/*
+work/
+results*
+bcl*
+null/
+test.nf
+*.csv
+*.xlsx
+assets/**/*
+assets/stub/demux_fastq/Reports/fastq_list.csv

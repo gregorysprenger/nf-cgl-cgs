@@ -32,9 +32,8 @@ include { softwareVersionsToYAML  } from './subworkflows/nf-core/utils_nfcore_pi
 workflow NF_DRAGEN_CGS {
 
     take:
-    mgi_samplesheet        // channel: [ path(file) ]
-    reseq_mgi_samplesheet  // channel: [ path(file) ]
-    samples                // channel: [ val(meta), path(file) ]
+    mgi_samplesheet  // channel: [ path(file) ]
+    samples          // channel: [ val(meta), path(file) ]
 
     main:
     //
@@ -42,7 +41,6 @@ workflow NF_DRAGEN_CGS {
     //
     DRAGEN_CGS (
         mgi_samplesheet,
-        reseq_mgi_samplesheet,
         samples
     )
 
@@ -73,7 +71,6 @@ workflow {
         params.outdir,
         params.demux_outdir,
         params.input,
-        params.reseq_input,
         params.fastq_list
     )
     ch_versions = ch_versions.mix(PIPELINE_INITIALISATION.out.versions)
@@ -83,7 +80,6 @@ workflow {
     //
     NF_DRAGEN_CGS (
         PIPELINE_INITIALISATION.out.mgi_samplesheet,
-        PIPELINE_INITIALISATION.out.reseq_mgi_samplesheet,
         PIPELINE_INITIALISATION.out.samples
     )
     ch_versions = ch_versions.mix(NF_DRAGEN_CGS.out.versions)

@@ -5,6 +5,7 @@ on:
 
 jobs:
   clean-up:
+    if: false # TODO: re-enable at another time
     runs-on: ubuntu-latest
     permissions:
       issues: write
