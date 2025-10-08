@@ -5,16 +5,17 @@ import glob
 import os
 from datetime import datetime
 from functools import reduce
-from typing import Any, List
+from typing import Any, List, Optional
 
 import pandas as pd
 
 
 def parseArgs() -> argparse.Namespace:
     """
-    Parse input parameters.
+    Parse command line arguments.
 
-    :return: Parsed arguments
+    Returns:
+        Parsed command line arguments.
     """
     parser = argparse.ArgumentParser(
         description="Find, parse, and create summary QC metric files.", add_help=False
@@ -27,7 +28,6 @@ def parseArgs() -> argparse.Namespace:
         "-m",
         "--mgi_worksheet",
         help="Path to MGI worksheet that contains sequencing information for each sample.",
-        default="",
     )
     parser.add_argument(
         "-i",
@@ -49,8 +49,11 @@ def get_output_directory(outdir: str) -> str:
     """
     Get absolute path of output directory if specified. If not specified, set it to the current working directory.
 
-    :param outdir: User specified path to output directory
-    :return: Absolute path to output directory
+    Args:
+        outdir: User specified path to output directory.
+
+    Returns:
+        Absolute path to output directory.
     """
     if not outdir:
         output_dir = os.getcwd()
@@ -67,11 +70,14 @@ def get_list_value(lst: list, sep: str, index: int, value: str) -> Any | None:
     """
     Find the first string match in provided list, and then split based on provided separator and index.
 
-    :param lst: Input list of strings to search through
-    :param sep: Separator to split text by
-    :param index: Index to keep after splitting the text
-    :param value: Only look at strings that contain this substring
-    :return: Returns identified substring
+    Args:
+        lst: Input list of strings to search through.
+        sep: Separator to split text by.
+        index: Index to keep after splitting the text.
+        value: Only look at strings that contain this substring.
+
+    Returns:
+        Returns identified substring.
     """
     return next((s.split(sep)[index] for s in lst if value in s), None)
 
@@ -80,19 +86,25 @@ def get_columns(df: pd.DataFrame, col_list: list) -> pd.DataFrame:
     """
     Subset a DataFrame from a list of columns if those columns are present in the DataFrame.
 
-    :param df: DataFrame to subset columns from
-    :param col_list: List of column names to subset DataFrame
-    :return: DataFrame with a specified subset of columns if they exist
+    Args:
+        df: DataFrame to subset columns from.
+        col_list: List of column names to subset DataFrame.
+
+    Returns:
+        DataFrame with a specified subset of columns if they exist.
     """
     return df[[col for col in col_list if col in df.columns]]
 
 
 def parse_mapping_metrics(metric_files: List[str]) -> pd.DataFrame:
     """
-    Parse metrics out of all files that end with `mapping_metrics.csv`.
+    Parse metrics out of all files that end with 'mapping_metrics.csv'.
 
-    :param metric_files: List of all metric CSV files
-    :return: DataFrame containing metrics for each `mapping_metrics.csv` file
+    Args:
+        metric_files: List of all metric CSV files.
+
+    Returns:
+        DataFrame containing metrics for each 'mapping_metrics.csv' file.
     """
     metric_dict = {
         "Total input reads": 3,
@@ -133,10 +145,13 @@ def parse_mapping_metrics(metric_files: List[str]) -> pd.DataFrame:
 
 def parse_wgs_coverage_metrics(metric_files: List[str]) -> pd.DataFrame:
     """
-    Parse metrics out of all files that end with `wgs_coverage_metrics.csv`.
+    Parse metrics out of all files that end with 'wgs_coverage_metrics.csv'.
 
-    :param metric_files: List of all metric CSV files
-    :return: DataFrame containing metrics for each `wgs_coverage_metrics.csv` file
+    Args:
+        metric_files: List of all metric CSV files.
+
+    Returns:
+        DataFrame containing metrics for each 'wgs_coverage_metrics.csv' file.
     """
     metric_dict = {
         "Average alignment coverage over genome": 3,
@@ -156,10 +171,13 @@ def parse_wgs_coverage_metrics(metric_files: List[str]) -> pd.DataFrame:
 
 def parse_qc_coverage_region_metrics(metric_files: List[str]) -> pd.DataFrame:
     """
-    Parse metrics out of all files that end with `qc-coverage-region-1_coverage_metrics.csv`.
+    Parse metrics out of all files that end with 'qc-coverage-region-1_coverage_metrics.csv'.
 
-    :param metric_files: List of all metric CSV files
-    :return: DataFrame containing metrics for each `qc-coverage-region-1_coverage_metrics.csv` file
+    Args:
+        metric_files: List of all metric CSV files.
+
+    Returns:
+        DataFrame containing metrics for each 'qc-coverage-region-1_coverage_metrics.csv' file.
     """
     metric_dict = {
         "Average alignment coverage over QC coverage region": 3,
@@ -180,10 +198,13 @@ def parse_qc_coverage_region_metrics(metric_files: List[str]) -> pd.DataFrame:
 
 def parse_vc_metrics(metric_files: List[str]) -> pd.DataFrame:
     """
-    Parse metrics out of all files that end with `vc_metrics.csv`.
+    Parse metrics out of all files that end with 'vc_metrics.csv'.
 
-    :param metric_files: List of all metric CSV files
-    :return: DataFrame containing metrics for each `vc_metrics.csv` file
+    Args:
+        metric_files: List of all metric CSV files.
+
+    Returns:
+        DataFrame containing metrics for each 'vc_metrics.csv' file.
     """
     metric_dict = {
         "Het/Hom ratio": 3,
@@ -198,10 +219,13 @@ def parse_vc_metrics(metric_files: List[str]) -> pd.DataFrame:
 
 def parse_cnv_metrics(metric_files: List[str]) -> pd.DataFrame:
     """
-    Parse metrics out of all files that end with `cnv_metrics.csv`.
+    Parse metrics out of all files that end with 'cnv_metrics.csv'.
 
-    :param metric_files: List of all metric CSV files
-    :return: DataFrame containing metrics for each `cnv_metrics.csv` file
+    Args:
+        metric_files: List of all metric CSV files.
+
+    Returns:
+        DataFrame containing metrics for each 'cnv_metrics.csv' file.
     """
     metric_dict = {"SEX GENOTYPER": 3, "Coverage uniformity": 3}
 
@@ -216,10 +240,13 @@ def parse_metrics(
     """
     Parse list of files for items in dictionary.
 
-    :param files: List of files to search through for metrics
-    :param metric_dict: Dictionary that maps a value and index of substring to find
-    :param line_startswith: Only search for metric strings in lines that start with this substring
-    :return: DataFrame that contains specified metrics in metric_dict for all specified files
+    Args:
+        files: List of files to search through for metrics.
+        metric_dict: Dictionary that maps a value and index of substring to find.
+        line_startswith: Only search for metric strings in lines that start with this substring.
+
+    Returns:
+        DataFrame that contains specified metrics in metric_dict for all specified files.
     """
     dataframe_list = []
 
@@ -260,12 +287,13 @@ def save_mgi_metrics(
     """
     Save required QC metrics for MGI.
 
-    :param mgi_worksheet: QC metrics sheet from the MGI worksheet input
-    :param mapping_metrics: Metrics pulled from '*.mapping_metrics.csv' files
-    :param wgs_coverage_metrics: Metrics pulled from '*.wgs_coverage_metrics.csv' files
-    :param qc_coverage_region: Metrics pulled from '*.qc-coverage-region-1_coverage_metrics.csv' files
-    :param filename_prefix: Prefix for output filenames
-    :param outdir: Output directory to save file
+    Args:
+        mgi_worksheet: QC metrics sheet from the MGI worksheet input.
+        mapping_metrics: Metrics pulled from '*.mapping_metrics.csv' files.
+        wgs_coverage_metrics: Metrics pulled from '*.wgs_coverage_metrics.csv' files.
+        qc_coverage_region: Metrics pulled from '*.qc-coverage-region-1_coverage_metrics.csv' files.
+        filename_prefix: Prefix for output filenames.
+        outdir: Output directory to save file.
     """
     qc_dataframes = [
         mgi_worksheet,
@@ -328,9 +356,10 @@ def save_all_metrics(
     """
     Save all QC metrics.
 
-    :param all_qc_dataframes: List of QC metric DataFrames
-    :param filename_prefix: Prefix for output filenames
-    :param outdir: Output directory to save file
+    Args:
+        all_qc_dataframes: List of QC metric DataFrames.
+        filename_prefix: Prefix for output filenames.
+        outdir: Output directory to save file.
     """
     all_qc_metrics = reduce(
         lambda left, right: pd.merge(left, right, on=["SAMPLE ID"], how="outer"),
@@ -350,10 +379,11 @@ def save_genoox_metrics(
     """
     Create Excel workbook that contains the following sheets: QC Metrics - qPCR.
 
-    :param mgi_worksheet: QC metrics sheet from the MGI worksheet input
-    :param mapping_metrics: Metrics pulled from '*.mapping_metrics.csv' files - ONLY SAMPLE_ID column is used
-    :param filename_prefix: Prefix for output filenames
-    :param outdir: Output directory to save file
+    Args:
+        mgi_worksheet: QC metrics sheet from the MGI worksheet input.
+        mapping_metrics: Metrics pulled from '*.mapping_metrics.csv' files - ONLY SAMPLE_ID column is used.
+        filename_prefix: Prefix for output filenames.
+        outdir: Output directory to save file.
     """
     # Use only specified columns from MGI worksheet
     required_columns = [
@@ -384,19 +414,31 @@ def save_genoox_metrics(
     )
 
 
-def read_file_to_dataframe(file: str) -> pd.DataFrame:
-    file_readers = {
-        ".tsv": lambda f: pd.read_csv(f, sep="\t"),
-        ".csv": lambda f: pd.read_csv(f, sep=","),
-        ".xlsx": lambda f: pd.read_excel(f, sheet_name="QC Metrics"),
-    }
+def read_file_to_dataframe(file: Optional[str]) -> pd.DataFrame:
+    """
+    Read input file to DataFrame.
 
-    _, file_extension = os.path.splitext(file)
+    Args:
+        file: Input file to read.
 
-    try:
-        df = file_readers.get(file_extension, lambda f: pd.DataFrame())(file)
-    except ValueError:
+    Returns:
+        DataFrame containing data from input file.
+    """
+    if not file:
         df = pd.DataFrame()
+    else:
+        file_readers = {
+            ".tsv": lambda f: pd.read_csv(f, sep="\t"),
+            ".csv": lambda f: pd.read_csv(f, sep=","),
+            ".xlsx": lambda f: pd.read_excel(f, sheet_name="QC Metrics"),
+        }
+
+        _, file_extension = os.path.splitext(file)
+
+        try:
+            df = file_readers.get(file_extension, lambda f: pd.DataFrame())(file)
+        except ValueError:
+            df = pd.DataFrame()
 
     if "Content_Desc" in df:
         if "SAMPLE ID" not in df:

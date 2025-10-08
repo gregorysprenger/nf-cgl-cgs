@@ -1,19 +1,17 @@
 process TRANSFER_DATA_AWS {
+    tag "${meta.id}"
     label 'process_low'
-    label 'gnx_aws'
+    label 'transfer_data_aws'
 
-    conda "conda-forge::awscli=2.15.39"
-    container "docker.io/gregorysprenger/aws-cli:v2.15.39"
+    conda "conda-forge::rclone=1.70.1"
+    container "dockerreg01.accounts.ad.wustl.edu/cgl/rclone@sha256:1d82d564b8da03893be1b8c6e16557d45e10b496080fd7569a89f312e55c2bfe"
 
     input:
-    path(dragen_align_files), stageAs: "dragen_align_files/*"
-    path(joint_vcf_files)   , stageAs: "joint_called_files/*"
-    path(joint_metric_files), stageAs: "joint_called_files/*"
-    path(qc_metrics)
+    tuple val(meta), val(s3_files), path(local_files, stageAs: "local_files/*")
 
     output:
-    path("aws_log.txt") , emit: aws_log
-    path("versions.yml"), emit: versions
+    path("transfer_data_aws.log"), emit: transfer_logs
+    path("versions.yml")         , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -21,111 +19,164 @@ process TRANSFER_DATA_AWS {
     script:
     def prefix = task.ext.prefix
     """
-    export AWS_ACCESS_KEY_ID=\${GNX_ACCESS_KEY}
-    export AWS_SECRET_ACCESS_KEY=\${GNX_SECRET_KEY}
+    export RCLONE_CONFIG_SOURCE_S3_REGION=\$AWS_REGION
+    export RCLONE_CONFIG_SOURCE_S3_ACCESS_KEY_ID=\$AWS_ACCESS_KEY
+    export RCLONE_CONFIG_SOURCE_S3_SECRET_ACCESS_KEY=\$AWS_SECRET_KEY
 
-    # Organize files for upload
-    for file in \$(find -L dragen_align_files/ -type f -name "*.bam"); do
-        base=\$(basename "\${file%%.*}")
-        target_dir="${prefix.id}/\${base}"
-        mkdir -p "\$target_dir"
+    export RCLONE_CONFIG_DEST_S3_REGION=\$GNX_REGION
+    export RCLONE_CONFIG_DEST_S3_ACCESS_KEY_ID=\$GNX_ACCESS_KEY
+    export RCLONE_CONFIG_DEST_S3_SECRET_ACCESS_KEY=\$GNX_SECRET_KEY
 
-        for dir in dragen_align_files joint_called_files; do
-            [ -d "\$dir" ] && \\
-            find \\
-                -L \\
-                "\$dir" \\
-                -type f \\
-                -name "\${base}*" \\
-                -exec mv -f {} "\$target_dir" \\;
-        done
+    BATCH_DEST_S3_FOLDER="dest_s3:\${GNX_BUCKET}/\${GNX_DATA}/${prefix.id}/"
+    if [ ${meta.id} != "Genoox_Metrics" ]; then
+        BATCH_DEST_S3_FOLDER="\${BATCH_DEST_S3_FOLDER}${meta.id}/"
+    fi
+
+    mkdir -p lists
+
+    # Group S3 files & write list files
+    declare -A listfiles
+    for full_path in ${s3_files.join(' ')}; do
+        dir=\$(dirname "\$full_path")
+        [[ "\$dir" != */ ]] && dir="\${dir}/"
+        file=\$(basename "\$full_path")
+
+        safe_key=\$(echo "\$dir" | sed 's/[^a-zA-Z0-9]/_/g')
+        list_file="lists/\${safe_key}.txt"
+
+        if [ -z "\${listfiles[\$dir]+x}" ]; then
+            listfiles[\$dir]=\$list_file
+            : > "\$list_file"
+        fi
+
+        printf '%s\\n' "\$file" >> "\${listfiles[\$dir]}"
     done
 
-    # Move Genoox excel spreadsheet
-    find -L \$PWD \\
-        -type f \\
-        -name "*Genoox.xlsx" \\
-        -exec mv -f "{}" "${prefix.id}" \\;
+    # Copy each directory’s files
+    for dir in "\${!listfiles[@]}"; do
+        list_file="\${listfiles[\$dir]}"
+        nfiles=\$(wc -l < "\$list_file" | tr -d '[:space:]')
+        echo "Directory: \$dir (\$nfiles files)"
 
-    # Sync files with the following extensions
-    aws s3 sync \\
-        "${prefix.id}" \\
-        "s3://\${GNX_BUCKET}/\${GNX_DATA}/${prefix.id}/" \\
-        --exclude "*" \\
-        --include "*.bw*" \\
-        --include "*.csv" \\
-        --include "*.bam*" \\
-        --include "*.json" \\
-        --include "*.xlsx" \\
-        --include "*.gff3*" \\
-        --include "*.vcf.gz*" \\
-        --include "*.bed.gz*" \\
-        --include "*_usage.txt" \\
-        --only-show-errors \\
-        &> aws_log.txt
+        rclone copy \\
+            "\$dir" \\
+            "\$BATCH_DEST_S3_FOLDER" \\
+            --files-from "\$list_file" \\
+            --progress \\
+            --retries 10 \\
+            --no-traverse \\
+            --log-level INFO \\
+            --transfers ${task.cpus} \\
+            --log-file transfer_data_aws.log \\
+            --s3-location-constraint "\${RCLONE_CONFIG_DEST_S3_REGION}" \\
+            || error "Rclone failed for \$dir"
+    done
 
-    if [ \$? -eq 0 ]; then
-        echo "AWS sync completed successfully." >> aws_log.txt
-    else
-        error "AWS sync failed. Check 'aws_log.txt' for details."
+    # Copy local files if present
+    if [[ -d "local_files" ]] && [[ -n "${local_files}" ]]; then
+        echo "Uploading local files from local_files/"
+
+        rclone copy \\
+            "local_files/" \\
+            "\$BATCH_DEST_S3_FOLDER" \\
+            --progress \\
+            --retries 10 \\
+            --copy-links \\
+            --log-level INFO \\
+            --transfers ${task.cpus} \\
+            --log-file transfer_data_aws.log \\
+            --s3-location-constraint "\${RCLONE_CONFIG_DEST_S3_REGION}" \\
+            || error "Rclone failed for local_files/*"
     fi
+
+    echo "Finished sample: ${meta.id}"
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        aws: \$(aws --version 2>&1 | awk '{print \$1}' | cut -d '/' -f2)
+        rclone: \$(rclone --version | head -n 1 | cut -d ' ' -f2)
     END_VERSIONS
     """
 
     stub:
     def prefix = task.ext.prefix
     """
-    export AWS_ACCESS_KEY_ID=\${GNX_ACCESS_KEY}
-    export AWS_SECRET_ACCESS_KEY=\${GNX_SECRET_KEY}
+    export RCLONE_CONFIG_SOURCE_S3_REGION=\$AWS_REGION
+    export RCLONE_CONFIG_SOURCE_S3_ACCESS_KEY_ID=\$AWS_ACCESS_KEY
+    export RCLONE_CONFIG_SOURCE_S3_SECRET_ACCESS_KEY=\$AWS_SECRET_KEY
 
-    # Organize files for upload
-    for file in \$(find -L dragen_align_files/ -type f -name "*.bam"); do
-        base=\$(basename "\${file%%.*}")
-        target_dir="${prefix.id}/\${base}"
-        mkdir -p "\$target_dir"
+    export RCLONE_CONFIG_DEST_S3_REGION=\$GNX_REGION
+    export RCLONE_CONFIG_DEST_S3_ACCESS_KEY_ID=\$GNX_ACCESS_KEY
+    export RCLONE_CONFIG_DEST_S3_SECRET_ACCESS_KEY=\$GNX_SECRET_KEY
 
-        for dir in dragen_align_files joint_called_files; do
-            [ -d "\$dir" ] && \\
-            find \\
-                -L \\
-                "\$dir" \\
-                -type f \\
-                -name "\${base}*" \\
-                -exec mv -f {} "\$target_dir" \\;
-        done
+    BATCH_DEST_S3_FOLDER="dest_s3:\${GNX_BUCKET}/\${GNX_DATA}/${prefix.id}/"
+    if [ ${meta.id} != "Genoox_Metrics" ]; then
+        BATCH_DEST_S3_FOLDER="\${BATCH_DEST_S3_FOLDER}${meta.id}/"
+    fi
+
+    mkdir -p lists
+
+    # Group S3 files & write list files
+    declare -A listfiles
+    for full_path in ${s3_files.join(' ')}; do
+        dir=\$(dirname "\$full_path")
+        [[ "\$dir" != */ ]] && dir="\${dir}/"
+        file=\$(basename "\$full_path")
+
+        safe_key=\$(echo "\$dir" | sed 's/[^a-zA-Z0-9]/_/g')
+        list_file="lists/\${safe_key}.txt"
+
+        if [ -z "\${listfiles[\$dir]+x}" ]; then
+            listfiles[\$dir]=\$list_file
+            : > "\$list_file"
+        fi
+
+        printf '%s\\n' "\$file" >> "\${listfiles[\$dir]}"
     done
 
-    # Move Genoox excel spreadsheet
-    find -L \$PWD \\
-        -type f \\
-        -name "*Genoox.xlsx" \\
-        -exec mv -f "{}" "${prefix.id}" \\;
+    # Copy each directory’s files
+    for dir in "\${!listfiles[@]}"; do
+        list_file="\${listfiles[\$dir]}"
+        nfiles=\$(wc -l < "\$list_file" | tr -d '[:space:]')
+        echo "Directory: \$dir (\$nfiles files)"
 
-    # Sync files with the following extensions
-    aws s3 sync \\
-        "${prefix.id}" \\
-        "s3://\${GNX_BUCKET}/\${GNX_DATA}/${prefix.id}/" \\
-        --exclude "*" \\
-        --include "*.bw*" \\
-        --include "*.csv" \\
-        --include "*.bam*" \\
-        --include "*.json" \\
-        --include "*.xlsx" \\
-        --include "*.gff3*" \\
-        --include "*.vcf.gz*" \\
-        --include "*.bed.gz*" \\
-        --include "*_usage.txt" \\
-        --only-show-errors \\
-        --dryrun \\
-        &> aws_log.txt
+        rclone copy \\
+            "\$dir" \\
+            "\$BATCH_DEST_S3_FOLDER" \\
+            --files-from "\$list_file" \\
+            --progress \\
+            --retries 10 \\
+            --no-traverse \\
+            --log-level INFO \\
+            --transfers ${task.cpus} \\
+            --log-file transfer_data_aws.log \\
+            --s3-location-constraint "\${RCLONE_CONFIG_DEST_S3_REGION}" \\
+            --dry-run \\
+            || error "Rclone failed for \$dir"
+    done
+
+    # Copy local files if present
+    if [[ -d "local_files" ]] && [[ -n "${local_files}" ]]; then
+        echo "Uploading local files from local_files/"
+
+        rclone copy \\
+            "local_files/" \\
+            "\$BATCH_DEST_S3_FOLDER" \\
+            --progress \\
+            --retries 10 \\
+            --copy-links \\
+            --log-level INFO \\
+            --transfers ${task.cpus} \\
+            --log-file transfer_data_aws.log \\
+            --s3-location-constraint "\${RCLONE_CONFIG_DEST_S3_REGION}" \\
+            --dry-run \\
+            || error "Rclone failed for local_files/*"
+    fi
+
+    echo "Finished sample: ${meta.id}"
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        aws: \$(aws --version 2>&1 | awk '{print \$1}' | cut -d '/' -f2)
+        rclone: \$(rclone --version | head -n 1 | cut -d ' ' -f2)
     END_VERSIONS
     """
 }

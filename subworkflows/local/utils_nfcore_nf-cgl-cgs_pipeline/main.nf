@@ -84,14 +84,14 @@ workflow PIPELINE_INITIALISATION {
     //
     INPUT_CHECK (
         input ?: [],
-        fastq_list ? Channel.fromPath(fastq_list, checkIfExists: true) : []
+        fastq_list ? Channel.fromPath(fastq_list, checkIfExists: true) : Channel.empty().ifEmpty([])
     )
     ch_versions = ch_versions.mix(INPUT_CHECK.out.versions)
 
     emit:
-    samples         = INPUT_CHECK.out.samples           // channel: [ val(meta), path(file) ]
-    mgi_samplesheet = INPUT_CHECK.out.mgi_samplesheet   // channel: [ path(file) ]
-    versions        = ch_versions                       // channel: [ path(file) ]
+    samples         = INPUT_CHECK.out.samples          // channel: [ val(meta), path(reads), path(fastq_list) ]
+    mgi_samplesheet = INPUT_CHECK.out.mgi_samplesheet  // channel: [ path(file) ]
+    versions        = ch_versions                      // channel: [ path(file) ]
 
 }
 
