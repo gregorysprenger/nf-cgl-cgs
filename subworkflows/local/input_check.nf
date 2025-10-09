@@ -23,6 +23,18 @@ workflow INPUT_CHECK {
     ch_samples         = Channel.empty()
     ch_mgi_samplesheet = Channel.empty()
 
+    /*
+    ================================================================================
+                        Check if batch name is part of Illumina run directory
+    ================================================================================
+    */
+
+    if (params.batch_name && params.illumina_rundir && !params.validation_samples) {
+        def dateMatch = params.batch_name.find(/(\d{8})/)
+        params.illumina_rundir.split('/')[0].split('_').any{ part -> part == dateMatch }
+    } else {
+        error("Date in batch name does not match Illumina run directory! If this is a validation run, please set the '--validation_samples' parameter to true.")
+    }
 
     /*
     ================================================================================
