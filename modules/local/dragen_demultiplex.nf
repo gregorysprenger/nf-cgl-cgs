@@ -28,7 +28,7 @@ process DRAGEN_DEMULTIPLEX {
         --strict-mode true \\
         --sample-sheet ${samplesheet} \\
         --bcl-input-directory ${illumina_run_dir} \\
-        --output-directory "\$PWD/${prefix.id}" \\
+        --output-directory "\$PWD/${prefix.id}"
 
     # Copy RunParameters.xml to ${prefix.id}/Reports
     find -L ${illumina_run_dir} \\
