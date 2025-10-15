@@ -162,7 +162,7 @@ workflow DRAGEN_CGS {
     DRAGEN_ALIGN (
         ch_samples.filter{
             meta, reads, fastq_list ->
-                params.validation_samples || (meta?.acc instanceof String &&meta?.acc.startsWith("G"))
+                params.validation_samples || (meta?.acc instanceof String && meta?.acc.startsWith("G"))
         },
         ch_intermediate_dir,
         ch_qc_cross_contamination,
