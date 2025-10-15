@@ -50,7 +50,12 @@ workflow DEMULTIPLEX {
                                 def columns = rows[0].keySet() as List
                                 def samplesheet = file("Samplesheet_${flowcell}.csv")
                                 samplesheet.text = columns.join(',') + '\n' +
-                                    rows.collect{ r -> columns.collect { c -> r[c] }.join(',') }.join('\n')
+                                    rows.collect{ r ->
+                                        columns.collect{ c ->
+                                            def value = r[c]
+                                            c == 'Lane' ? "\"${value}\"" : value
+                                        }.join(',')
+                                    }.join('\n')
                                 [ flowcell, samplesheet ]
                         }
                         .join(
