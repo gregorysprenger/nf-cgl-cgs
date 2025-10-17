@@ -11,7 +11,7 @@ process PARSE_QC_METRICS {
 
     output:
     path("*.xlsx")      , emit: qc_metrics
-    path("*Genoox.xlsx"), emit: genoox_metrics
+    path("*Genoox.xlsx"), emit: genoox_metrics, optional: true
     path("versions.yml"), emit: versions
 
     when:

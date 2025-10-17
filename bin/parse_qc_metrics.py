@@ -406,6 +406,13 @@ def save_genoox_metrics(
         )
         cleaned_mgi_worksheet = cleaned_mgi_worksheet[required_columns]
 
+    # Filter for SAMPLE ID values that are strings and start with 'G'
+    is_genoox_sample = cleaned_mgi_worksheet["SAMPLE ID"].str.startswith("G", na=False)
+    cleaned_mgi_worksheet = cleaned_mgi_worksheet[is_genoox_sample]
+
+    if cleaned_mgi_worksheet.empty:
+        return
+
     # Save as Excel spreadsheet
     cleaned_mgi_worksheet.to_excel(
         f"{outdir}/{filename_prefix}_Genoox.xlsx",
