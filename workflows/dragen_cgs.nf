@@ -160,7 +160,10 @@ workflow DRAGEN_CGS {
     // MODULE: DRAGEN alignment for clinical samples
     //
     DRAGEN_ALIGN (
-        ch_samples.filter{ meta, reads, fastq_list -> params.validation_samples || meta?.acc.startsWith("G") },
+        ch_samples.filter{
+            meta, reads, fastq_list ->
+                params.validation_samples || (meta?.acc instanceof String && meta?.acc.startsWith("G"))
+        },
         ch_intermediate_dir,
         ch_qc_cross_contamination,
         ch_adapter1_file,
@@ -190,7 +193,10 @@ workflow DRAGEN_CGS {
         DRAGEN_ALIGN_CONTROL (
             JOINT_GENOTYPING.out.dragen_usage
                     .collect()
-                    .combine(ch_samples.filter{ meta, reads, fastq_list -> !meta?.acc.startsWith("G") })
+                    .combine(ch_samples.filter{
+                        meta, reads, fastq_list ->
+                            meta?.acc instanceof String && !meta?.acc.startsWith("G")
+                    })
                     .map{
                         done, meta, reads, fastq_list ->
                             meta['create_gvcf'] = false

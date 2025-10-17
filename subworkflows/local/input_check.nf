@@ -88,10 +88,12 @@ workflow INPUT_CHECK {
                                 def R2 = file(it['Read2File'], checkIfExists: true)
 
                                 def regexPattern = /\w\d{2}-\d+/
+                                def matcher = it.RGSM =~ regexPattern
+                                def acc = matcher.find() ? matcher.group(0) : it.RGSM
                                 def meta = [
-                                    id  : it.RGSM,
-                                    acc : (it.RGSM =~ regexPattern)?.find() ?: it.RGSM,
-                                    RGSM: it.RGSM
+                                    'id'  : it.RGSM,
+                                    'acc' : acc,
+                                    'RGSM': it.RGSM
                                 ]
 
                                 [ meta.acc, meta, [ R1, R2 ] ]
