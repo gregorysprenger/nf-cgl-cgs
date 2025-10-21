@@ -27,6 +27,7 @@ def parseArgs() -> argparse.Namespace:
     parser.add_argument(
         "-m",
         "--mgi_worksheet",
+        nargs="*",
         help="Path to MGI worksheet that contains sequencing information for each sample.",
     )
     parser.add_argument(
@@ -477,7 +478,12 @@ def main() -> None:
 
     # Check inputs
     inputdir = os.path.abspath(args.inputdir)
-    mgi_worksheet = read_file_to_dataframe(args.mgi_worksheet)
+    if args.mgi_worksheet:
+        mgi_worksheet = pd.concat(
+            [read_file_to_dataframe(f) for f in args.mgi_worksheet], ignore_index=True
+        )
+    else:
+        mgi_worksheet = read_file_to_dataframe(None)
     outdir = get_output_directory(args.outdir)
 
     if args.prefix:

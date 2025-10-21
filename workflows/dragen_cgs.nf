@@ -19,7 +19,7 @@ include { TRANSFER_DATA_AWS                    } from '../modules/local/transfer
 
 // Original input file - has not gone through XLSX -> CSV conversion
 if (params.input) {
-    ch_input_file = Channel.fromPath(params.input).collect()
+    ch_input_file = Channel.fromPath(params.input.split(',') as List).collect()
 } else {
     ch_input_file = Channel.empty()
 }

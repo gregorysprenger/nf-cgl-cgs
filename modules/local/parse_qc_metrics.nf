@@ -19,7 +19,7 @@ process PARSE_QC_METRICS {
 
     script:
     def prefix        = task.ext.prefix
-    def mgi_worksheet = samplesheet ? "--mgi_worksheet ${samplesheet}" : ""
+    def mgi_worksheet = samplesheet ? "--mgi_worksheet ${samplesheet.join(' ')}" : ""
     """
     # Remove single sample metrics if joint called metrics
     if [[ -d joint_sample_metrics ]]; then
@@ -48,7 +48,7 @@ process PARSE_QC_METRICS {
 
     stub:
     def prefix        = task.ext.prefix
-    def mgi_worksheet = samplesheet ? "--mgi_worksheet ${samplesheet}" : ""
+    def mgi_worksheet = samplesheet ? "--mgi_worksheet ${samplesheet.join(' ')}" : ""
     """
     # Remove single sample metrics if joint called metrics
     if [[ -d joint_sample_metrics ]]; then
