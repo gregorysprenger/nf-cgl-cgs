@@ -193,7 +193,7 @@ workflow DRAGEN_CGS {
         DRAGEN_ALIGN_CONTROL (
             JOINT_GENOTYPING.out.dragen_usage
                     .collect()
-                    .ifEmpty("done")
+                    .ifEmpty("done") // Proceed with control alignment even if no joint genotyping
                     .combine(ch_samples.filter{
                         meta, reads, fastq_list ->
                             meta?.acc instanceof String && !meta?.acc.startsWith("G")
