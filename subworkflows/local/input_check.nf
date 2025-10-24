@@ -30,13 +30,13 @@ workflow INPUT_CHECK {
     */
 
     if (params.batch_name && params.illumina_rundir && !params.validation_samples) {
-        def dateMatch = params.batch_name.find(/(\d{8})/)
+        def dateMatch = params.batch_name.find(/(\d{4}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01]))/)
         if (dateMatch) {
             def runDirName   = new File(params.illumina_rundir).name
             def dateInRunDir = runDirName.split('_').any{ it.contains(dateMatch) }
 
             if (!dateInRunDir) {
-                error "Date in batch name ('${dateMatch}') does not match any part of the Illumina run directory name ('${runDirName}'). If this is a validation run, please set '--validation_samples' to true."
+                error "Date in batch name ('${dateMatch}') not found in Illumina run directory name ('${runDirName}'). Run directory parts checked: ${runDirName.split('_').join(', ')}. If this is a validation run, please set '--validation_samples' to true."
             }
         } else {
             error "Could not find an 8-digit date (YYYYMMDD) in '--batch_name ${params.batch_name}'. If this is a validation run, please set '--validation_samples' to true"
