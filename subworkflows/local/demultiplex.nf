@@ -95,17 +95,6 @@ workflow DEMULTIPLEX {
     )
     ch_versions = ch_versions.mix(VERIFY_FASTQ_LIST.out.versions)
 
-    // Ensure FastQ size >10MB after demux unless validation samples are used
-    if (!params.validation_samples) {
-        ch_verify_fastq_files = VERIFY_FASTQ_LIST.out.samples
-                                    .map{
-                                        meta, reads, fastq_list ->
-                                            reads.each{
-                                                (it.size() > (10 * 1024 * 1024)) ? true : error("FastQ file '${it}' is less than 10MB!")
-                                            }
-                                    }
-    }
-
     // Use 'params.demux_outdir' path for paths in 'fastq_list.csv' and save
     if (params.demux_outdir) {
         def batch_name = params.batch_name ?: new java.util.Date().format('yyyyMMdd') + '_CGS'
