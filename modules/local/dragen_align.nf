@@ -116,7 +116,7 @@ process DRAGEN_ALIGN {
         ! -name "*.md5sum" \\
         -exec bash -c 'md5sum "{}" | sed "s| .*/| |" > "{}.md5sum"' \\;
 
-    cat <<-END_CMDS > "dragen/${meta.id}.txt"
+    cat <<-END_CMDS > "${meta.id}/${meta.id}.txt"
     ${exe_path}/bin/dragen \\
         --fastq-list ${fastq_list} \\
         --fastq-list-sample-id ${meta.id} \\

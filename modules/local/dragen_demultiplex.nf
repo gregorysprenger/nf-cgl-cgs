@@ -46,7 +46,7 @@ process DRAGEN_DEMULTIPLEX {
     def prefix   = task.ext.prefix
     def exe_path = ['dragenaws'].any{ workflow.profile.contains(it) } ? "/opt/edico" : "/opt/dragen/4.3.6"
     """
-    cp -r ${projectDir}/assets/20250606_A22VNC2LT3/demux_fastq "${prefix.id}"
+    cp -r ${projectDir}/assets/stub/demux_fastq "${prefix.id}"
 
     cat <<-END_CMDS > "${prefix.id}_cmds.txt"
     ${exe_path}/bin/dragen \\
