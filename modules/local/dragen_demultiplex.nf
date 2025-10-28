@@ -19,7 +19,7 @@ process DRAGEN_DEMULTIPLEX {
 
     script:
     def prefix   = task.ext.prefix
-    def exe_path = ['dragenaws'].any{ workflow.profile.contains(it) } ? "/opt/edico" : "/opt/dragen/4.3.6"
+    def exe_path = ['awsbatch'].any{ workflow.profile.contains(it) } ? "/opt/edico" : "/opt/dragen/4.3.6"
     """
     # Perform demultiplexing of samples
     ${exe_path}/bin/dragen \\
@@ -44,7 +44,7 @@ process DRAGEN_DEMULTIPLEX {
 
     stub:
     def prefix   = task.ext.prefix
-    def exe_path = ['dragenaws'].any{ workflow.profile.contains(it) } ? "/opt/edico" : "/opt/dragen/4.3.6"
+    def exe_path = ['awsbatch'].any{ workflow.profile.contains(it) } ? "/opt/edico" : "/opt/dragen/4.3.6"
     """
     cp -r ${projectDir}/assets/stub/demux_fastq "${prefix.id}"
 
