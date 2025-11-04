@@ -240,8 +240,7 @@ workflow DRAGEN_CGS {
                         ".json",
                         ".vcf",
                     ]
-
-                    [ meta.id, [files.findAll{ f -> extensions.any{ f.toString().toLowerCase().contains(it) } }] ]
+                    [ meta.id, files.findAll{ f -> extensions.any{ f.toString().toLowerCase().contains(it) } } ]
             }
             .join(
                 DRAGEN_ALIGN.out.dragen_output.map{ meta, files -> meta.id }
@@ -249,19 +248,18 @@ workflow DRAGEN_CGS {
                     .combine(JOINT_GENOTYPING.out.metrics.collect().toList().ifEmpty([]))
                     .map{
                         id, vcf_files, metric_files ->
-                            [ id, [(vcf_files + metric_files).findAll{ f -> f.toString().toLowerCase().contains(id.toLowerCase()) }] ]
+                            def joint_files = (vcf_files + metric_files).findAll{ f -> f.toString().toLowerCase().contains(id.toLowerCase()) }
+                            [ id, joint_files ]
                     },
                 remainder: true
             )
             .map{
                 sample_name, dragen_files, joint_files ->
-                    def filtered = [dragen_files + joint_files ?: []].flatten().collectEntries{ [ (file(it).name): it ] }.values()
-
-                    def local_files = filtered.findAll{ file(it.toString()).exists() && file(it.toString()).isFile() } ?: []
-                    def s3_files    = (filtered - local_files).collect{ it.toString().replaceFirst("/", "source_s3:") }
-                    [ ["id": sample_name], s3_files ?: [], local_files ?: [] ]
+                    def exclude_filenames = joint_files.collect{ it.name }
+                    def all_files = dragen_files.findAll{ !exclude_filenames.contains(it.name) } + joint_files
+                    [ ["id":sample_name], all_files ]
             }
-            .mix(PARSE_QC_METRICS.out.genoox_metrics.map{ [ ["id": "Genoox_Metrics"], [], it ] })
+            .mix(PARSE_QC_METRICS.out.genoox_metrics.map{ [ ["id": "Genoox_Metrics"], [it] ] })
 
         //
         // MODULE: Transfer AWS data to GNX AWS bucket
