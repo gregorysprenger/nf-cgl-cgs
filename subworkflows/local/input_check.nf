@@ -73,74 +73,75 @@ workflow INPUT_CHECK {
     ================================================================================
     */
 
-    ch_samples = ch_samples.mix(
-                    ch_fastq_list
-                        .filter{ it != [] }
-                        .flatMap{
-                            def data = parseFastqList(it)
-                            def requiredColumns = ['RGID', 'RGSM', 'RGLB', 'Lane', 'Read1File', 'Read2File']
-                            data.collect{
-                                if (!it.keySet().containsAll(requiredColumns)) {
-                                    error("Missing required columns in input FastQ list!")
-                                }
-
-                                def R1 = file(it['Read1File'], checkIfExists: true)
-                                def R2 = file(it['Read2File'], checkIfExists: true)
-
-                                // Ensure FastQ size > min_fastq_size unless validation samples are used
-                                if (!params.validation_samples) {
-                                    def MIN_FASTQ_SIZE_BYTES = params.min_fastq_size * 1024 * 1024
-                                    if (R1.size() < MIN_FASTQ_SIZE_BYTES) {
-                                        error("FastQ file '${R1.name}' is ${R1.size()} bytes, less than ${params.min_fastq_size}MB minimum!")
+    // Process the fastq list to create samples channel and the updated fastq list for alignment
+    ch_processed_fastq = ch_fastq_list
+                            .filter{ it.size() > 0 }
+                            .flatMap{ fastq_list_file ->
+                                def data = parseFastqList(fastq_list_file)
+                                def requiredColumns = ['RGID', 'RGSM', 'RGLB', 'Lane', 'Read1File', 'Read2File']
+                                data.collect{ row ->
+                                    if (!row.keySet().containsAll(requiredColumns)) {
+                                        error("Missing required columns in input FastQ list!")
                                     }
-                                    if (R2.size() < MIN_FASTQ_SIZE_BYTES) {
-                                        error("FastQ file '${R2.name}' is ${R2.size()} bytes, less than ${params.min_fastq_size}MB minimum!")
-                                    }
-                                }
 
-                                def regexPattern = /\w\d{2}-\d+/
-                                def matcher = it.RGSM =~ regexPattern
-                                def acc = matcher.find() ? matcher.group(0) : it.RGSM
-                                def meta = [
-                                    'id'  : it.RGSM,
-                                    'acc' : acc,
-                                    'RGSM': it.RGSM
-                                ]
+                                    def R1 = file(row['Read1File'], checkIfExists: true)
+                                    def R2 = file(row['Read2File'], checkIfExists: true)
 
-                                [ meta.acc, meta, [ R1, R2 ] ]
-                            }
-                        }
-                        .groupTuple()
-                        .combine(
-                            ch_fastq_list
-                                .filter{ it != [] }
-                                .map{
-                                    def data = parseFastqList(it)
-                                    data.each{
-                                        if (it) {
-                                            it['Read1File'] = "fastq_files/${it['Read1File'].split('/')[-1]}"
-                                            it['Read2File'] = "fastq_files/${it['Read2File'].split('/')[-1]}"
+                                    if (!params.validation_samples) {
+                                        def MIN_FASTQ_SIZE_BYTES = params.min_fastq_size * 1024 * 1024
+                                        if (R1.size() < MIN_FASTQ_SIZE_BYTES) {
+                                            error("FastQ file '${R1.name}' is ${R1.size()} bytes, less than ${params.min_fastq_size}MB minimum!")
+                                        }
+                                        if (R2.size() < MIN_FASTQ_SIZE_BYTES) {
+                                            error("FastQ file '${R2.name}' is ${R2.size()} bytes, less than ${params.min_fastq_size}MB minimum!")
                                         }
                                     }
 
-                                    if (data) {
-                                        def header = data[0].keySet().join(',')
-                                        def content = data.collect { it.values().join(',') }.join('\n')
+                                    def regexPattern = /\w\d{2}-\d+/
+                                    def matcher = row.RGSM =~ regexPattern
+                                    def acc = matcher.find() ? matcher.group(0) : row.RGSM
+                                    def meta = ['id': row.RGSM, 'acc': acc, 'RGSM': row.RGSM]
 
-                                        [ [ header ], [ content ] ]
-                                    } else {
-                                        [ [], [] ]
-                                    }
+                                    // Create a new map for the updated fastq list to ensure column order
+                                    def updated_row = [
+                                        'RGID': row.RGID,
+                                        'RGSM': row.RGSM,
+                                        'RGLB': row.RGLB,
+                                        'Lane': row.Lane,
+                                        'Read1File': "fastq_files/${R1.name}",
+                                        'Read2File': "fastq_files/${R2.name}"
+                                    ]
+
+                                    [ meta, [R1, R2], updated_row ]
                                 }
+                            }
+                            .multiMap{ meta, reads, updated_row ->
+                                samples: [ meta, reads ]
+                                csv_rows: updated_row
+                            }
+
+    ch_updated_fastq_list = ch_processed_fastq.csv_rows
+                                .collect()
+                                .map{ rows ->
+                                    if (rows.isEmpty()) return  [ [], [] ]
+                                    def header = rows[0].keySet().join(',')
+                                    def content = rows.collect{ it.values().join(',') }.join('\n')
+                                    [ [header], [content] ]
+                                }
+                                .filter{ it != [ [], [] ] }
                                 .flatten()
                                 .collectFile(
-                                    name   : "updated_fastq_list.csv",
-                                    newLine: true,
-                                    sort   : 'index'
+                                    newLine : true,
+                                    sort    : 'index',
+                                    storeDir: "${workflow.workDir}",
+                                    name    : "updated_fastq_list.csv",
                                 )
-                        )
-                        .map{ id, meta, reads, fastq_list -> [ meta[0], reads.flatten(), fastq_list ] }
-                )
+
+    ch_samples = ch_processed_fastq.samples
+                    .map{ meta, reads -> [ meta.id, meta, reads ] }
+                    .groupTuple()
+                    .map{ id, metas, reads -> [ metas[0], reads.flatten() ] }
+                    .combine(ch_updated_fastq_list)
 
     emit:
     samples         = ch_samples          // channel: [ val(sample_info), path(reads), path(fastq_list) ]
@@ -164,7 +165,10 @@ def hasExtension(it, extension) {
 def parseFastqList(file) {
     def separator = file.endsWith("tsv") ? '\t' : ','
     def lines = file.readLines()
-    def headers = lines.first().split(separator)
+    if (lines.isEmpty()) {
+        return []
+    }
+    def headers = lines.first().split(separator) as List
     lines.drop(1).collect{ line ->
         [headers, line.split(separator)].transpose().collectEntries{ it }
     }
