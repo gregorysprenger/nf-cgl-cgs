@@ -1,13 +1,78 @@
 #!/usr/bin/env python3
 
 import argparse
+import datetime
 import glob
 import os
-from datetime import datetime
 from functools import reduce
-from typing import Any, List, Optional
+from typing import Optional
 
 import pandas as pd
+
+METRIC_CONFIGS = {
+    "mapping": {
+        "suffix": ".mapping_metrics.csv",
+        "header": "MAPPING/ALIGNING SUMMARY",
+        "metrics": {
+            "Total input reads": 3,
+            "Total bases": 3,
+            "Mapped reads": 3,
+            "PCT Mapped reads": 4,
+            "Number of unique reads (excl. duplicate marked reads)": 3,
+            "PCT Number of unique reads (excl. duplicate marked reads)": 4,
+            "Number of duplicate marked reads": 3,
+            "PCT Number of duplicate marked reads": 4,
+            "Paired reads (itself & mate mapped)": 4,
+            "Not properly paired reads (discordant)": 4,
+            "PCT Mismatched bases R1": 4,
+            "PCT Mismatched bases R2": 4,
+            "Q30 bases R1": 4,
+            "PCT Q30 bases R1": 4,
+            "Q30 bases R2": 4,
+            "PCT Q30 bases R2": 4,
+            "Insert length: median": 3,
+            "Insert length: mean": 3,
+            "Estimated sample contamination": 3,
+        },
+    },
+    "wgs": {
+        "suffix": ".wgs_coverage_metrics.csv",
+        "header": "COVERAGE SUMMARY",
+        "metrics": {
+            "Average alignment coverage over genome": 3,
+            "Average autosomal coverage over genome": 3,
+            "PCT of genome with coverage [  20x: inf)": 3,
+            "PCT of genome with coverage [  10x: inf)": 3,
+            "PCT Aligned reads in genome": 4,
+            "Uniformity of coverage (PCT > 0.2*mean) over genome": 3,
+        },
+    },
+    "qc_region": {
+        "suffix": ".qc-coverage-region-1_coverage_metrics.csv",
+        "header": "COVERAGE SUMMARY",
+        "metrics": {
+            "Average alignment coverage over QC coverage region": 3,
+            "Average autosomal coverage over QC coverage region": 3,
+            "PCT of QC coverage region with coverage [  20x: inf)": 3,
+            "PCT of QC coverage region with coverage [  10x: inf)": 3,
+            "Uniformity of coverage (PCT > 0.2*mean) over QC coverage region": 3,
+        },
+    },
+    "vc": {
+        "suffix": ".vc_metrics.csv",
+        "header": "CALLER POSTFILTER",
+        "metrics": {
+            "Het/Hom ratio": 3,
+            "Ti/Tv ratio": 3,
+            "Percent Autosome Callability": 3,
+        },
+    },
+    "cnv": {
+        "suffix": ".cnv_metrics.csv",
+        "header": "",
+        "metrics": {"SEX GENOTYPER": 3, "Coverage uniformity": 3},
+    },
+}
 
 
 def parseArgs() -> argparse.Namespace:
@@ -17,13 +82,9 @@ def parseArgs() -> argparse.Namespace:
     Returns:
         Parsed command line arguments.
     """
-    parser = argparse.ArgumentParser(
-        description="Find, parse, and create summary QC metric files.", add_help=False
-    )
+    parser = argparse.ArgumentParser(description="Find, parse, and create summary QC metric files.", add_help=False)
 
-    parser.add_argument(
-        "-h", "--help", action="help", help="Show usage information and exit."
-    )
+    parser.add_argument("-h", "--help", action="help", help="Show usage information and exit.")
     parser.add_argument(
         "-m",
         "--mgi_worksheet",
@@ -36,208 +97,13 @@ def parseArgs() -> argparse.Namespace:
         help="Directory to search for QC metric files.",
         required=True,
     )
-    parser.add_argument(
-        "-o", "--outdir", help="Directory to save summary QC metric files."
-    )
-    parser.add_argument(
-        "-p", "--prefix", help="Filename prefix to append to output files."
-    )
+    parser.add_argument("-o", "--outdir", help="Directory to save summary QC metric files.")
+    parser.add_argument("-p", "--prefix", help="Filename prefix to append to output files.")
 
     return parser.parse_args()
 
 
-def get_output_directory(outdir: str) -> str:
-    """
-    Get absolute path of output directory if specified. If not specified, set it to the current working directory.
-
-    Args:
-        outdir: User specified path to output directory.
-
-    Returns:
-        Absolute path to output directory.
-    """
-    if not outdir:
-        output_dir = os.getcwd()
-    else:
-        output_dir = os.path.abspath(outdir)
-
-    if not os.path.isdir(output_dir):
-        os.mkdir(os.path.abspath(output_dir))
-
-    return output_dir
-
-
-def get_list_value(lst: list, sep: str, index: int, value: str) -> Any | None:
-    """
-    Find the first string match in provided list, and then split based on provided separator and index.
-
-    Args:
-        lst: Input list of strings to search through.
-        sep: Separator to split text by.
-        index: Index to keep after splitting the text.
-        value: Only look at strings that contain this substring.
-
-    Returns:
-        Returns identified substring.
-    """
-    return next((s.split(sep)[index] for s in lst if value in s), None)
-
-
-def get_columns(df: pd.DataFrame, col_list: list) -> pd.DataFrame:
-    """
-    Subset a DataFrame from a list of columns if those columns are present in the DataFrame.
-
-    Args:
-        df: DataFrame to subset columns from.
-        col_list: List of column names to subset DataFrame.
-
-    Returns:
-        DataFrame with a specified subset of columns if they exist.
-    """
-    return df[[col for col in col_list if col in df.columns]]
-
-
-def parse_mapping_metrics(metric_files: List[str]) -> pd.DataFrame:
-    """
-    Parse metrics out of all files that end with 'mapping_metrics.csv'.
-
-    Args:
-        metric_files: List of all metric CSV files.
-
-    Returns:
-        DataFrame containing metrics for each 'mapping_metrics.csv' file.
-    """
-    metric_dict = {
-        "Total input reads": 3,
-        "Total bases": 3,
-        "Mapped reads": 3,
-        "PCT Mapped reads": 4,
-        "Number of unique reads (excl. duplicate marked reads)": 3,
-        "PCT Number of unique reads (excl. duplicate marked reads)": 4,
-        "Number of duplicate marked reads": 3,
-        "PCT Number of duplicate marked reads": 4,
-        "Paired reads (itself & mate mapped)": 4,
-        "Not properly paired reads (discordant)": 4,
-        "PCT Mismatched bases R1": 4,
-        "PCT Mismatched bases R2": 4,
-        "Q30 bases R1": 4,
-        "PCT Q30 bases R1": 4,
-        "Q30 bases R2": 4,
-        "PCT Q30 bases R2": 4,
-        "Insert length: median": 3,
-        "Insert length: mean": 3,
-        "Estimated sample contamination": 3,
-    }
-
-    metrics_files = [
-        f.strip() for f in metric_files if f.endswith(".mapping_metrics.csv")
-    ]
-
-    df = parse_metrics(metrics_files, metric_dict, "MAPPING/ALIGNING SUMMARY")
-    if "Total bases" in df.columns:
-        df.insert(
-            3,
-            "Total giga bases",
-            round(df["Total bases"].astype(float) / 1000000000, 2),
-        )
-
-    return df
-
-
-def parse_wgs_coverage_metrics(metric_files: List[str]) -> pd.DataFrame:
-    """
-    Parse metrics out of all files that end with 'wgs_coverage_metrics.csv'.
-
-    Args:
-        metric_files: List of all metric CSV files.
-
-    Returns:
-        DataFrame containing metrics for each 'wgs_coverage_metrics.csv' file.
-    """
-    metric_dict = {
-        "Average alignment coverage over genome": 3,
-        "Average autosomal coverage over genome": 3,
-        "PCT of genome with coverage [  20x: inf)": 3,
-        "PCT of genome with coverage [  10x: inf)": 3,
-        "PCT Aligned reads in genome": 4,
-        "Uniformity of coverage (PCT > 0.2*mean) over genome": 3,
-    }
-
-    metrics_files = [
-        f.strip() for f in metric_files if f.endswith(".wgs_coverage_metrics.csv")
-    ]
-
-    return parse_metrics(metrics_files, metric_dict, "COVERAGE SUMMARY")
-
-
-def parse_qc_coverage_region_metrics(metric_files: List[str]) -> pd.DataFrame:
-    """
-    Parse metrics out of all files that end with 'qc-coverage-region-1_coverage_metrics.csv'.
-
-    Args:
-        metric_files: List of all metric CSV files.
-
-    Returns:
-        DataFrame containing metrics for each 'qc-coverage-region-1_coverage_metrics.csv' file.
-    """
-    metric_dict = {
-        "Average alignment coverage over QC coverage region": 3,
-        "Average autosomal coverage over QC coverage region": 3,
-        "PCT of QC coverage region with coverage [  20x: inf)": 3,
-        "PCT of QC coverage region with coverage [  10x: inf)": 3,
-        "Uniformity of coverage (PCT > 0.2*mean) over QC coverage region": 3,
-    }
-
-    metrics_files = [
-        f.strip()
-        for f in metric_files
-        if f.endswith(".qc-coverage-region-1_coverage_metrics.csv")
-    ]
-
-    return parse_metrics(metrics_files, metric_dict, "COVERAGE SUMMARY")
-
-
-def parse_vc_metrics(metric_files: List[str]) -> pd.DataFrame:
-    """
-    Parse metrics out of all files that end with 'vc_metrics.csv'.
-
-    Args:
-        metric_files: List of all metric CSV files.
-
-    Returns:
-        DataFrame containing metrics for each 'vc_metrics.csv' file.
-    """
-    metric_dict = {
-        "Het/Hom ratio": 3,
-        "Ti/Tv ratio": 3,
-        "Percent Autosome Callability": 3,
-    }
-
-    metrics_files = [f.strip() for f in metric_files if f.endswith(".vc_metrics.csv")]
-
-    return parse_metrics(metrics_files, metric_dict, "CALLER POSTFILTER")
-
-
-def parse_cnv_metrics(metric_files: List[str]) -> pd.DataFrame:
-    """
-    Parse metrics out of all files that end with 'cnv_metrics.csv'.
-
-    Args:
-        metric_files: List of all metric CSV files.
-
-    Returns:
-        DataFrame containing metrics for each 'cnv_metrics.csv' file.
-    """
-    metric_dict = {"SEX GENOTYPER": 3, "Coverage uniformity": 3}
-
-    metrics_files = [f.strip() for f in metric_files if f.endswith(".cnv_metrics.csv")]
-
-    return parse_metrics(metrics_files, metric_dict, "")
-
-
-def parse_metrics(
-    files: List[str], metric_dict: dict, line_startswith: str
-) -> pd.DataFrame:
+def parse_metrics(files: list[str], metric_dict: dict, line_startswith: str) -> pd.DataFrame:
     """
     Parse list of files for items in dictionary.
 
@@ -249,39 +115,43 @@ def parse_metrics(
     Returns:
         DataFrame that contains specified metrics in metric_dict for all specified files.
     """
-    dataframe_list = []
+    data_list = []
+
+    search_map = {}
+    for key, idx in metric_dict.items():
+        if key.startswith("PCT "):
+            search_map.setdefault(key[4:], []).append((key, idx))
+        else:
+            search_map.setdefault(key, []).append((key, idx))
 
     for file in files:
-        lines = [
-            line.strip()
-            for line in open(file)
-            if line.startswith(line_startswith) or line_startswith in line
-        ]
-
         data_dict = {}
         data_dict["SAMPLE ID"] = os.path.basename(file).split(".")[0]
 
-        for k, v in metric_dict.items():
-            if k.startswith("PCT"):
-                search = k.split("PCT ")[1]
-            else:
-                search = k
+        try:
+            with open(file, "r") as f:
+                for line in f:
+                    if line_startswith and not line.startswith(line_startswith) and line_startswith not in line:
+                        continue
 
-            data_dict[k] = get_list_value(lines, ",", v, search)
+                    parts = line.strip().split(",")
+                    for search_key, metrics in search_map.items():
+                        if any(part.strip() == search_key or part.strip() == f"PCT {search_key}" for part in parts):
+                            for metric_name, col_idx in metrics:
+                                if col_idx < len(parts):
+                                    data_dict[metric_name] = parts[col_idx]
+                            break
+        except (OSError, IOError):
+            continue
 
-        dataframe_list.append(pd.DataFrame(data_dict, index=[0]))
+        data_list.append(data_dict)
 
-    if len(dataframe_list) > 0:
-        return pd.concat(dataframe_list)
-    else:
-        return pd.DataFrame(columns=["SAMPLE ID"])
+    return pd.DataFrame(data_list) if data_list else pd.DataFrame(columns=["SAMPLE ID"])
 
 
 def save_mgi_metrics(
     mgi_worksheet: pd.DataFrame,
-    mapping_metrics: pd.DataFrame,
-    wgs_coverage_metrics: pd.DataFrame,
-    qc_coverage_region: pd.DataFrame,
+    qc_dfs: dict[str, pd.DataFrame],
     filename_prefix: str,
     outdir: str,
 ) -> None:
@@ -289,23 +159,15 @@ def save_mgi_metrics(
     Save required QC metrics for MGI.
 
     Args:
-        mgi_worksheet: QC metrics sheet from the MGI worksheet input.
-        mapping_metrics: Metrics pulled from '*.mapping_metrics.csv' files.
-        wgs_coverage_metrics: Metrics pulled from '*.wgs_coverage_metrics.csv' files.
-        qc_coverage_region: Metrics pulled from '*.qc-coverage-region-1_coverage_metrics.csv' files.
+        mgi_worksheet: QC metrics sheet.
+        qc_dfs: Dictionary containing parsed QC DataFrames.
         filename_prefix: Prefix for output filenames.
         outdir: Output directory to save file.
     """
-    qc_dataframes = [
-        mgi_worksheet,
-        mapping_metrics,
-        wgs_coverage_metrics,
-        qc_coverage_region,
-    ]
-    df = reduce(
-        lambda left, right: pd.merge(left, right, on=["SAMPLE ID"], how="outer"),
-        qc_dataframes,
-    )
+    df = mgi_worksheet.copy()
+    for key in ["mapping", "wgs", "qc_region"]:
+        if not qc_dfs[key].empty:
+            df = pd.merge(df, qc_dfs[key], on="SAMPLE ID", how="outer")
 
     columns_to_rename = {
         "Total input reads": "TOTAL_READS",
@@ -330,20 +192,17 @@ def save_mgi_metrics(
 
     df.rename(columns=columns_to_rename, inplace=True)
 
-    # Output select columns
-    df = get_columns(
-        df,
-        [
-            "ACCESSION NUMBER",
-            "RUN ID",
-            "SAMPLE ID",
-            "Total DNA yield (ng)",
-            "260/280",
-            "Library Input (ng)",
-            "Capture Input (ng)",
-        ]
-        + list(columns_to_rename.values()),
-    )
+    cols = [
+        "ACCESSION NUMBER",
+        "RUN ID",
+        "SAMPLE ID",
+        "Total DNA yield (ng)",
+        "260/280",
+        "Library Input (ng)",
+        "Capture Input (ng)",
+    ] + list(columns_to_rename.values())
+
+    df = df[[c for c in cols if c in df.columns]]
     df.to_excel(
         f"{outdir}/{filename_prefix}_MGI_QC.xlsx",
         index=False,
@@ -351,9 +210,7 @@ def save_mgi_metrics(
     )
 
 
-def save_all_metrics(
-    all_qc_dataframes: List[pd.DataFrame], filename_prefix: str, outdir: str
-) -> None:
+def save_all_metrics(all_qc_dataframes: list[pd.DataFrame], filename_prefix: str, outdir: str) -> None:
     """
     Save all QC metrics.
 
@@ -362,12 +219,28 @@ def save_all_metrics(
         filename_prefix: Prefix for output filenames.
         outdir: Output directory to save file.
     """
+
+    def merge_dfs(left: pd.DataFrame, right: pd.DataFrame) -> pd.DataFrame:
+        """Merge two DataFrames on the SAMPLE ID column.
+
+        Args:
+            left: First DataFrame to merge.
+            right: Second DataFrame to merge.
+
+        Returns:
+            Merged DataFrame.
+        """
+        return pd.merge(left, right, on="SAMPLE ID", how="outer") if not right.empty else left
+
     all_qc_metrics = reduce(
-        lambda left, right: pd.merge(left, right, on=["SAMPLE ID"], how="outer"),
+        merge_dfs,
         all_qc_dataframes,
     )
     all_qc_metrics.to_excel(
-        f"{outdir}/{filename_prefix}_QC.xlsx", index=False, sheet_name="QC metrics"
+        f"{outdir}/{filename_prefix}_QC.xlsx",
+        index=False,
+        sheet_name="QC metrics",
+        engine="openpyxl",
     )
 
 
@@ -386,7 +259,6 @@ def save_genoox_metrics(
         filename_prefix: Prefix for output filenames.
         outdir: Output directory to save file.
     """
-    # Use only specified columns from MGI worksheet
     required_columns = [
         "ACCESSION NUMBER",
         "RUN ID",
@@ -395,26 +267,18 @@ def save_genoox_metrics(
         "260/280",
         "Library Input (ng)",
     ]
-    cleaned_mgi_worksheet = get_columns(
-        mgi_worksheet,
-        required_columns,
-    )
+    cleaned_mgi_worksheet = mgi_worksheet[[c for c in required_columns if c in mgi_worksheet.columns]]
 
-    # Check if all values in SAMPLE ID column are None
     if cleaned_mgi_worksheet["SAMPLE ID"].isnull().all() or cleaned_mgi_worksheet.empty:
-        cleaned_mgi_worksheet = cleaned_mgi_worksheet.merge(
-            mapping_metrics, on="SAMPLE ID", how="right"
-        )
+        cleaned_mgi_worksheet = cleaned_mgi_worksheet.merge(mapping_metrics, on="SAMPLE ID", how="right")
         cleaned_mgi_worksheet = cleaned_mgi_worksheet[required_columns]
 
-    # Filter for SAMPLE ID values that are strings and start with 'G'
     is_genoox_sample = cleaned_mgi_worksheet["SAMPLE ID"].str.startswith("G", na=False)
     cleaned_mgi_worksheet = cleaned_mgi_worksheet[is_genoox_sample]
 
     if cleaned_mgi_worksheet.empty:
         return
 
-    # Save as Excel spreadsheet
     cleaned_mgi_worksheet.to_excel(
         f"{outdir}/{filename_prefix}_Genoox.xlsx",
         sheet_name="QC Metrics - qPCR",
@@ -435,24 +299,23 @@ def read_file_to_dataframe(file: Optional[str]) -> pd.DataFrame:
     if not file:
         df = pd.DataFrame()
     else:
-        file_readers = {
-            ".tsv": lambda f: pd.read_csv(f, sep="\t"),
-            ".csv": lambda f: pd.read_csv(f, sep=","),
-            ".xlsx": lambda f: pd.read_excel(f, sheet_name="QC Metrics"),
-        }
-
-        _, file_extension = os.path.splitext(file)
-
         try:
-            df = file_readers.get(file_extension, lambda f: pd.DataFrame())(file)
-        except ValueError:
-            df = pd.DataFrame()
+            if file.endswith(".tsv"):
+                df = pd.read_csv(file, sep="\t")
+            elif file.endswith(".csv"):
+                df = pd.read_csv(file, sep=",")
+            elif file.endswith(".xlsx"):
+                df = pd.read_excel(file, sheet_name="QC Metrics")
+            else:
+                df = pd.DataFrame()
+        except (ValueError, FileNotFoundError):
+            return pd.DataFrame()
 
     if "Content_Desc" in df:
         if "SAMPLE ID" not in df:
             df.rename(columns={"Content_Desc": "SAMPLE ID"}, inplace=True)
-        elif df["SAMPLE ID"].apply(lambda x: x == "" or pd.isna(x)).all():
-            df["SAMPLE ID"] = df["Content_Desc"]
+        elif df["SAMPLE ID"].fillna("").eq("").all():
+            df["SAMPLE ID"] = df["Content_Desc"].copy()
 
     cols = [
         "ACCESSION NUMBER",
@@ -463,11 +326,13 @@ def read_file_to_dataframe(file: Optional[str]) -> pd.DataFrame:
         "Library Input (ng)",
     ]
 
-    for col in cols:
-        if col not in df:
-            df[col] = None
+    df = df.reindex(columns=cols)
 
-    return df[cols]
+    obj_cols = df.select_dtypes(include=["object"]).columns
+    if not obj_cols.empty:
+        df[obj_cols] = df[obj_cols].apply(lambda x: x.str.strip())
+
+    return df
 
 
 def main() -> None:
@@ -476,59 +341,54 @@ def main() -> None:
     """
     args = parseArgs()
 
-    # Check inputs
     inputdir = os.path.abspath(args.inputdir)
     if args.mgi_worksheet:
-        mgi_worksheet = pd.concat(
-            [read_file_to_dataframe(f) for f in args.mgi_worksheet], ignore_index=True
-        )
+        mgi_worksheet = pd.concat([read_file_to_dataframe(f) for f in args.mgi_worksheet], ignore_index=True)
     else:
         mgi_worksheet = read_file_to_dataframe(None)
-    outdir = get_output_directory(args.outdir)
+
+    outdir = os.path.abspath(args.outdir) if args.outdir else os.getcwd()
+    if not os.path.isdir(outdir):
+        os.makedirs(outdir, exist_ok=True)
 
     if args.prefix:
         filename_prefix = args.prefix
     else:
-        timestamp = datetime.today().strftime("%Y%m%d")
+        timestamp = datetime.date.today().strftime("%Y%m%d")
         filename_prefix = f"{timestamp}_CGS"
 
-    # Gather all DRAGEN metric files
-    metric_files = [f for f in glob.glob(f"{inputdir}/**/*metrics.csv", recursive=True)]
+    metric_files = glob.glob(f"{inputdir}/**/*metrics.csv", recursive=True)
 
-    mapping_metrics = parse_mapping_metrics(metric_files)
-    wgs_coverage_metrics = parse_wgs_coverage_metrics(metric_files)
-    qc_coverage_region = parse_qc_coverage_region_metrics(metric_files)
-    vc_metrics = parse_vc_metrics(metric_files)
-    cnv_metrics = parse_cnv_metrics(metric_files)
+    files_by_type = {k: [] for k in METRIC_CONFIGS}
+
+    for f in metric_files:
+        f_strip = f.strip()
+        for key, config in METRIC_CONFIGS.items():
+            if f_strip.endswith(config["suffix"]):
+                files_by_type[key].append(f_strip)
+                break
+
+    qc_dfs = {}
+    for key, config in METRIC_CONFIGS.items():
+        df = parse_metrics(files_by_type[key], config["metrics"], config["header"])
+        if key == "mapping" and "Total bases" in df.columns:
+            df.insert(3, "Total giga bases", round(df["Total bases"].astype(float) / 1e9, 2))
+        qc_dfs[key] = df
 
     # Create output files
     ## MGI metrics
-    save_mgi_metrics(
-        mgi_worksheet,
-        mapping_metrics,
-        wgs_coverage_metrics,
-        qc_coverage_region,
-        filename_prefix,
-        outdir,
-    )
+    save_mgi_metrics(mgi_worksheet, qc_dfs, filename_prefix, outdir)
 
     ## Genoox metrics
     save_genoox_metrics(
         mgi_worksheet,
-        mapping_metrics,
+        qc_dfs["mapping"],
         filename_prefix,
         outdir,
     )
 
     ## All metrics
-    all_qc_dataframes = [
-        mgi_worksheet,
-        mapping_metrics,
-        wgs_coverage_metrics,
-        qc_coverage_region,
-        vc_metrics,
-        cnv_metrics,
-    ]
+    all_qc_dataframes = [mgi_worksheet] + [qc_dfs[k] for k in ["mapping", "wgs", "qc_region", "vc", "cnv"]]
     save_all_metrics(all_qc_dataframes, f"{filename_prefix}_All", outdir)
 
 
