@@ -139,7 +139,7 @@ def parse_metrics(files: list[str], metric_dict: dict, line_startswith: str) -> 
                         if any(part.strip() == search_key or part.strip() == f"PCT {search_key}" for part in parts):
                             for metric_name, col_idx in metrics:
                                 if col_idx < len(parts):
-                                    data_dict[metric_name] = parts[col_idx]
+                                    data_dict[metric_name] = parts[col_idx].strip()
                             break
         except (OSError, IOError):
             continue
