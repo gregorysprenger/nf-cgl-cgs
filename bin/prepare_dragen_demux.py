@@ -1,114 +1,22 @@
 #!/usr/bin/env python3
 
 import argparse
-import os
 import csv
 import sys
-import pandas as pd
 import xml.etree.ElementTree as ET
+from pathlib import Path
+from typing import Any, Dict, cast
+
+import pandas as pd
 
 __version__ = "1.0.0"
 
 
-def checkfile(file_path):
-    """Check if a file exists at the given path."""
-    if not os.path.exists(file_path):
-        raise argparse.ArgumentTypeError(f"The file {file_path} does not exist.")
-    return file_path
-
-
-def fileexists(file_path):
-    """Check if a file exists at the given path."""
-    if os.path.exists(file_path):
-        raise argparse.ArgumentTypeError(f"The outfile {file_path} exists!")
-    return file_path
-
-
-def reverse_complement(seq):
-    # reverse complement the DNA sequence:
-    return seq.translate(str.maketrans("ATCG", "TAGC"))[::-1]
-
-
-def parse_runinfo(rundir):
-    runinfo_path = os.path.join(rundir, "RunInfo.xml")
-    # check if this path exists:
-    if not os.path.exists(runinfo_path):
-        raise ValueError("RunInfo.xml file not found in the specified directory")
-
-    # locate the RunParameters.xml file and check if it exists:
-    runparams_path = os.path.join(rundir, "RunParameters.xml")
-    # check if this path exists:
-    if not os.path.exists(runparams_path):
-        raise ValueError("RunParameters.xml file not found in the specified directory")
-
-    tree = ET.parse(runparams_path)
-    root = tree.getroot()
-    runinfo = {}
-    runinfo["RunID"] = root.find("RunId").text
-
-    # this checks for NovaSeq Xplus run parameters and obtains them
-    plannedReads = root.findall(".//PlannedReads")
-    if len(plannedReads) > 0:  # if >0 then we know its Xplus data
-        for el in plannedReads[0].findall("Read"):
-            runinfo[el.attrib["ReadName"] + "Cycles"] = int(el.attrib["Cycles"])
-
-        runinfo["FlowCellType"] = root.find("FlowCellType").text
-        runinfo["InstrumentType"] = root.find("InstrumentType").text
-        runinfo["Instrument"] = root.find("InstrumentSerialNumber").text
-        runinfo["Side"] = root.find("Side").text
-
-        # fine the serial number of the flowcell:
-        consumInfo = root.findall("ConsumableInfo")
-        if len(consumInfo) > 0:
-            for el in root.findall("ConsumableInfo")[0].findall("ConsumableInfo"):
-                el2 = el.find("Type")
-                if el2 is not None:
-                    if el2.text == "FlowCell":
-                        runinfo["FlowCellType"] = el.find("Mode").text
-                        runinfo["Flowcell"] = el.find("SerialNumber").text
-                        runinfo["FlowCellLotNumber"] = el.find("LotNumber").text
-                    elif el2.text == "Reagent":
-                        runinfo["ReagentLotNumber"] = el.find("LotNumber").text
-
-        tree = ET.parse(runinfo_path)
-        root = tree.getroot()
-        runinfo_reads = root.findall(".//Read")
-        runinfo["Index1Reverse"] = "N"
-        runinfo["Index2Reverse"] = "N"
-        if runinfo_reads[1].attrib["IsReverseComplement"] == "Y":
-            runinfo["Index1Reverse"] = "Y"
-        if runinfo_reads[2].attrib["IsReverseComplement"] == "Y":
-            runinfo["Index2Reverse"] = "Y"
-
-    # in case we're processing older NovaSeq 6000 data
-    else:
-        runinfo["Read1Cycles"] = int(root.find(".//Read1NumberOfCycles").text)
-        runinfo["Read2Cycles"] = int(root.find(".//Read2NumberOfCycles").text)
-        runinfo["Index1Cycles"] = int(root.find(".//IndexRead1NumberOfCycles").text)
-        runinfo["Index2Cycles"] = int(root.find(".//IndexRead2NumberOfCycles").text)
-        runinfo["Flowcell"] = root.find(".//FlowCellSerialBarcode").text
-
-        runinfo["FlowCellType"] = "UNKNOWN"
-        runinfo["FlowCellType"] = "UNKNOWN"
-        runinfo["InstrumentType"] = "UNKNOWN"
-        runinfo["Instrument"] = "UNKNOWN"
-        runinfo["Side"] = "UNKNOWN"
-        runinfo["Index1Reverse"] = "N"
-        runinfo["Index2Reverse"] = "Y"
-
-    return runinfo
-
-
-# main function:
-def main():
-    # parse arguments:
+def parse_args() -> argparse.Namespace:
+    """Get command-line arguments."""
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-r", "--rundir", type=checkfile, help="Path to the Illumina run folder"
-    )
-    parser.add_argument(
-        "-s", "--samplesheet", type=checkfile, help="Path to the samplesheet"
-    )
+    parser.add_argument("-r", "--rundir", required=True, type=Path, help="Path to the Illumina run folder")
+    parser.add_argument("-s", "--samplesheet", required=True, type=Path, help="Path to the samplesheet")
     parser.add_argument(
         "-c",
         "--checkindexes",
@@ -116,87 +24,210 @@ def main():
         default=False,
         help="Reverse complement indexes according to the RunInfo.",
     )
-    parser.add_argument(
-        "-v", "--version", action="version", version="%(prog)s: " + __version__
-    )
-
+    parser.add_argument("-v", "--version", action="version", version="%(prog)s: " + __version__)
     args = parser.parse_args()
 
-    # get the run info
-    runinfo = parse_runinfo(args.rundir)
+    if not args.rundir.exists():
+        parser.error(f"The directory {args.rundir} does not exist.")
 
-    # create samplesheet
-    # read the samplesheet into a dataframe:
-    df = pd.read_csv(args.samplesheet, header=0)
+    if not args.samplesheet.exists():
+        parser.error(f"The file {args.samplesheet} does not exist.")
 
-    # rename columns in df called lane and id to Lane and Sample:
+    return args
+
+
+def reverse_complement(seq: str) -> str:
+    """Return the reverse complement of a DNA sequence."""
+    return seq.translate(str.maketrans("ATCG", "TAGC"))[::-1]
+
+
+def get_text_from_xml(element: ET.Element, tag: str) -> str:
+    """Safely extract text from an XML element."""
+    found = element.find(tag)
+    if found is None or found.text is None:
+        raise ValueError(f"Tag '{tag}' not found or empty in XML.")
+    return found.text.strip()
+
+
+def _parse_novaseq_x_plus(root: ET.Element, run_dir: Path, run_info: Dict[str, Any]) -> None:
+    """Parse NovaSeq X Plus specific parameters."""
+    planned_reads = root.find(".//PlannedReads")
+    if planned_reads is not None:
+        for el in planned_reads.findall("Read"):
+            read_name = el.attrib.get("ReadName", "")
+            cycles = el.attrib.get("Cycles", "0")
+            run_info[f"{read_name}Cycles"] = int(cycles)
+
+    run_info["FlowCellType"] = get_text_from_xml(root, "FlowCellType")
+    run_info["InstrumentType"] = get_text_from_xml(root, "InstrumentType")
+    run_info["Instrument"] = get_text_from_xml(root, "InstrumentSerialNumber")
+    run_info["Side"] = get_text_from_xml(root, "Side")
+
+    # Find the serial number of the flowcell
+    consumable_info = root.find("ConsumableInfo")
+    if consumable_info is not None:
+        for el in consumable_info.findall("ConsumableInfo"):
+            el_type = el.find("Type")
+            if el_type is not None and el_type.text:
+                if el_type.text == "FlowCell":
+                    run_info["FlowCellType"] = get_text_from_xml(el, "Mode")
+                    run_info["Flowcell"] = get_text_from_xml(el, "SerialNumber")
+                    run_info["FlowCellLotNumber"] = get_text_from_xml(el, "LotNumber")
+                elif el_type.text == "Reagent":
+                    run_info["ReagentLotNumber"] = get_text_from_xml(el, "LotNumber")
+
+    # Parse RunInfo.xml for index orientation
+    run_info_path = run_dir / "RunInfo.xml"
+    if not run_info_path.exists():
+        raise ValueError("RunInfo.xml file not found in the specified directory")
+
+    tree = ET.parse(run_info_path)
+    ri_root = tree.getroot()
+    run_info_reads = ri_root.findall(".//Read")
+
+    run_info["Index1Reverse"] = "N"
+    run_info["Index2Reverse"] = "N"
+
+    if len(run_info_reads) > 1 and run_info_reads[1].attrib.get("IsReverseComplement") == "Y":
+        run_info["Index1Reverse"] = "Y"
+    if len(run_info_reads) > 2 and run_info_reads[2].attrib.get("IsReverseComplement") == "Y":
+        run_info["Index2Reverse"] = "Y"
+
+
+def _parse_legacy_novaseq(root: ET.Element, run_info: Dict[str, Any]) -> None:
+    """Parse legacy NovaSeq 6000 specific parameters."""
+    run_info["Read1Cycles"] = int(get_text_from_xml(root, ".//Read1NumberOfCycles"))
+    run_info["Read2Cycles"] = int(get_text_from_xml(root, ".//Read2NumberOfCycles"))
+    run_info["Index1Cycles"] = int(get_text_from_xml(root, ".//IndexRead1NumberOfCycles"))
+    run_info["Index2Cycles"] = int(get_text_from_xml(root, ".//IndexRead2NumberOfCycles"))
+    run_info["Flowcell"] = get_text_from_xml(root, ".//FlowCellSerialBarcode")
+
+    run_info["FlowCellType"] = "UNKNOWN"
+    run_info["InstrumentType"] = "UNKNOWN"
+    run_info["Instrument"] = "UNKNOWN"
+    run_info["Side"] = "UNKNOWN"
+    run_info["Index1Reverse"] = "N"
+    run_info["Index2Reverse"] = "Y"
+
+
+def parse_run_info(run_dir: Path) -> Dict[str, Any]:
+    """Parse RunInfo.xml and RunParameters.xml files to extract run information."""
+    run_params_path = run_dir / "RunParameters.xml"
+    if not run_params_path.exists():
+        raise ValueError("RunParameters.xml file not found in the specified directory")
+
+    tree = ET.parse(run_params_path)
+    root = tree.getroot()
+    run_info: Dict[str, Any] = {}
+    run_info["RunID"] = get_text_from_xml(root, "RunId")
+
+    # Check for NovaSeq Xplus run parameters
+    if root.find(".//PlannedReads") is not None:
+        _parse_novaseq_x_plus(root, run_dir, run_info)
+    else:
+        _parse_legacy_novaseq(root, run_info)
+
+    return run_info
+
+
+def read_samplesheet(file_path: Path) -> pd.DataFrame:
+    """Read samplesheet from either xlsx or csv file."""
+    if file_path.suffix == ".xlsx":
+        return pd.read_excel(file_path, header=0)
+    return pd.read_csv(file_path, header=0)
+
+
+def process_samplesheet(df: pd.DataFrame, run_info: Dict[str, Any], check_indexes: bool) -> pd.DataFrame:
+    """Process the samplesheet DataFrame."""
     df.rename(columns={"Content_Desc": "Sample_ID"}, inplace=True)
 
-    # Split the 'index' column into 'Index' and 'Index2'
-    df[["Index", "Index2"]] = df["Index"].str.split("-", expand=True)
+    split_df = df["Index"].astype(str).str.split("-", n=1, expand=True)
+    df["Index"] = split_df[0]
+    df["Index2"] = split_df[1] if split_df.shape[1] > 1 else ""
 
-    # if index1_direction is reverse, then reverse complement the DNA sequence:
-    if args.checkindexes and runinfo["Index1Reverse"] == "Y":
-        df["Index"] = df["Index"].apply(reverse_complement)
+    df[["Index", "Index2"]] = df[["Index", "Index2"]].fillna("")
 
-    # if index2_direction is reverse, then reverse complement the DNA sequence:
-    if args.checkindexes and runinfo["Index2Reverse"] == "Y":
-        df["Index2"] = df["Index2"].apply(reverse_complement)
+    if check_indexes:
+        if run_info["Index1Reverse"] == "Y":
+            df["Index"] = df["Index"].str.translate(TRANS_TABLE).str[::-1]
 
-    # make cycle string
-    if runinfo["Index1Cycles"] < 19:
-        print(f"Number of cycles needs to be >=19, its {runinfo['Index1Cycles']}")
-        sys.exit()
+        if run_info["Index2Reverse"] == "Y":
+            df["Index2"] = df["Index2"].str.translate(TRANS_TABLE).str[::-1]
 
-    cycle_str = "Y" + str(runinfo["Read1Cycles"]) + ";I10U9"
-    if runinfo["Index1Cycles"] > 19:
-        cycle_str = cycle_str + "N" + str(runinfo["Index1Cycles"] - 19)
+    return df
 
-    cycle_str = cycle_str + ";I10"
-    if runinfo["Index2Cycles"] > 10:
-        cycle_str = cycle_str + "N" + str(runinfo["Index2Cycles"] - 10)
 
-    cycle_str = cycle_str + ";Y" + str(runinfo["Read2Cycles"])
+def generate_cycle_string(run_info: Dict[str, Any]) -> str:
+    """Generate the OverrideCycles string for BCLConvert."""
+    if run_info["Index1Cycles"] < 19:
+        print(f"Number of cycles needs to be >=19, its {run_info['Index1Cycles']}", file=sys.stderr)
+        sys.exit(1)
 
-    # Initialize a list to store rows
-    rows_list = []
+    cycle_str = f"Y{run_info['Read1Cycles']};I10U9"
+    if run_info["Index1Cycles"] > 19:
+        cycle_str += f"N{run_info['Index1Cycles'] - 19}"
 
-    # Iterate through each row and split the Lane values
-    for index, row in df.iterrows():
-        lanes = map(int, str(row["Lane"]).split(","))
-        for lane in lanes:
-            rows_list.append(
-                {
-                    "Lane": lane,
-                    "Sample_ID": row["Sample_ID"],
-                    "Index": row["Index"],
-                    "Index2": row["Index2"],
-                }
-            )
+    cycle_str += ";I10"
+    if run_info["Index2Cycles"] > 10:
+        cycle_str += f"N{run_info['Index2Cycles'] - 10}"
 
-    # Create a DataFrame from the list of rows
-    df_output = pd.DataFrame(rows_list)
+    cycle_str += f";Y{run_info['Read2Cycles']}"
+    return cycle_str
 
-    # # Select and order the required columns
-    # df_output = df[['Lane', 'Sample_ID', 'Index', 'Index2']]
 
-    # Write the header for the output file
-    outfile = open(runinfo["RunID"] + ".demux_samplesheet.csv", "w")
-    outfile.write("[Header]\nFileFormatVersion,2\n\n")
-    outfile.write(
-        f"[BCLConvert_Settings]\nAdapterBehavior,trim\nAdapterRead1,AGATCGGAAGAGCACACGTCTGAAC\nAdapterRead2,AGATCGGAAGAGCGTCGTGTAGGGA\nOverrideCycles,{cycle_str}\n\n"
-    )
-    outfile.write("[BCLConvert_Data]\n")
+def prepare_demux_sheet(df: pd.DataFrame) -> pd.DataFrame:
+    """Prepare the DataFrame for the demux samplesheet."""
+    df = df.assign(Lane=df["Lane"].astype(str).str.split(",")).explode("Lane")
+    df["Lane"] = df["Lane"].astype(int)
 
-    # Append the processed data to the file
-    df_output.to_csv(outfile, mode="a", header=True, index=False)
-    outfile.close()
+    output_cols = ["Lane", "Sample_ID", "Index", "Index2"]
+    df_output = df[output_cols].copy()
 
-    # Write the runinfo dict to a json file named after the batch:
-    with open(runinfo["Flowcell"] + ".runinfo.csv", "w", newline="") as cfile:
+    if not df_output.empty:
+        df_output = cast(pd.DataFrame, cast(Any, df_output).sort_values(by=output_cols))
+
+    return cast(pd.DataFrame, df_output)
+
+
+def write_demux_sheet(df: pd.DataFrame, run_info: Dict[str, Any], cycle_str: str) -> None:
+    """Write the BCLConvert demux samplesheet."""
+    output_filename = f"{run_info['RunID']}.demux_samplesheet.csv"
+    with open(output_filename, "w") as outfile:
+        outfile.write("[Header]\nFileFormatVersion,2\n\n")
+        outfile.write(
+            f"[BCLConvert_Settings]\nAdapterBehavior,trim\n"
+            f"AdapterRead1,AGATCGGAAGAGCACACGTCTGAAC\n"
+            f"AdapterRead2,AGATCGGAAGAGCGTCGTGTAGGGA\n"
+            f"OverrideCycles,{cycle_str}\n\n"
+        )
+        outfile.write("[BCLConvert_Data]\n")
+        df.to_csv(outfile, mode="a", header=True, index=False)
+
+
+def write_run_info(run_info: Dict[str, Any]) -> None:
+    """Write the runinfo dict to a CSV file."""
+    run_info_filename = f"{run_info['Flowcell']}.runinfo.csv"
+    with open(run_info_filename, "w", newline="") as cfile:
         writer = csv.writer(cfile)
-        writer.writerow(runinfo.keys())
-        writer.writerow(runinfo.values())
+        keys = sorted(run_info.keys())
+        writer.writerow(keys)
+        writer.writerow([run_info[key] for key in keys])
+
+
+def main():
+    """Main entry point for the script."""
+    args = parse_args()
+    run_info = parse_run_info(args.rundir)
+
+    df = read_samplesheet(args.samplesheet)
+    df = process_samplesheet(df, run_info, args.checkindexes)
+
+    cycle_str = generate_cycle_string(run_info)
+
+    df_output = prepare_demux_sheet(df)
+
+    write_demux_sheet(df_output, run_info, cycle_str)
+    write_run_info(run_info)
 
 
 if __name__ == "__main__":
