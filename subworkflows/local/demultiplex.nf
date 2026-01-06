@@ -8,6 +8,16 @@ include { CREATE_DEMULTIPLEX_SAMPLESHEET   } from '../../modules/local/create_de
 include { DRAGEN_DEMULTIPLEX               } from '../../modules/local/dragen_demultiplex'
 include { INPUT_CHECK as VERIFY_FASTQ_LIST } from '../../subworkflows/local/input_check'
 
+
+// Validate illumina run completion status
+def validate_run = { f ->
+    def matcher = f.text =~ /<RunStatus>\s*(.*?)\s*<\/RunStatus>/
+    if (matcher && matcher[0][1] == 'RunCompleted') {
+        return f.parent
+    }
+    error("${f} exists but did not complete successfully!")
+}
+
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     CREATE CHANNELS FOR INPUT PARAMETERS
@@ -15,9 +25,16 @@ include { INPUT_CHECK as VERIFY_FASTQ_LIST } from '../../subworkflows/local/inpu
 */
 
 // Illumina run directory
-ch_illumina_run_dir = params.illumina_rundir
-    ? Channel.fromPath(params.illumina_rundir.split(',') as List, type: 'dir', checkIfExists: true).collect()
-    : Channel.empty()
+ch_illumina_run_dir = Channel.empty()
+
+params.illumina_rundir.split(',').each{ dir ->
+    def xml_path = "${dir}/RunCompletionStatus.xml"
+    def ch_new = file(xml_path).exists()
+        ? Channel.fromPath(xml_path)
+        : Channel.watchPath(xml_path).take(1)
+
+    ch_illumina_run_dir = ch_illumina_run_dir.mix(ch_new.map(validate_run))
+}
 
 /*
 ========================================================================================
