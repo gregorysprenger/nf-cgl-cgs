@@ -11,6 +11,8 @@ import pandas as pd
 
 __version__ = "1.0.0"
 
+TRANS_TABLE = str.maketrans("ATCG", "TAGC")
+
 
 def parse_args() -> argparse.Namespace:
     """Get command-line arguments."""
@@ -38,7 +40,7 @@ def parse_args() -> argparse.Namespace:
 
 def reverse_complement(seq: str) -> str:
     """Return the reverse complement of a DNA sequence."""
-    return seq.translate(str.maketrans("ATCG", "TAGC"))[::-1]
+    return seq.translate(TRANS_TABLE)[::-1]
 
 
 def get_text_from_xml(element: ET.Element, tag: str) -> str:
