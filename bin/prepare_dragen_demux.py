@@ -26,6 +26,16 @@ def parse_args() -> argparse.Namespace:
         default=False,
         help="Reverse complement indexes according to the RunInfo.",
     )
+    parser.add_argument(
+        "--adapter_read1",
+        default="AGATCGGAAGAGCACACGTCTGAAC",
+        help="Adapter sequence for Read 1.",
+    )
+    parser.add_argument(
+        "--adapter_read2",
+        default="AGATCGGAAGAGCGTCGTGTAGGGA",
+        help="Adapter sequence for Read 2.",
+    )
     parser.add_argument("-v", "--version", action="version", version="%(prog)s: " + __version__)
     args = parser.parse_args()
 
@@ -135,7 +145,10 @@ def parse_run_info(run_dir: Path) -> Dict[str, Any]:
 def read_samplesheet(file_path: Path) -> pd.DataFrame:
     """Read samplesheet from either xlsx or csv file."""
     if file_path.suffix == ".xlsx":
-        return pd.read_excel(file_path, header=0)
+        try:
+            return pd.read_excel(file_path, header=0)
+        except ImportError:
+            sys.exit("Error: 'openpyxl' is required to read Excel files. Please install it.")
     return pd.read_csv(file_path, header=0)
 
 
@@ -162,7 +175,7 @@ def process_samplesheet(df: pd.DataFrame, run_info: Dict[str, Any], check_indexe
 def generate_cycle_string(run_info: Dict[str, Any]) -> str:
     """Generate the OverrideCycles string for BCLConvert."""
     if run_info["Index1Cycles"] < 19:
-        print(f"Number of cycles needs to be >=19, its {run_info['Index1Cycles']}", file=sys.stderr)
+        print(f"Number of cycles needs to be >=19, but is {run_info['Index1Cycles']}", file=sys.stderr)
         sys.exit(1)
 
     cycle_str = f"Y{run_info['Read1Cycles']};I10U9"
@@ -186,20 +199,20 @@ def prepare_demux_sheet(df: pd.DataFrame) -> pd.DataFrame:
     df_output = df[output_cols].copy()
 
     if not df_output.empty:
-        df_output = cast(pd.DataFrame, cast(Any, df_output).sort_values(by=output_cols))
+        df_output = df_output.sort_values(by=output_cols)
 
     return cast(pd.DataFrame, df_output)
 
 
-def write_demux_sheet(df: pd.DataFrame, run_info: Dict[str, Any], cycle_str: str) -> None:
+def write_demux_sheet(df: pd.DataFrame, run_info: Dict[str, Any], cycle_str: str, adapter1: str, adapter2: str) -> None:
     """Write the BCLConvert demux samplesheet."""
     output_filename = f"{run_info['RunID']}.demux_samplesheet.csv"
     with open(output_filename, "w") as outfile:
         outfile.write("[Header]\nFileFormatVersion,2\n\n")
         outfile.write(
             f"[BCLConvert_Settings]\nAdapterBehavior,trim\n"
-            f"AdapterRead1,AGATCGGAAGAGCACACGTCTGAAC\n"
-            f"AdapterRead2,AGATCGGAAGAGCGTCGTGTAGGGA\n"
+            f"AdapterRead1,{adapter1}\n"
+            f"AdapterRead2,{adapter2}\n"
             f"OverrideCycles,{cycle_str}\n\n"
         )
         outfile.write("[BCLConvert_Data]\n")
@@ -211,6 +224,7 @@ def write_run_info(run_info: Dict[str, Any]) -> None:
     run_info_filename = f"{run_info['Flowcell']}.runinfo.csv"
     with open(run_info_filename, "w", newline="") as cfile:
         writer = csv.writer(cfile)
+        # Sort keys for deterministic output
         keys = sorted(run_info.keys())
         writer.writerow(keys)
         writer.writerow([run_info[key] for key in keys])
@@ -228,7 +242,7 @@ def main():
 
     df_output = prepare_demux_sheet(df)
 
-    write_demux_sheet(df_output, run_info, cycle_str)
+    write_demux_sheet(df_output, run_info, cycle_str, args.adapter_read1, args.adapter_read2)
     write_run_info(run_info)
 
 
