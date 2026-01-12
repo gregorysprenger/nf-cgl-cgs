@@ -41,7 +41,8 @@ process TRANSFER_DATA_AWS {
         --log-level INFO \\
         --transfers ${task.cpus} \\
         --log-file transfer_data_aws.log \\
-        || error "Rclone failed for local_files/*"
+        --s3-location-constraint "\${RCLONE_CONFIG_DEST_S3_REGION}" \
+        || error "Rclone failed for sample: ${meta.id}"
 
     echo "Finished sample: ${meta.id}"
 
@@ -77,7 +78,8 @@ process TRANSFER_DATA_AWS {
         --transfers ${task.cpus} \\
         --log-file transfer_data_aws.log \\
         --dry-run \\
-        || error "Rclone failed for local_files/*"
+        --s3-location-constraint "\${RCLONE_CONFIG_DEST_S3_REGION}" \
+        || error "Rclone failed for sample: ${meta.id}"
 
     echo "Finished sample: ${meta.id}"
 

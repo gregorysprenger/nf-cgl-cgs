@@ -255,9 +255,12 @@ workflow DRAGEN_CGS {
             )
             .map{
                 sample_name, dragen_files, joint_files ->
+                    // Prefer joint genotyping files over DRAGEN output if filenames match
                     def exclude_filenames = joint_files.collect{ it.name }
-                    def all_files = dragen_files.findAll{ !exclude_filenames.contains(it.name) } + joint_files
-                    [ ["id":sample_name], all_files ]
+
+                    // Nextflow automatically stages S3 files when passed as input to a process.
+                    // We collect all files here to be staged by the TRANSFER_DATA_AWS process.
+                    [ ["id":sample_name], dragen_files.findAll{ !exclude_filenames.contains(it.name) } + joint_files ]
             }
             .mix(PARSE_QC_METRICS.out.genoox_metrics.map{ [ ["id": "Genoox_Metrics"], [it] ] })
 
