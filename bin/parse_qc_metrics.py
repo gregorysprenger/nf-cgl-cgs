@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
-import datetime
+import datetime as dt
 import glob
 import os
 from functools import reduce
@@ -207,6 +207,7 @@ def save_mgi_metrics(
         f"{outdir}/{filename_prefix}_MGI_QC.xlsx",
         index=False,
         sheet_name="MGI QC metrics",
+        engine="openpyxl",
     )
 
 
@@ -267,7 +268,7 @@ def save_genoox_metrics(
         "260/280",
         "Library Input (ng)",
     ]
-    cleaned_mgi_worksheet = mgi_worksheet[[c for c in required_columns if c in mgi_worksheet.columns]]
+    cleaned_mgi_worksheet = mgi_worksheet[[c for c in required_columns if c in mgi_worksheet.columns]].copy()
 
     if cleaned_mgi_worksheet["SAMPLE ID"].isnull().all() or cleaned_mgi_worksheet.empty:
         cleaned_mgi_worksheet = cleaned_mgi_worksheet.merge(mapping_metrics, on="SAMPLE ID", how="right")
@@ -283,6 +284,7 @@ def save_genoox_metrics(
         f"{outdir}/{filename_prefix}_Genoox.xlsx",
         sheet_name="QC Metrics - qPCR",
         index=False,
+        engine="openpyxl",
     )
 
 
@@ -309,13 +311,13 @@ def read_file_to_dataframe(file: Optional[str]) -> pd.DataFrame:
             else:
                 df = pd.DataFrame()
         except (ValueError, FileNotFoundError):
-            return pd.DataFrame()
+            df = pd.DataFrame()
 
     if "Content_Desc" in df:
         if "SAMPLE ID" not in df:
             df.rename(columns={"Content_Desc": "SAMPLE ID"}, inplace=True)
         elif df["SAMPLE ID"].fillna("").eq("").all():
-            df["SAMPLE ID"] = df["Content_Desc"].copy()
+            df["SAMPLE ID"] = df["Content_Desc"]
 
     cols = [
         "ACCESSION NUMBER",
@@ -330,7 +332,7 @@ def read_file_to_dataframe(file: Optional[str]) -> pd.DataFrame:
 
     obj_cols = df.select_dtypes(include=["object"]).columns
     if not obj_cols.empty:
-        df[obj_cols] = df[obj_cols].apply(lambda x: x.str.strip())
+        df[obj_cols] = df[obj_cols].fillna("").apply(lambda x: x.str.strip())
 
     return df
 
@@ -348,24 +350,22 @@ def main() -> None:
         mgi_worksheet = read_file_to_dataframe(None)
 
     outdir = os.path.abspath(args.outdir) if args.outdir else os.getcwd()
-    if not os.path.isdir(outdir):
-        os.makedirs(outdir, exist_ok=True)
+    os.makedirs(outdir, exist_ok=True)
 
     if args.prefix:
         filename_prefix = args.prefix
     else:
-        timestamp = datetime.date.today().strftime("%Y%m%d")
+        timestamp = dt.date.today().strftime("%Y%m%d")
         filename_prefix = f"{timestamp}_CGS"
 
-    metric_files = glob.glob(f"{inputdir}/**/*metrics.csv", recursive=True)
+    metric_files = [f.strip() for f in glob.glob(f"{inputdir}/**/*metrics.csv", recursive=True)]
 
     files_by_type = {k: [] for k in METRIC_CONFIGS}
 
     for f in metric_files:
-        f_strip = f.strip()
         for key, config in METRIC_CONFIGS.items():
-            if f_strip.endswith(config["suffix"]):
-                files_by_type[key].append(f_strip)
+            if f.endswith(config["suffix"]):
+                files_by_type[key].append(f)
                 break
 
     qc_dfs = {}
