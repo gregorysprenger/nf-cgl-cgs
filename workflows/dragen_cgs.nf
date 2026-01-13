@@ -240,8 +240,7 @@ workflow DRAGEN_CGS {
                         ".json",
                         ".vcf",
                     ]
-
-                    [ meta.id, [files.findAll{ f -> extensions.any{ f.toString().toLowerCase().contains(it) } }] ]
+                    [ meta.id, files.findAll{ f -> extensions.any{ f.toString().toLowerCase().contains(it) } } ]
             }
             .join(
                 DRAGEN_ALIGN.out.dragen_output.map{ meta, files -> meta.id }
@@ -249,19 +248,21 @@ workflow DRAGEN_CGS {
                     .combine(JOINT_GENOTYPING.out.metrics.collect().toList().ifEmpty([]))
                     .map{
                         id, vcf_files, metric_files ->
-                            [ id, [(vcf_files + metric_files).findAll{ f -> f.toString().toLowerCase().contains(id.toLowerCase()) }] ]
+                            def joint_files = (vcf_files + metric_files).findAll{ f -> f.toString().toLowerCase().contains(id.toLowerCase()) }
+                            [ id, joint_files ]
                     },
                 remainder: true
             )
             .map{
                 sample_name, dragen_files, joint_files ->
-                    def filtered = [dragen_files + joint_files ?: []].flatten().collectEntries{ [ (file(it).name): it ] }.values()
+                    // Prefer joint genotyping files over DRAGEN output if filenames match
+                    def exclude_filenames = joint_files.collect{ it.name }
 
-                    def local_files = filtered.findAll{ file(it.toString()).exists() && file(it.toString()).isFile() } ?: []
-                    def s3_files    = (filtered - local_files).collect{ it.toString().replaceFirst("/", "source_s3:") }
-                    [ ["id": sample_name], s3_files ?: [], local_files ?: [] ]
+                    // Nextflow automatically stages S3 files when passed as input to a process.
+                    // We collect all files here to be staged by the TRANSFER_DATA_AWS process.
+                    [ ["id":sample_name], dragen_files.findAll{ !exclude_filenames.contains(it.name) } + joint_files ]
             }
-            .mix(PARSE_QC_METRICS.out.genoox_metrics.map{ [ ["id": "Genoox_Metrics"], [], it ] })
+            .mix(PARSE_QC_METRICS.out.genoox_metrics.map{ [ ["id": "Genoox_Metrics"], [it] ] })
 
         //
         // MODULE: Transfer AWS data to GNX AWS bucket

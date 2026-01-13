@@ -48,7 +48,7 @@ workflow DEMULTIPLEX {
                         .map{
                             flowcell, rows ->
                                 def columns = rows[0].keySet() as List
-                                def samplesheet = file("Samplesheet_${flowcell}.csv")
+                                def samplesheet = file("${workDir}/Samplesheet_${flowcell}.csv")
                                 samplesheet.text = columns.join(',') + '\n' +
                                     rows.collect{ r ->
                                         columns.collect{ c ->
