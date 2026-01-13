@@ -107,23 +107,23 @@ workflow JOINT_GENOTYPING {
                                             def joint_lines  = joint.readLines()
                                             def sample_lines = sample.readLines()
 
-                                            def autosome_line = sample_lines.find{ it.contains("Percent Autosome Callability") }
+                                            def autosome_line = sample_lines.find{ it =~ "Percent Autosome Callability" }
                                             def indel_count   = 0
                                             def indel_percent = 0.0
 
-                                            def joint_sample_lines = joint_lines.findAll{ it.contains(sample_name) }.collect{ line ->
-                                                if (line.contains("Insertions") || line.contains("Deletions") || line.contains("Indels")) {
+                                            def joint_sample_lines = joint_lines.findAll{ line -> line.split(',').contains(sample_name) }.collect{ line ->
+                                                if (line =~ "Insertions|Deletions|Indels") {
                                                     def parts      = line.split(',')
                                                     indel_count   += parts[3].toInteger()
                                                     indel_percent += parts[4].toFloat()
                                                 }
-                                                (autosome_line && line.contains("Percent Autosome Callability")) ? autosome_line : line
+                                                (autosome_line && line =~ "Percent Autosome Callability") ? autosome_line : line
                                             }
 
                                             def output = [
-                                                joint_lines.find{  it.contains("Number of samples") },
-                                                sample_lines.find{ it.contains("Reads Processed"  ) },
-                                                sample_lines.find{ it.contains("Child Sample"     ) },
+                                                joint_lines.find{  it =~ "Number of samples" },
+                                                sample_lines.find{ it =~ "Reads Processed"   },
+                                                sample_lines.find{ it =~ "Child Sample"      },
                                                 joint_sample_lines,
                                                 "JOINT CALLER POSTFILTER,${sample_name},Number of Indels,${indel_count},${indel_percent.round(2)}"
                                             ].flatten().findAll().join('\n')
