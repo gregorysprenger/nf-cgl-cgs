@@ -103,24 +103,32 @@ workflow JOINT_GENOTYPING {
                                     .combine(ch_dragen_output.flatMap{ it.findAll{ it.toString().endsWith('vc_metrics.csv') } })
                                     .map{
                                         joint, sample ->
-                                            def sample_name = sample.getSimpleName().toString()
-                                            def joint_lines = joint.readLines()
+                                            def sample_name  = sample.getSimpleName().toString()
+                                            def joint_lines  = joint.readLines()
                                             def sample_lines = sample.readLines()
 
-                                            def joint_sample_lines = joint_lines.findAll{ it.contains(sample_name) }
+                                            def autosome_line = sample_lines.find{ it.contains("Percent Autosome Callability") }
+                                            def indel_count   = 0
+                                            def indel_percent = 0.0
 
-                                            def sample_autosome_callability = sample_lines.find{ it.contains("Percent Autosome Callability") }
+                                            def joint_sample_lines = joint_lines.findAll{ it.contains(sample_name) }.collect{ line ->
+                                                if (line.contains("Insertions") || line.contains("Deletions") || line.contains("Indels")) {
+                                                    def parts      = line.split(',')
+                                                    indel_count   += parts[3].toInteger()
+                                                    indel_percent += parts[4].toFloat()
+                                                }
+                                                (autosome_line && line.contains("Percent Autosome Callability")) ? autosome_line : line
+                                            }
 
                                             def output = [
-                                                joint_lines.find{ it.contains("Number of samples") },
-                                                sample_lines.find{ it.contains("Reads Processed") },
-                                                sample_lines.find{ it.contains("Child Sample") },
-                                                joint_sample_lines.find{ it.contains("Het/Hom ratio") },
-                                                joint_sample_lines.find{ it.contains("Ti/Tv ratio") },
-                                                sample_autosome_callability
-                                            ].findAll{ it != null }
+                                                joint_lines.find{  it.contains("Number of samples") },
+                                                sample_lines.find{ it.contains("Reads Processed"  ) },
+                                                sample_lines.find{ it.contains("Child Sample"     ) },
+                                                joint_sample_lines,
+                                                "JOINT CALLER POSTFILTER,${sample_name},Number of Indels,${indel_count},${indel_percent.round(2)}"
+                                            ].flatten().findAll().join('\n')
 
-                                            [ sample_name, output.join('\n') ]
+                                            [ sample_name, output ]
                                     }
 
         saveMetricFile(
