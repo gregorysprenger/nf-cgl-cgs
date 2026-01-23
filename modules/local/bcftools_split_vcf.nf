@@ -63,7 +63,9 @@ process BCFTOOLS_SPLIT_VCF {
     def prefix = task.ext.prefix
     """
     mkdir -p split_vcf
+
     ext=\$(echo "${joint_vcf_file}" | sed "s|${prefix.id}||1")
+
     for sample in \$(bcftools query -l ${joint_vcf_file}); do
         touch "split_vcf/\${sample}\${ext}" \\
             "split_vcf/\${sample}\${ext}.tbi" \\

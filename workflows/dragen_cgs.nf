@@ -240,8 +240,7 @@ workflow DRAGEN_CGS {
                         ".json",
                         ".vcf",
                     ]
-
-                    [ meta.id, [files.findAll{ f -> extensions.any{ f.toString().toLowerCase().contains(it) } }] ]
+                    [ meta.id, files.findAll{ f -> extensions.any{ f.toString().toLowerCase().contains(it) } } ]
             }
             .join(
                 JOINT_GENOTYPING.out.vcf_files
@@ -257,7 +256,7 @@ workflow DRAGEN_CGS {
 
                     [ ["id": sample_name], all_files ]
             }
-            .mix(PARSE_QC_METRICS.out.genoox_metrics.map{ [ ["id": "Genoox_Metrics"], [], it ] })
+            .mix(PARSE_QC_METRICS.out.genoox_metrics.map{ [ ["id": "Genoox_Metrics"], [it] ] })
 
         //
         // MODULE: Transfer AWS data to GNX AWS bucket
