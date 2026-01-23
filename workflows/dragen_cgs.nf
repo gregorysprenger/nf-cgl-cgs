@@ -220,9 +220,9 @@ workflow DRAGEN_CGS {
     // MODULE: Parse QC metrics
     //
     PARSE_QC_METRICS (
-        ch_input_file.ifEmpty([]),
+        ch_input_file.collect().ifEmpty([]),
         ch_dragen_metrics.collect(),
-        JOINT_GENOTYPING.out.metrics.collect().ifEmpty([])
+        JOINT_GENOTYPING.out.metric_files.collect().ifEmpty([])
     )
     ch_versions = ch_versions.mix(PARSE_QC_METRICS.out.versions)
 
@@ -243,24 +243,18 @@ workflow DRAGEN_CGS {
                     [ meta.id, files.findAll{ f -> extensions.any{ f.toString().toLowerCase().contains(it) } } ]
             }
             .join(
-                DRAGEN_ALIGN.out.dragen_output.map{ meta, files -> meta.id }
-                    .combine(JOINT_GENOTYPING.out.vcf_files.collect().toList().ifEmpty([]))
-                    .combine(JOINT_GENOTYPING.out.metrics.collect().toList().ifEmpty([]))
-                    .map{
-                        id, vcf_files, metric_files ->
-                            def joint_files = (vcf_files + metric_files).findAll{ f -> f.toString().toLowerCase().contains(id.toLowerCase()) }
-                            [ id, joint_files ]
-                    },
-                remainder: true
+                JOINT_GENOTYPING.out.vcf_files
+                    .flatMap()
+                    .map{ file -> [ file.baseName.split('\\.')[0], file ] }
+                    .groupTuple()
+                    .join(JOINT_GENOTYPING.out.metric_files.collect().ifEmpty([]))
+                    .map{ id, vcf_files, metric_files -> [ id, vcf_files + metric_files ] }
             )
             .map{
                 sample_name, dragen_files, joint_files ->
-                    // Prefer joint genotyping files over DRAGEN output if filenames match
-                    def exclude_filenames = joint_files.collect{ it.name }
+                    def all_files = [dragen_files + joint_files ?: []].flatten().collectEntries{ [ (file(it).name): it ] }.values()
 
-                    // Nextflow automatically stages S3 files when passed as input to a process.
-                    // We collect all files here to be staged by the TRANSFER_DATA_AWS process.
-                    [ ["id":sample_name], dragen_files.findAll{ !exclude_filenames.contains(it.name) } + joint_files ]
+                    [ ["id": sample_name], all_files ]
             }
             .mix(PARSE_QC_METRICS.out.genoox_metrics.map{ [ ["id": "Genoox_Metrics"], [it] ] })
 
