@@ -16,7 +16,15 @@ def validate_run = { f ->
         log.info "[${new java.util.Date().format('yyyy-MM-dd HH:mm:ss')}] [DEMULTIPLEX] Run status 'RunCompleted' confirmed for ${f} – continuing."
         return f.parent
     }
-    error("${f} exists but did not complete successfully!")
+    def runStatusInfo
+    if (!matcher) {
+        runStatusInfo = "RunStatus tag not found"
+    } else if (matcher[0].size() > 1 && matcher[0][1]) {
+        runStatusInfo = "found status '${matcher[0][1]}'"
+    } else {
+        runStatusInfo = "RunStatus tag empty or malformed"
+    }
+    error("${f} exists but did not complete successfully: ${runStatusInfo} (expected 'RunCompleted').")
 }
 
 /*
