@@ -49,7 +49,11 @@ workflow DEMULTIPLEX {
 
     // Watch for RunCompletionStatus.xml files in each specified Illumina run directory
     if (params.illumina_rundir) {
-        for (dir in params.illumina_rundir.toString().split(',')) {
+        for (dirRaw in params.illumina_rundir.toString().split(',')) {
+            def dir = dirRaw.trim()
+            if (!dir) {
+                continue
+            }
             def xml = file("${dir}/RunCompletionStatus.xml")
             log.info "[${new java.util.Date().format('yyyy-MM-dd HH:mm:ss')}] [DEMULTIPLEX] Waiting for ${xml} to be created …"
 
