@@ -13,6 +13,7 @@ include { INPUT_CHECK as VERIFY_FASTQ_LIST } from '../../subworkflows/local/inpu
 def validate_run = { f ->
     def matcher = f.text =~ /<RunStatus>\s*(.*?)\s*<\/RunStatus>/
     if (matcher && matcher[0][1] == 'RunCompleted') {
+        log.info "[${new java.util.Date().format('yyyy-MM-dd HH:mm:ss')}] [DEMULTIPLEX] Run status 'RunCompleted' confirmed for ${f} – continuing."
         return f.parent
     }
     error("${f} exists but did not complete successfully!")
@@ -23,18 +24,6 @@ def validate_run = { f ->
     CREATE CHANNELS FOR INPUT PARAMETERS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
-
-// Illumina run directory
-ch_illumina_run_dir = Channel.empty()
-
-params.illumina_rundir.split(',').each{ dir ->
-    def xml_path = "${dir}/RunCompletionStatus.xml"
-    def ch_new = file(xml_path).exists()
-        ? Channel.fromPath(xml_path)
-        : Channel.watchPath(xml_path).take(1)
-
-    ch_illumina_run_dir = ch_illumina_run_dir.mix(ch_new.map(validate_run))
-}
 
 /*
 ========================================================================================
@@ -48,13 +37,36 @@ workflow DEMULTIPLEX {
     ch_samplesheet  // channel: [ path(file) ]
 
     main:
-    ch_versions = Channel.empty()
+    ch_illumina_run_dir = Channel.empty()
+    ch_versions         = Channel.empty()
 
     // Verify presence of Illumina run directory if there are samples to demultiplex
     ch_samplesheet.map{
         !it.isEmpty() && !params.illumina_rundir
             ? error("Please specify the path to the directory containing the Illumina run data.")
             : it
+    }
+
+    // Watch for RunCompletionStatus.xml files in each specified Illumina run directory
+    if (params.illumina_rundir) {
+        for (dir in params.illumina_rundir.toString().split(',')) {
+            def xml = file("${dir}/RunCompletionStatus.xml")
+            log.info "[${new java.util.Date().format('yyyy-MM-dd HH:mm:ss')}] [DEMULTIPLEX] Waiting for ${xml} to be created …"
+
+            def chNew
+            if (xml.exists()) {
+                log.info "[${new java.util.Date().format('yyyy-MM-dd HH:mm:ss')}] [DEMULTIPLEX] ${xml} file exists – continuing."
+                chNew = Channel.fromPath(xml.toString())
+            } else {
+                chNew = Channel.watchPath(xml.toString())
+                            .take(1)
+                            .map{
+                                log.info "[${new java.util.Date().format('yyyy-MM-dd HH:mm:ss')}] [DEMULTIPLEX] ${xml} appeared – continuing."
+                                it
+                            }
+            }
+            ch_illumina_run_dir = ch_illumina_run_dir.mix(chNew.map(validate_run))
+        }
     }
 
     // Flowcell specific demultiplex channel: [ val(flowcell), path(samplesheet), path(illumina run dir) ]
@@ -76,7 +88,7 @@ workflow DEMULTIPLEX {
                                 [ flowcell, samplesheet ]
                         }
                         .join(
-                            ch_illumina_run_dir.map{ [ it[0].name.toString().split('_').last().takeRight(9), it[0] ] },
+                            ch_illumina_run_dir.map{ [ it.name.toString().split('_').last().takeRight(9), it ] },
                             by: 0
                         )
 
@@ -93,13 +105,12 @@ workflow DEMULTIPLEX {
     //
     DRAGEN_DEMULTIPLEX (
         CREATE_DEMULTIPLEX_SAMPLESHEET.out.demux_data
-            .count()
-            .combine(CREATE_DEMULTIPLEX_SAMPLESHEET.out.demux_data)
             .map{
-                count, flowcell, samplesheet, illumina_run_dir ->
-                    def meta = ['flowcell': count > 1 ? flowcell : '']
+                flowcell, samplesheet, illumina_run_dir ->
+                    def run_dir_count = params.illumina_rundir ? params.illumina_rundir.toString().split(',').size() : 0
+                    def meta = ['flowcell': run_dir_count > 1 ? flowcell : '']
                     [ meta, samplesheet, illumina_run_dir ]
-            }
+        }
     )
     ch_versions = ch_versions.mix(DRAGEN_DEMULTIPLEX.out.versions)
 
@@ -121,8 +132,11 @@ workflow DEMULTIPLEX {
             .splitCsv( header: true )
             .map{
                 row ->
-                    def read1 = row['Read1File'].split('/')[-2..-1].join('/')
-                    def read2 = row['Read2File'].split('/')[-2..-1].join('/')
+                    def read1_parts = row['Read1File'].split('/')
+                    def read1 = read1_parts.size() > 1 ? read1_parts[-2..-1].join('/') : read1_parts[-1]
+
+                    def read2_parts = row['Read2File'].split('/')
+                    def read2 = read2_parts.size() > 1 ? read2_parts[-2..-1].join('/') : read2_parts[-1]
 
                     // Get absolute path of 'params.demux_outdir'
                     def demux_outdir = file(params.demux_outdir).toAbsolutePath().toString()
