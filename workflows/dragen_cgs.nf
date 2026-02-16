@@ -93,7 +93,7 @@ workflow DRAGEN_CGS {
 
     take:
     ch_samplesheet  // channel: [ path(file) ]
-    ch_samples      // channel: [ val(meta), path(file) ]
+    ch_samples      // channel: [ val(meta), path(reads), path(fastq_list), path(alignment_file) ]
 
     main:
     ch_versions       = Channel.empty()
@@ -114,7 +114,7 @@ workflow DRAGEN_CGS {
     // Fetch gender for samples
     if (params.sample_info) {
         ch_samples = ch_samples
-                        .map{ meta, reads, fastq_list -> [ meta?.acc ?: meta?.id, meta, reads, fastq_list ] }
+                        .map{ meta, reads, fastq_list, alignment_file -> [ meta?.acc ?: meta?.id, meta, reads, fastq_list, alignment_file ] }
                         .join(
                             ch_sample_information
                                 .splitCsv(header: true)
@@ -123,13 +123,13 @@ workflow DRAGEN_CGS {
                         )
                         .filter{ it[1] != null }
                         .map{
-                            acc, meta, reads, fastq_list, gender ->
+                            acc, meta, reads, fastq_list, alignment_file, gender ->
                                 if (meta) {
                                     def meta_new = meta.clone()
                                     meta_new['sex']   = (gender == 'm' || gender == 'male')   ? 'male'   :
                                                         (gender == 'f' || gender == 'female') ? 'female' : ''
 
-                                    [ meta_new, reads, fastq_list ]
+                                    [ meta_new, reads, fastq_list, alignment_file ]
                                 }
                         }
     }
@@ -138,16 +138,16 @@ workflow DRAGEN_CGS {
     ch_samples = ch_samples
                     .combine(ch_samples.count().map{ it > 1 && params.create_gvcf })
                     .map{
-                        meta, reads, fastq_list, create_gvcf ->
+                        meta, reads, fastq_list, alignment_file, create_gvcf ->
                             def meta_new = meta.clone()
                             meta_new['create_gvcf'] = create_gvcf
 
-                            [ meta_new, reads, fastq_list ]
+                            [ meta_new, reads, fastq_list, alignment_file ]
                     }
 
     // Verify no duplicate samples exist
     ch_samples
-        .map{ meta, reads, fastq_list -> [ reads ] }
+        .map{ meta, reads, fastq_list, alignment_file -> reads ? reads : alignment_file }
         .collect()
         .map{
             def duplicates = it.findAll{ sample -> it.count(sample) > 1 }.unique()
@@ -161,7 +161,7 @@ workflow DRAGEN_CGS {
     //
     DRAGEN_ALIGN (
         ch_samples.filter{
-            meta, reads, fastq_list ->
+            meta, reads, fastq_list, alignment_file ->
                 params.validation_samples || (meta?.acc instanceof String && meta?.acc.startsWith("G"))
         },
         ch_intermediate_dir,

@@ -5,6 +5,7 @@
 */
 
 include { CONVERT_XLSX_TO_CSV } from '../../modules/local/convert_xlsx_to_csv'
+include { UPDATE_SAMPLE_NAME  } from '../../modules/local/update_sample_name'
 
 /*
 ========================================================================================
@@ -17,11 +18,13 @@ workflow INPUT_CHECK {
     take:
     mgi_samplesheet  //  string: Path to input MGI samplesheet
     ch_fastq_list    //  channel: [ path(file) ]
+    ch_bam_cram_list //  channel: [ path(file) ]
 
     main:
-    ch_versions        = Channel.empty()
-    ch_samples         = Channel.empty()
-    ch_mgi_samplesheet = Channel.empty()
+    ch_versions         = Channel.empty()
+    ch_samples          = Channel.empty()
+    ch_bam_cram_samples = Channel.empty()
+    ch_mgi_samplesheet  = Channel.empty()
 
     /*
     ================================================================================
@@ -77,7 +80,7 @@ workflow INPUT_CHECK {
                     ch_fastq_list
                         .filter{ it != [] }
                         .flatMap{
-                            def data = parseFastqList(it)
+                            def data = parseInputList(it)
                             def requiredColumns = ['RGID', 'RGSM', 'RGLB', 'Lane', 'Read1File', 'Read2File']
                             data.collect{
                                 if (!it.keySet().containsAll(requiredColumns)) {
@@ -115,7 +118,7 @@ workflow INPUT_CHECK {
                             ch_fastq_list
                                 .filter{ it != [] }
                                 .map{
-                                    def data = parseFastqList(it)
+                                    def data = parseInputList(it)
                                     data.each{
                                         if (it) {
                                             it['Read1File'] = "fastq_files/${it['Read1File'].split('/')[-1]}"
@@ -139,11 +142,55 @@ workflow INPUT_CHECK {
                                     sort   : 'index'
                                 )
                         )
-                        .map{ id, meta, reads, fastq_list -> [ meta[0], reads.flatten(), fastq_list ] }
+                        .map{ id, meta, reads, fastq_list -> [ meta[0], reads.flatten(), fastq_list, [] ] }
                 )
 
+    /*
+    ================================================================================
+                        Process input BAM/CRAM list
+    ================================================================================
+    */
+
+    ch_bam_cram_samples = ch_bam_cram_samples.mix(
+                            ch_bam_cram_list
+                                .filter{ it != [] }
+                                .flatMap{
+                                    def data = parseInputList(it)
+                                    def requiredColumns = ['ID', 'File']
+                                    data.collect{
+                                        if (!it.keySet().containsAll(requiredColumns)) {
+                                            error("Missing required columns in input BAM/CRAM list!")
+                                        }
+
+                                        def alignment_file = file(it['File'], checkIfExists: true)
+
+                                        // Ensure BAM/CRAM size > min_bam_cram_size unless validation samples are used
+                                        if (!params.validation_samples) {
+                                            def MIN_BAM_CRAM_SIZE_BYTES = params.min_bam_cram_size * 1024 * 1024
+                                            if (alignment_file.size() < MIN_BAM_CRAM_SIZE_BYTES) {
+                                                error("BAM/CRAM file '${alignment_file.name}' is ${alignment_file.size()} bytes, less than ${params.min_bam_cram_size}MB minimum!")
+                                            }
+                                        }
+
+                                        if (alignment_file.toString().endsWith('bam') || alignment_file.toString().endsWith('cram')) {
+                                            [ ["id": it['ID'], "acc": it['ID']], alignment_file ]
+                                        } else {
+                                            error("Input file is not a BAM or CRAM file.")
+                                        }
+                                    }
+                                }
+                        )
+
+    UPDATE_SAMPLE_NAME (
+        ch_bam_cram_samples
+    )
+
+    ch_samples = ch_samples.mix(
+        UPDATE_SAMPLE_NAME.out.updated_alignment.map{ meta, alignment_file -> [ meta, [], [], alignment_file ] }
+    )
+
     emit:
-    samples         = ch_samples          // channel: [ val(sample_info), path(reads), path(fastq_list) ]
+    samples         = ch_samples          // channel: [ val(sample_info), path(reads), path(fastq_list), path(alignment_file) ]
     mgi_samplesheet = ch_mgi_samplesheet  // channel: [ path(file) ]
     versions        = ch_versions         // channel: [ path(file) ]
 
@@ -160,8 +207,8 @@ def hasExtension(it, extension) {
     it.toString().toLowerCase().endsWith(extension.toLowerCase())
 }
 
-// Parse FastQ list
-def parseFastqList(file) {
+// Parse FastQ or BAM/CRAM list
+def parseInputList(file) {
     def separator = file.endsWith("tsv") ? '\t' : ','
     def lines = file.readLines()
     def headers = lines.first().split(separator)

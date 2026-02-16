@@ -108,12 +108,12 @@ workflow JOINT_GENOTYPING {
 
                                             def indels_list = joint_sample_lines.findAll{
                                                                                     it.contains("Insertions") ||
-                                                                                    it.contains("Deletions") ||
+                                                                                    it.contains("Deletions" ) ||
                                                                                     it.contains("Indels")
                                                                                 }
 
-                                            def indel_count = indels_list.collect{ it.split(',')[3].toInteger() }.sum()
-                                            def indel_percent = indels_list.collect{ it.split(',')[4].toFloat() }.sum()
+                                            def indel_count   = indels_list.collect{ it.split(',')[3].toInteger() }.sum()
+                                            def indel_percent = indels_list.collect{ it.split(',')[4].toFloat()   }.sum()
 
                                             def output = [
                                                 joint.text.findAll("VARIANT CALLER SUMMARY,,Number of samples,.+"),

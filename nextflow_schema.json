@@ -20,7 +20,12 @@
                 "fastq_list": {
                     "type": "string",
                     "format": "file-path",
-                    "description": "Path to samplesheet containing the columns: RGID, RGSM, RGLB, Lane, Read1File, Read2File."
+                    "description": "Path to samplesheet containing the columns: RGID, RGSM, RGLB, Lane, Read1File, Read2File. Used to provide FASTQ files as input."
+                },
+                "bam_cram_list": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Path to samplesheet containing the columns: ID, File. Used to provide BAM or CRAM files as input."
                 },
                 "sample_info": {
                     "type": "string",
@@ -61,6 +66,12 @@
                 "min_fastq_size": {
                     "type": "integer",
                     "description": "Minimum expected size of FastQ files in MB. Files smaller than this will cause an error.",
+                    "default": 10,
+                    "fa_icon": "fas fa-hdd"
+                },
+                "min_bam_cram_size": {
+                    "type": "integer",
+                    "description": "Minimum expected size of BAM/CRAM files in MB. Files smaller than this will cause an error.",
                     "default": 10,
                     "fa_icon": "fas fa-hdd"
                 },

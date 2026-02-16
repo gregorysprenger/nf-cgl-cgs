@@ -91,7 +91,8 @@ workflow DEMULTIPLEX {
     //
     VERIFY_FASTQ_LIST (
         [],
-        DRAGEN_DEMULTIPLEX.out.fastq_list
+        DRAGEN_DEMULTIPLEX.out.fastq_list,
+        Channel.empty()
     )
     ch_versions = ch_versions.mix(VERIFY_FASTQ_LIST.out.versions)
 
@@ -100,7 +101,7 @@ workflow DEMULTIPLEX {
         def batch_name = params.batch_name ?: new java.util.Date().format('yyyyMMdd') + '_CGS'
 
         ch_fastq_list = VERIFY_FASTQ_LIST.out.samples
-            .map{ meta, reads, fastq_list -> fastq_list }
+            .map{ meta, reads, fastq_list, alignment_file -> fastq_list }
             .splitCsv( header: true )
             .map{
                 row ->
@@ -123,7 +124,7 @@ workflow DEMULTIPLEX {
     }
 
     emit:
-    samples  = VERIFY_FASTQ_LIST.out.samples  // channel: [ val(meta), path(file) ]
+    samples  = VERIFY_FASTQ_LIST.out.samples  // channel: [ val(meta), path(reads), path(fastq_list), path(alignment_file) ]
     versions = ch_versions                    // channel: [ path(file) ]
 
 }

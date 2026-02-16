@@ -7,7 +7,7 @@ process DRAGEN_ALIGN {
         : 'dockerreg01.accounts.ad.wustl.edu/cgl/dragen:v4.3.6' }"
 
     input:
-    tuple val(meta), path(reads, stageAs: "fastq_files/*"), path(fastq_list)
+    tuple val(meta), path(reads, stageAs: "fastq_files/*"), path(fastq_list), path(alignment_file)
     tuple val(intermediate_directory_value), path(intermediate_directory)
     tuple val(qc_contamination_value)      , path(qc_contamination_file)
     path(adapter1_file)
@@ -27,6 +27,14 @@ process DRAGEN_ALIGN {
 
     script:
     def exe_path       = ['awsbatch','dragenaws'].any{ workflow.profile.contains(it) } ? "/opt/edico" : "/opt/dragen/4.3.6"
+
+    def input = [
+        alignment_file.find{ it ==~ /.*\.bam$/  }?.with{ "--bam-input ${it}"  }                                  ?:
+        alignment_file.find{ it ==~ /.*\.cram$/ }?.with{ "--cram-input ${it}" }                                  ?:
+        fastq_list.toString().endsWith('csv')    ? "--fastq-list ${fastq_list} --fastq-list-sample-id ${meta.id}" :
+        error("Input file is not a BAM, CRAM, or CSV file.")
+    ].join(' ').trim()
+
     def alignment_args = [
         task.ext.dragen_license_args                  ?: "",
         meta.sex?.toLowerCase() in ['male', 'female'] ? "--sample-sex ${meta.sex}"                                   : "",
@@ -45,26 +53,25 @@ process DRAGEN_ALIGN {
     mkdir -p ${meta.id}
 
     ${exe_path}/bin/dragen \\
-        --fastq-list ${fastq_list} \\
-        --fastq-list-sample-id ${meta.id} \\
-        --output-file-prefix ${meta.id} \\
-        --output-directory ${meta.id} \\
-        --force \\
+        ${input} \\
         ${alignment_args} \\
-        --enable-sv true \\
-        --enable-cnv true \\
-        --enable-sort true \\
-        --output-format BAM \\
-        --enable-map-align true \\
-        --read-trimmers adapter \\
-        --gc-metrics-enable true \\
-        --sv-output-contigs true \\
-        --enable-bam-indexing true \\
-        --enable-variant-caller true \\
-        --enable-map-align-output true \\
-        --enable-duplicate-marking true \\
-        --qc-coverage-ignore-overlaps true \\
         --cnv-enable-self-normalization true \\
+        --enable-bam-indexing true \\
+        --enable-cnv true \\
+        --enable-duplicate-marking true \\
+        --enable-map-align true \\
+        --enable-map-align-output true \\
+        --enable-sort true \\
+        --enable-sv true \\
+        --enable-variant-caller true \\
+        --force \\
+        --gc-metrics-enable true \\
+        --output-directory ${meta.id} \\
+        --output-file-prefix ${meta.id} \\
+        --output-format BAM \\
+        --qc-coverage-ignore-overlaps true \\
+        --read-trimmers adapter \\
+        --sv-output-contigs true \\
         --variant-annotation-assembly GRCh38
 
     # Create md5sum for files
@@ -87,6 +94,14 @@ process DRAGEN_ALIGN {
 
     stub:
     def exe_path       = ['awsbatch','dragenaws'].any{ workflow.profile.contains(it) } ? "/opt/edico" : "/opt/dragen/4.3.6"
+
+    def input = [
+        alignment_file.find{ it ==~ /.*\.bam$/  }?.with{ "--bam-input ${it}"  }                                  ?:
+        alignment_file.find{ it ==~ /.*\.cram$/ }?.with{ "--cram-input ${it}" }                                  ?:
+        fastq_list.toString().endsWith('csv')    ? "--fastq-list ${fastq_list} --fastq-list-sample-id ${meta.id}" :
+        error("Input file is not a BAM, CRAM, or CSV file.")
+    ].join(' ').trim()
+
     def alignment_args = [
         task.ext.dragen_license_args                  ?: "",
         meta.sex?.toLowerCase() in ['male', 'female'] ? "--sample-sex ${meta.sex}"                                   : "",
@@ -118,26 +133,25 @@ process DRAGEN_ALIGN {
 
     cat <<-END_CMDS > "${meta.id}/${meta.id}.txt"
     ${exe_path}/bin/dragen \\
-        --fastq-list ${fastq_list} \\
-        --fastq-list-sample-id ${meta.id} \\
-        --output-file-prefix ${meta.id} \\
-        --output-directory ${meta.id} \\
-        --force \\
+        ${input} \\
         ${alignment_args} \\
-        --enable-sv true \\
-        --enable-cnv true \\
-        --enable-sort true \\
-        --output-format BAM \\
-        --enable-map-align true \\
-        --read-trimmers adapter \\
-        --gc-metrics-enable true \\
-        --sv-output-contigs true \\
-        --enable-bam-indexing true \\
-        --enable-variant-caller true \\
-        --enable-map-align-output true \\
-        --enable-duplicate-marking true \\
-        --qc-coverage-ignore-overlaps true \\
         --cnv-enable-self-normalization true \\
+        --enable-bam-indexing true \\
+        --enable-cnv true \\
+        --enable-duplicate-marking true \\
+        --enable-map-align true \\
+        --enable-map-align-output true \\
+        --enable-sort true \\
+        --enable-sv true \\
+        --enable-variant-caller true \\
+        --force \\
+        --gc-metrics-enable true \\
+        --output-directory ${meta.id} \\
+        --output-file-prefix ${meta.id} \\
+        --output-format BAM \\
+        --qc-coverage-ignore-overlaps true \\
+        --read-trimmers adapter \\
+        --sv-output-contigs true \\
         --variant-annotation-assembly GRCh38
 
     # Create md5sum for files
