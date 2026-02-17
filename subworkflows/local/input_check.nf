@@ -56,14 +56,14 @@ workflow INPUT_CHECK {
         samplesheet = Channel.fromPath(mgi_samplesheet.split(',') as List, checkIfExists: true)
 
         // Verify MGI samplesheet has a file extension in [xlsx,csv,tsv]
-        if (samplesheet.map{ hasExtension(it, 'xlsx') }) {
+        if (samplesheet.map{ hasExtension(it, '.xlsx') }) {
             CONVERT_XLSX_TO_CSV (
                 samplesheet
             )
             ch_versions        = ch_versions.mix(CONVERT_XLSX_TO_CSV.out.versions)
             ch_mgi_samplesheet = ch_mgi_samplesheet.mix(CONVERT_XLSX_TO_CSV.out.csv)
 
-        } else if (samplesheet.any{ hasExtension(it, 'csv') || hasExtension(it, 'tsv') }) {
+        } else if (samplesheet.any{ hasExtension(it, '.csv') || hasExtension(it, '.tsv') }) {
             ch_mgi_samplesheet = ch_mgi_samplesheet.mix(samplesheet)
         } else {
             error("MGI samplesheet input does not end in '.{xlsx,csv,tsv}'!")
@@ -158,7 +158,7 @@ workflow INPUT_CHECK {
                                     def data = parseInputList(it)
 
                                     // Verify CRAM reference file is provided if a CRAM file is in the input samplesheet
-                                    if (data.any{ row -> row.containsKey('File') && hasExtension(row['File'], 'cram') } && !params.cram_reference) {
+                                    if (data.any{ row -> row.containsKey('File') && hasExtension(row['File'], '.cram') } && !params.cram_reference) {
                                         error("A CRAM reference file must be provided when using a CRAM file as input.")
                                     }
 
@@ -178,7 +178,7 @@ workflow INPUT_CHECK {
                                             }
                                         }
 
-                                        if (hasExtension(alignment_file, 'bam') || hasExtension(alignment_file, 'cram')) {
+                                        if (hasExtension(alignment_file, '.bam') || hasExtension(alignment_file, '.cram')) {
                                             [ ["id": it['ID'], "acc": it['ID']], alignment_file ]
                                         } else {
                                             error("Input file is not a BAM or CRAM file.")
