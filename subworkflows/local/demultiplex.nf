@@ -79,6 +79,9 @@ workflow DEMULTIPLEX {
             if (!dir) {
                 continue
             }
+            if (!file(dir).isDirectory()) {
+                error "Illumina run directory not found: ${dir}"
+            }
             def xml = file("${dir}/RunCompletionStatus.xml")
             log.info "[${new java.util.Date().format('yyyy-MM-dd HH:mm:ss')}] [DEMULTIPLEX] Waiting for ${xml} to be created …"
 
