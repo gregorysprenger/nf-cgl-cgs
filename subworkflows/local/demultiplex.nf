@@ -119,7 +119,7 @@ workflow DEMULTIPLEX {
         CREATE_DEMULTIPLEX_SAMPLESHEET.out.demux_data
             .map{
                 flowcell, samplesheet, illumina_run_dir ->
-                    def run_dir_count = params.illumina_rundir ? params.illumina_rundir.toString().split(',').size() : 0
+                    def run_dir_count = params.illumina_rundir ? params.illumina_rundir.toString().split(',').collect{ it.trim() }.findAll{ it }.size() : 0
                     def meta = ['flowcell': run_dir_count > 1 ? flowcell : '']
                     [ meta, samplesheet, illumina_run_dir ]
         }
