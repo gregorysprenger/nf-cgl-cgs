@@ -13,7 +13,7 @@ include { INPUT_CHECK as VERIFY_FASTQ_LIST } from '../../subworkflows/local/inpu
 def validate_run = { f ->
     def matcher = f.text =~ /<RunStatus>\s*(.*?)\s*<\/RunStatus>/
     if (matcher && matcher[0][1] == 'RunCompleted') {
-        log.info "[${new java.util.Date().format('yyyy-MM-dd HH:mm:ss')}] [DEMULTIPLEX] Run status 'RunCompleted' confirmed for ${f} – continuing."
+        log.info "[DEMULTIPLEX] Run status 'RunCompleted' confirmed for ${f} – continuing."
         return f.parent
     }
     def runStatusInfo
