@@ -110,6 +110,7 @@ process DRAGEN_ALIGN {
         dbsnp_file                                    ? "--dbsnp ${dbsnp_file}"                                      : "",
         meta.create_gvcf                              ? "--vc-emit-ref-confidence GVCF"                              : "",
         reference_directory                           ? "--ref-dir ${reference_directory}"                           : "",
+        cram_reference_file                           ? "--cram-reference ${cram_reference_file}"                    : "",
         adapter1_file                                 ? "--trim-adapter-read1 ${adapter1_file}"                      : "",
         adapter2_file                                 ? "--trim-adapter-read2 ${adapter2_file}"                      : "",
         qc_contamination_file                         ? "--qc-cross-cont-vcf ${qc_contamination_file}"               : "",
