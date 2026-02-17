@@ -159,6 +159,11 @@
                     "description": "Path to the directory containing the reference hash table.",
                     "format": "directory-path"
                 },
+                "cram_reference": {
+                    "type": "string",
+                    "description": "Path to the reference FASTA file for CRAM input.",
+                    "format": "file-path"
+                },
                 "qc_coverage_region": {
                     "type": "string",
                     "description": "Path to BED file used to generate coverage region report."

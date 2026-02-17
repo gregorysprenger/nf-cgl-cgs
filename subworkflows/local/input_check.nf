@@ -156,6 +156,12 @@ workflow INPUT_CHECK {
                                 .filter{ it != [] }
                                 .flatMap{
                                     def data = parseInputList(it)
+
+                                    // Verify CRAM reference file is provided if a CRAM file is in the input samplesheet
+                                    if (data.any{ row -> row.containsKey('File') && hasExtension(row['File'], 'cram') } && !params.cram_reference) {
+                                        error("A CRAM reference file must be provided when using a CRAM file as input.")
+                                    }
+
                                     def requiredColumns = ['ID', 'File']
                                     data.collect{
                                         if (!it.keySet().containsAll(requiredColumns)) {

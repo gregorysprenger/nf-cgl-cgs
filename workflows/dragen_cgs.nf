@@ -37,6 +37,13 @@ if (params.refdir) {
     ch_reference_dir = []
 }
 
+// CRAM reference file
+if (params.cram_reference) {
+    ch_cram_reference = Channel.fromPath(params.cram_reference, checkIfExists: true).collect()
+} else {
+    ch_cram_reference = []
+}
+
 // DRAGEN dbSNP annotation VCF
 if (params.dbsnp) {
     ch_dbsnp_file = Channel.fromPath(params.dbsnp, checkIfExists: true).collect()
@@ -170,7 +177,8 @@ workflow DRAGEN_CGS {
         ch_adapter2_file,
         ch_dbsnp_file,
         ch_qc_coverage_region,
-        ch_reference_dir
+        ch_reference_dir,
+        ch_cram_reference
     )
     ch_versions       = ch_versions.mix(DRAGEN_ALIGN.out.versions)
     ch_dragen_usage   = ch_dragen_usage.mix(DRAGEN_ALIGN.out.usage)

@@ -15,6 +15,7 @@ process DRAGEN_ALIGN {
     path(dbsnp_file)
     path(qc_coverage_region_file)
     path(reference_directory)
+    path(cram_reference_file)
 
     output:
     tuple val(meta), path("${meta.id}/*")  , emit: dragen_output
@@ -41,6 +42,7 @@ process DRAGEN_ALIGN {
         dbsnp_file                                    ? "--dbsnp ${dbsnp_file}"                                      : "",
         meta.create_gvcf                              ? "--vc-emit-ref-confidence GVCF"                              : "",
         reference_directory                           ? "--ref-dir ${reference_directory}"                           : "",
+        cram_reference_file                           ? "--cram-reference ${cram_reference_file}"                    : "",
         adapter1_file                                 ? "--trim-adapter-read1 ${adapter1_file}"                      : "",
         adapter2_file                                 ? "--trim-adapter-read2 ${adapter2_file}"                      : "",
         qc_contamination_file                         ? "--qc-cross-cont-vcf ${qc_contamination_file}"               : "",
