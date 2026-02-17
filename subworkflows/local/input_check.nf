@@ -53,8 +53,8 @@ workflow INPUT_CHECK {
     */
 
     if (mgi_samplesheet) {
-        def mgi_files = mgi_samplesheet.split(',') as List
-        def samplesheet = Channel.fromPath(mgi_files, checkIfExists: true)
+        mgi_files   = mgi_samplesheet.split(',') as List
+        samplesheet = Channel.fromPath(mgi_files, checkIfExists: true)
 
         // Verify MGI samplesheet has a file extension in [xlsx,csv,tsv]
         if (mgi_files.any{ hasExtension(it, '.xlsx') }) {
