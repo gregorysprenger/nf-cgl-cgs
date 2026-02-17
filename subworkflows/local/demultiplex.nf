@@ -83,7 +83,7 @@ workflow DEMULTIPLEX {
                 error("Illumina run directory not found: ${dir}")
             }
             def xml = file("${dir}/RunCompletionStatus.xml")
-            log.info "[DEMULTIPLEX] Waiting for ${xml} to be created …"
+            log.info "[DEMULTIPLEX] Checking for ${xml} (will wait if missing) …"
 
             def chNew
             if (xml.exists()) {
