@@ -11,16 +11,33 @@ include { INPUT_CHECK as VERIFY_FASTQ_LIST } from '../../subworkflows/local/inpu
 
 // Validate illumina run completion status
 def validate_run = { f ->
-    def matcher = f.text =~ /<RunStatus>\s*(.*?)\s*<\/RunStatus>/
-    if (matcher && matcher[0][1] == 'RunCompleted') {
-        log.info "[DEMULTIPLEX] Run status 'RunCompleted' confirmed for ${f} – continuing."
+    def xml
+    try {
+        xml = new XmlSlurper().parse(f)
+    } catch (Exception e) {
+        error("${f} exists but could not be parsed as XML: ${e.message}")
+    }
+
+    // Find all RunStatus elements anywhere in the document, regardless of namespace
+    def runStatusNodes = xml.'**'.findAll { it.name() == 'RunStatus' }
+    def runStatuses = runStatusNodes
+        .collect { it.text()?.trim() }
+        .findAll { it }
+
+    if (runStatuses.any { it == 'RunCompleted' }) {
+        log.info "[${new java.util.Date().format('yyyy-MM-dd HH:mm:ss')}] [DEMULTIPLEX] Run status 'RunCompleted' confirmed for ${f} – continuing."
         return f.parent
     }
+
     def runStatusInfo
-    if (!matcher) {
+    if (!runStatusNodes || runStatusNodes.isEmpty()) {
         runStatusInfo = "RunStatus tag not found"
-    } else if (matcher[0].size() > 1 && matcher[0][1]) {
-        runStatusInfo = "found status '${matcher[0][1]}'"
+    } else if (runStatuses && !runStatuses.isEmpty()) {
+        if (runStatuses.size() == 1) {
+            runStatusInfo = "found status '${runStatuses[0]}'"
+        } else {
+            runStatusInfo = "found statuses '${runStatuses.join("', '")}'"
+        }
     } else {
         runStatusInfo = "RunStatus tag empty or malformed"
     }
