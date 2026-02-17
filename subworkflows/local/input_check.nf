@@ -178,7 +178,7 @@ workflow INPUT_CHECK {
                                             }
                                         }
 
-                                        if (alignment_file.toString().endsWith('bam') || alignment_file.toString().endsWith('cram')) {
+                                        if (hasExtension(alignment_file, 'bam') || hasExtension(alignment_file, 'cram')) {
                                             [ ["id": it['ID'], "acc": it['ID']], alignment_file ]
                                         } else {
                                             error("Input file is not a BAM or CRAM file.")
