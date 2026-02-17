@@ -190,6 +190,7 @@ workflow INPUT_CHECK {
     UPDATE_SAMPLE_NAME (
         ch_bam_cram_samples
     )
+    ch_versions = ch_versions.mix(UPDATE_SAMPLE_NAME.out.versions)
 
     ch_samples = ch_samples.mix(
         UPDATE_SAMPLE_NAME.out.updated_alignment.map{ meta, alignment_file -> [ meta, [], [], alignment_file ] }

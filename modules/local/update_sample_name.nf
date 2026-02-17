@@ -9,6 +9,7 @@ process UPDATE_SAMPLE_NAME {
 
     output:
     tuple val(meta), path("*.updated.{cram,bam}"), emit: updated_alignment
+    path("versions.yml")                         , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -31,7 +32,7 @@ process UPDATE_SAMPLE_NAME {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        python: \$(samtools --version | head -n 1 | cut -d ' ' -f2)
+        samtools: \$(samtools --version | head -n 1 | cut -d ' ' -f2)
     END_VERSIONS
     """
 }
