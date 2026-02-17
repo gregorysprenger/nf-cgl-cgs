@@ -24,11 +24,12 @@ process UPDATE_SAMPLE_NAME {
         | sed "s/SM:[^\t]*/SM:${meta.id}/g" \\
         > header.sam
 
-    cp "${alignment_file}" "\${new_filename}"
-
-    samtools reheader \\
-        -i header.sam \\
-        "\${new_filename}"
+    if [[ "\${file_extension,,}" == "cram" ]]; then
+        cp "${alignment_file}" "\${new_filename}"
+        samtools reheader --in-place header.sam "\${new_filename}"
+    else
+        samtools reheader header.sam "${alignment_file}" > "\${new_filename}"
+    fi
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
