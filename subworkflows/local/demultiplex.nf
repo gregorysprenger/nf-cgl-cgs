@@ -25,7 +25,7 @@ def validate_run = { f ->
         .findAll { it }
 
     if (runStatuses.any { it == 'RunCompleted' }) {
-        log.info "[${new java.util.Date().format('yyyy-MM-dd HH:mm:ss')}] [DEMULTIPLEX] Run status 'RunCompleted' confirmed for ${f} – continuing."
+        log.info "[DEMULTIPLEX] Run status 'RunCompleted' confirmed for ${f} – continuing."
         return f.parent
     }
 
@@ -83,17 +83,17 @@ workflow DEMULTIPLEX {
                 error "Illumina run directory not found: ${dir}"
             }
             def xml = file("${dir}/RunCompletionStatus.xml")
-            log.info "[${new java.util.Date().format('yyyy-MM-dd HH:mm:ss')}] [DEMULTIPLEX] Waiting for ${xml} to be created …"
+            log.info "[DEMULTIPLEX] Waiting for ${xml} to be created …"
 
             def chNew
             if (xml.exists()) {
-                log.info "[${new java.util.Date().format('yyyy-MM-dd HH:mm:ss')}] [DEMULTIPLEX] ${xml} file exists – continuing."
+                log.info "[DEMULTIPLEX] ${xml} file exists – continuing."
                 chNew = Channel.fromPath(xml.toString())
             } else {
                 chNew = Channel.watchPath(xml.toString())
                             .take(1)
                             .map{
-                                log.info "[${new java.util.Date().format('yyyy-MM-dd HH:mm:ss')}] [DEMULTIPLEX] ${xml} appeared – continuing."
+                                log.info "[DEMULTIPLEX] ${xml} appeared – continuing."
                                 it
                             }
             }
