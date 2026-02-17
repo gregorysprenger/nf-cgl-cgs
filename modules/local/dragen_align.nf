@@ -29,10 +29,11 @@ process DRAGEN_ALIGN {
     script:
     def exe_path       = ['awsbatch','dragenaws'].any{ workflow.profile.contains(it) } ? "/opt/edico" : "/opt/dragen/4.3.6"
 
+    def alignment_path = alignment_file ? alignment_file.toString() : null
     def input = [
-        alignment_file.find{ it ==~ /.*\.bam$/  }?.with{ "--bam-input ${it}"  }                                  ?:
-        alignment_file.find{ it ==~ /.*\.cram$/ }?.with{ "--cram-input ${it}" }                                  ?:
-        fastq_list.toString().endsWith('csv')    ? "--fastq-list ${fastq_list} --fastq-list-sample-id ${meta.id}" :
+        (alignment_path && alignment_path.endsWith('.bam'))       ? "--bam-input ${alignment_path}"                                :
+        (alignment_path && alignment_path.endsWith('.cram'))      ? "--cram-input ${alignment_path}"                               :
+        (fastq_list     && fastq_list.toString().endsWith('csv')) ? "--fastq-list ${fastq_list} --fastq-list-sample-id ${meta.id}" :
         error("Input file is not a BAM, CRAM, or CSV file.")
     ].join(' ').trim()
 
@@ -97,10 +98,11 @@ process DRAGEN_ALIGN {
     stub:
     def exe_path       = ['awsbatch','dragenaws'].any{ workflow.profile.contains(it) } ? "/opt/edico" : "/opt/dragen/4.3.6"
 
+    def alignment_path = alignment_file ? alignment_file.toString() : null
     def input = [
-        alignment_file.find{ it ==~ /.*\.bam$/  }?.with{ "--bam-input ${it}"  }                                  ?:
-        alignment_file.find{ it ==~ /.*\.cram$/ }?.with{ "--cram-input ${it}" }                                  ?:
-        fastq_list.toString().endsWith('csv')    ? "--fastq-list ${fastq_list} --fastq-list-sample-id ${meta.id}" :
+        (alignment_path && alignment_path.endsWith('.bam'))       ? "--bam-input ${alignment_path}"                                :
+        (alignment_path && alignment_path.endsWith('.cram'))      ? "--cram-input ${alignment_path}"                               :
+        (fastq_list     && fastq_list.toString().endsWith('csv')) ? "--fastq-list ${fastq_list} --fastq-list-sample-id ${meta.id}" :
         error("Input file is not a BAM, CRAM, or CSV file.")
     ].join(' ').trim()
 
