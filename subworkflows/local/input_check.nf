@@ -53,17 +53,18 @@ workflow INPUT_CHECK {
     */
 
     if (mgi_samplesheet) {
-        samplesheet = Channel.fromPath(mgi_samplesheet.split(',') as List, checkIfExists: true)
+        def mgi_files = mgi_samplesheet.split(',') as List
+        def samplesheet = Channel.fromPath(mgi_files, checkIfExists: true)
 
         // Verify MGI samplesheet has a file extension in [xlsx,csv,tsv]
-        if (samplesheet.map{ hasExtension(it, '.xlsx') }) {
+        if (mgi_files.any{ hasExtension(it, '.xlsx') }) {
             CONVERT_XLSX_TO_CSV (
                 samplesheet
             )
             ch_versions        = ch_versions.mix(CONVERT_XLSX_TO_CSV.out.versions)
             ch_mgi_samplesheet = ch_mgi_samplesheet.mix(CONVERT_XLSX_TO_CSV.out.csv)
 
-        } else if (samplesheet.any{ hasExtension(it, '.csv') || hasExtension(it, '.tsv') }) {
+        } else if (mgi_files.any{ hasExtension(it, '.csv') || hasExtension(it, '.tsv') }) {
             ch_mgi_samplesheet = ch_mgi_samplesheet.mix(samplesheet)
         } else {
             error("MGI samplesheet input does not end in '.{xlsx,csv,tsv}'!")
