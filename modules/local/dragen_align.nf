@@ -27,15 +27,20 @@ process DRAGEN_ALIGN {
     task.ext.when == null || task.ext.when
 
     script:
-    def exe_path       = ['awsbatch','dragenaws'].any{ workflow.profile.contains(it) } ? "/opt/edico" : "/opt/dragen/4.3.6"
+    def exe_path = ['awsbatch','dragenaws'].any{ workflow.profile.contains(it) } ? "/opt/edico" : "/opt/dragen/4.3.6"
 
-    def alignment_path = alignment_file ? alignment_file.toString() : null
-    def input = [
-        (alignment_path && alignment_path.endsWith('.bam'))       ? "--bam-input ${alignment_path}"                                :
-        (alignment_path && alignment_path.endsWith('.cram'))      ? "--cram-input ${alignment_path}"                               :
-        (fastq_list     && fastq_list.toString().endsWith('csv')) ? "--fastq-list ${fastq_list} --fastq-list-sample-id ${meta.id}" :
+    def input
+    if (alignment_file && alignment_file.name.endsWith('.bam')) {
+        input = "--bam-input ${alignment_file}"
+    } else if (alignment_file && alignment_file.name.endsWith('.cram')) {
+        input = "--cram-input ${alignment_file}"
+    } else if (fastq_list && fastq_list.name.endsWith('.csv')) {
+        input = "--fastq-list ${fastq_list} --fastq-list-sample-id ${meta.id}"
+    } else {
         error("Input file is not a BAM, CRAM, or CSV file.")
-    ].join(' ').trim()
+    }
+
+    def cram_ref = cram_reference_file ? cram_reference_file.find{ it.toString().endsWith('.fa') || it.toString().endsWith('.fasta') } : []
 
     def alignment_args = [
         task.ext.dragen_license_args                  ?: "",
@@ -43,7 +48,7 @@ process DRAGEN_ALIGN {
         dbsnp_file                                    ? "--dbsnp ${dbsnp_file}"                                      : "",
         meta.create_gvcf                              ? "--vc-emit-ref-confidence GVCF"                              : "",
         reference_directory                           ? "--ref-dir ${reference_directory}"                           : "",
-        cram_reference_file                           ? "--cram-reference ${cram_reference_file}"                    : "",
+        cram_ref                                      ? "--cram-reference ${cram_ref}"                               : "",
         adapter1_file                                 ? "--trim-adapter-read1 ${adapter1_file}"                      : "",
         adapter2_file                                 ? "--trim-adapter-read2 ${adapter2_file}"                      : "",
         qc_contamination_file                         ? "--qc-cross-cont-vcf ${qc_contamination_file}"               : "",
@@ -96,15 +101,20 @@ process DRAGEN_ALIGN {
     """
 
     stub:
-    def exe_path       = ['awsbatch','dragenaws'].any{ workflow.profile.contains(it) } ? "/opt/edico" : "/opt/dragen/4.3.6"
+    def exe_path = ['awsbatch','dragenaws'].any{ workflow.profile.contains(it) } ? "/opt/edico" : "/opt/dragen/4.3.6"
 
-    def alignment_path = alignment_file ? alignment_file.toString() : null
-    def input = [
-        (alignment_path && alignment_path.endsWith('.bam'))       ? "--bam-input ${alignment_path}"                                :
-        (alignment_path && alignment_path.endsWith('.cram'))      ? "--cram-input ${alignment_path}"                               :
-        (fastq_list     && fastq_list.toString().endsWith('csv')) ? "--fastq-list ${fastq_list} --fastq-list-sample-id ${meta.id}" :
+    def input
+    if (alignment_file && alignment_file.name.endsWith('.bam')) {
+        input = "--bam-input ${alignment_file}"
+    } else if (alignment_file && alignment_file.name.endsWith('.cram')) {
+        input = "--cram-input ${alignment_file}"
+    } else if (fastq_list && fastq_list.name.endsWith('.csv')) {
+        input = "--fastq-list ${fastq_list} --fastq-list-sample-id ${meta.id}"
+    } else {
         error("Input file is not a BAM, CRAM, or CSV file.")
-    ].join(' ').trim()
+    }
+
+    def cram_ref = cram_reference_file ? cram_reference_file.find{ it.toString().endsWith('.fa') || it.toString().endsWith('.fasta') } : []
 
     def alignment_args = [
         task.ext.dragen_license_args                  ?: "",
@@ -112,7 +122,7 @@ process DRAGEN_ALIGN {
         dbsnp_file                                    ? "--dbsnp ${dbsnp_file}"                                      : "",
         meta.create_gvcf                              ? "--vc-emit-ref-confidence GVCF"                              : "",
         reference_directory                           ? "--ref-dir ${reference_directory}"                           : "",
-        cram_reference_file                           ? "--cram-reference ${cram_reference_file}"                    : "",
+        cram_ref                                      ? "--cram-reference ${cram_ref}"                               : "",
         adapter1_file                                 ? "--trim-adapter-read1 ${adapter1_file}"                      : "",
         adapter2_file                                 ? "--trim-adapter-read2 ${adapter2_file}"                      : "",
         qc_contamination_file                         ? "--qc-cross-cont-vcf ${qc_contamination_file}"               : "",
