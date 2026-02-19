@@ -114,7 +114,7 @@ process DRAGEN_ALIGN {
         error("Input file is not a BAM, CRAM, or CSV file.")
     }
 
-    def cram_ref = cram_reference_file ? cram_reference_file.find{ it.toString().endsWith('.fa') || it.toString().endsWith('.fasta') } : []
+    def cram_ref = cram_reference_file ? cram_reference_file.find{ def s = it.toString().toLowerCase(); s.endsWith('.fa') || s.endsWith('.fasta') } : []
 
     def alignment_args = [
         task.ext.dragen_license_args                  ?: "",
