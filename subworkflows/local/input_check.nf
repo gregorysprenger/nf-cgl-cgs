@@ -180,7 +180,11 @@ workflow INPUT_CHECK {
                                         }
 
                                         if (hasExtension(alignment_file, '.bam') || hasExtension(alignment_file, '.cram')) {
-                                            [ ["id": it['ID'], "acc": it['ID']], alignment_file ]
+                                            def regexPattern = /\w\d{2}-\d+/
+                                            def matcher = it['ID'] =~ regexPattern
+                                            def acc = matcher.find() ? matcher.group(0) : it['ID']
+
+                                            [ ["id": it['ID'], "acc": acc], alignment_file ]
                                         } else {
                                             error("Input file is not a BAM or CRAM file.")
                                         }
@@ -217,7 +221,7 @@ def hasExtension(it, extension) {
 
 // Parse FastQ or BAM/CRAM list
 def parseInputList(file) {
-    def separator = file.endsWith("tsv") ? '\t' : ','
+    def separator = hasExtension(file, '.tsv') ? '\t' : ','
     def lines = file.readLines()
     def headers = lines.first().split(separator)
     lines.drop(1).collect{ line ->
