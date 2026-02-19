@@ -8,8 +8,8 @@ process UPDATE_SAMPLE_NAME {
     tuple val(meta), path(alignment_file)
 
     output:
-    tuple val(meta), path("*.updated.{cram,bam}"), emit: updated_alignment
-    path("versions.yml")                         , emit: versions
+    tuple val(meta), path("*.updated.*"), emit: updated_alignment
+    path("versions.yml")                , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -30,6 +30,20 @@ process UPDATE_SAMPLE_NAME {
     else
         samtools reheader header.sam "${alignment_file}" > "\${new_filename}"
     fi
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        samtools: \$(samtools --version | head -n 1 | cut -d ' ' -f2)
+    END_VERSIONS
+    """
+
+    stub:
+    """
+    base_name=\$(basename "${alignment_file}")
+    file_extension="\${base_name##*.}"
+    new_filename="\${base_name%.*}.updated.\${file_extension}"
+
+    touch "\${new_filename}"
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
