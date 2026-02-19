@@ -203,13 +203,13 @@ workflow DRAGEN_CGS {
                     .collect()
                     .ifEmpty("no_joint_genotyping")  // Proceed with control alignment even if no joint genotyping
                     .combine(ch_samples.filter{
-                        meta, reads, fastq_list ->
+                        meta, reads, fastq_list, alignment_file ->
                             meta?.acc instanceof String && !meta?.acc.startsWith("G")
                     })
                     .map{
-                        done, meta, reads, fastq_list ->
+                        done, meta, reads, fastq_list, alignment_file ->
                             meta['create_gvcf'] = false
-                            [ meta, reads, fastq_list ]
+                            [ meta, reads, fastq_list, alignment_file ]
                     },
             ch_intermediate_dir,
             ch_qc_cross_contamination,
