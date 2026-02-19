@@ -154,12 +154,12 @@ workflow DRAGEN_CGS {
 
     // Verify no duplicate samples exist
     ch_samples
-        .map{ meta, reads, fastq_list, alignment_file -> reads ? reads : alignment_file }
+        .map{ meta, reads, fastq_list, alignment_file -> meta.id }
         .collect()
         .map{
-            def duplicates = it.findAll{ sample -> it.count(sample) > 1 }.unique()
+            def duplicates = it.findAll{ id -> it.count(id) > 1 }.unique()
             if (duplicates) {
-                error "Duplicate entries found in channel:\n${duplicates.flatten()}"
+                error "Duplicate sample IDs found in channel:\n${duplicates.join('\n')}"
             }
         }
 
