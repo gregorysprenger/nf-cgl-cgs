@@ -39,7 +39,7 @@ if (params.refdir) {
 
 // CRAM reference file
 if (params.cram_reference) {
-    ch_cram_reference_file = Channel.fromPath(params.cram_reference, checkIfExists: true).collect()
+    ch_cram_reference_file = Channel.fromPath("${params.cram_reference}*", checkIfExists: true).collect()
 } else {
     ch_cram_reference_file = []
 }
