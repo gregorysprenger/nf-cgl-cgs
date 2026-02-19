@@ -107,17 +107,20 @@ process DRAGEN_ALIGN {
     def exe_path = ['awsbatch','dragenaws'].any{ workflow.profile.contains(it) } ? "/opt/edico" : "/opt/dragen/4.3.6"
 
     def input
-    if (alignment_file && alignment_file.name.endsWith('.bam')) {
+    if (alignment_file && alignment_file.name.toLowerCase().endsWith('.bam')) {
         input = "--bam-input ${alignment_file}"
-    } else if (alignment_file && alignment_file.name.endsWith('.cram')) {
+    } else if (alignment_file && alignment_file.name.toLowerCase().endsWith('.cram')) {
         input = "--cram-input ${alignment_file}"
-    } else if (fastq_list && fastq_list.name.endsWith('.csv')) {
+    } else if (fastq_list && fastq_list.name.toLowerCase().endsWith('.csv')) {
         input = "--fastq-list ${fastq_list} --fastq-list-sample-id ${meta.id}"
     } else {
         error("Input file is not a BAM, CRAM, or CSV file.")
     }
 
-    def cram_ref = cram_reference_file ? cram_reference_file.find{ def s = it.toString().toLowerCase(); s.endsWith('.fa') || s.endsWith('.fasta') } : []
+    def cram_ref = cram_reference_file ? cram_reference_file.find{
+                        def pathStr = it.toString().toLowerCase()
+                        pathStr.endsWith('.fa') || pathStr.endsWith('.fasta')
+                    } : []
 
     def alignment_args = [
         task.ext.dragen_license_args                  ?: "",
