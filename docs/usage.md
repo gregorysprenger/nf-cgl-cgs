@@ -151,35 +151,28 @@ To demultiplex samples, the demultiplexing parameter must be turned on and the l
 
 #### Illumina run directory
 
-The Illumina run directory that contains base call information of samples that need demultiplexing has to be specified. Use the following parameter to specify its location:
+The Illumina run directory (or directories) containing BCL data for demultiplexing must be specified. Multiple directories can be provided as a comma-separated list. When multiple directories are provided, they are matched to samples using the `Flowcell ID` in the samplesheet.
 
 ```bash
---illumina_rundir '[path to Illumina run directory]'
+--illumina_rundir '[path to run directory 1],[path to run directory 2]'
 ```
-
-> [!NOTE]
-> Multiple Illumina run directories can be provided as a comma-separated list.
-> For example: `--illumina_rundir '[path to first run directory],[path to second run directory]'`
 
 #### MGI samplesheet
 
-An Excel (.xlsx) samplesheet with information about the samples that needs to be demuliplexed must be created before running this pipeline. Use the following parameter to specify its location:
+An Excel (.xlsx) samplesheet with information about the samples to be demultiplexed must be provided. Multiple samplesheets can be supplied as a comma-separated list.
 
 ```bash
---input '[path to samplesheet file]'
+--input '[path to samplesheet 1],[path to samplesheet 2]'
 ```
-
-> [!NOTE]
-> Multiple MGI samplesheets can be provided as a comma-separated list.
-> For example: `--input '[path to first samplesheet],[path to second samplesheet]'`
 
 ##### MGI samplesheet example
 
 ```excel title="samplesheet.xlsx"
 Run Directory: /path/to/run/directory
 Lane    Flowcell ID    Content_Desc    Index    Exceptions
-2       ABC123         Sample_1        AAG-ACC
-2       ABC123         Sample_2        AGC-GAG
+2       237JMJLT3      Sample_1        AAG-ACC
+2       B237HVWLT3     Sample_2        AGC-GAG
+
 ```
 
 | Column          | Description                                                                         |

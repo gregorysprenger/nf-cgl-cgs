@@ -100,11 +100,12 @@ workflow JOINT_GENOTYPING {
         // and get all lines with sample name from joint called '*.vc_metrics.csv' file
         // and save to <sample name>.vc_metrics.csv file
         ch_small_variant_metrics = DRAGEN_JOINT_SMALL_VARIANTS.out.metrics.collect()
-                                    .combine(ch_dragen_output.map{ it.findAll{ it.toString().endsWith('vc_metrics.csv') } })
+                                    .combine(ch_dragen_output.flatMap{ it.findAll{ it.toString().endsWith('vc_metrics.csv') } })
                                     .map{
                                         joint, sample ->
-                                            def sample_name = sample.getSimpleName()
-                                            def joint_sample_lines = joint.text.findAll(".+${sample_name}.+")
+                                            def sample_name  = sample.getSimpleName().toString()
+                                            def joint_lines  = joint.readLines()
+                                            def sample_lines = sample.readLines()
 
                                             def indels_list = joint_sample_lines.findAll{
                                                                                     it.contains("Insertions") ||
@@ -116,16 +117,14 @@ workflow JOINT_GENOTYPING {
                                             def indel_percent = indels_list.collect{ it.split(',')[4].toFloat()   }.sum()
 
                                             def output = [
-                                                joint.text.findAll("VARIANT CALLER SUMMARY,,Number of samples,.+"),
-                                                sample.text.findAll("VARIANT CALLER SUMMARY,,Reads Processed,.+"),
-                                                sample.text.findAll("VARIANT CALLER SUMMARY,,Child Sample,.+"),
-                                                joint_sample_lines.collect{
-                                                    it.replaceAll(/.+,Percent Autosome Callability,.+/, sample.text.findAll("VARIANT CALLER POSTFILTER,.+,Percent Autosome Callability,.+")[0])
-                                                },
+                                                joint_lines.find{  it =~ "Number of samples" },
+                                                sample_lines.find{ it =~ "Reads Processed"   },
+                                                sample_lines.find{ it =~ "Child Sample"      },
+                                                joint_sample_lines,
                                                 "JOINT CALLER POSTFILTER,${sample_name},Number of Indels,${indel_count},${indel_percent.round(2)}"
-                                            ].flatten()
+                                            ].flatten().findAll().join('\n')
 
-                                            [ sample_name, output.join('\n') ]
+                                            [ sample_name, output ]
                                     }
 
         saveMetricFile(
@@ -148,7 +147,7 @@ workflow JOINT_GENOTYPING {
     //
     if (params.joint_genotype_sv) {
         DRAGEN_JOINT_SV (
-            ch_dragen_output.map{ it.findAll { it.toString().endsWith(".bam") } }.collect(),
+            ch_dragen_output.map{ it.findAll{ it.toString().endsWith(".bam") } }.collect(),
             ch_reference_dir
         )
         ch_versions        = ch_versions.mix(DRAGEN_JOINT_SV.out.versions)
@@ -185,7 +184,7 @@ workflow JOINT_GENOTYPING {
 
     emit:
     dragen_usage = ch_dragen_usage                   // channel: [ path(file) ]
-    metrics      = ch_metric_files                   // channel: [ path(file) ]
+    metric_files = ch_metric_files                   // channel: [ path(file) ]
     vcf_files    = BCFTOOLS_SPLIT_VCF.out.split_vcf  // channel: [ path(file) ]
     versions     = ch_versions                       // channel: [ path(file) ]
 

@@ -57,18 +57,16 @@ process DRAGEN_JOINT_SMALL_VARIANTS {
         small_variant_files.collect{ "--variant $it" }.join(' ')
     ].join(' ').trim()
     """
-    for file in "${projectDir}/assets/test_data/dragen_path/joint_genotyped_vcf/"*; do
-        cp "\$file" "\$(basename "\$file" | sed "s/joint_genotyped/${prefix.id}/")"
+    for file in "${projectDir}/assets/stub/joint_genotype/"*; do
+        cp "\$file" "\$(basename "\$file" | sed "s/CGS_stub/${prefix.id}/")"
     done
 
-    cat <<-END_CMDS > "${prefix.id}.txt"
-    ${exe_path}/bin/dragen \\
-        --force \\
-        ${dragen_args} \\
-        --output-directory \$PWD \\
-        --enable-joint-genotyping true \\
-        --output-file-prefix ${prefix.id}
-    END_CMDS
+    touch "${prefix.id}.vcf.gz" \\
+        "${prefix.id}.vcf.gz.tbi" \\
+        "${prefix.id}.vcf_metrics.csv" \\
+        "${prefix.id}.hard-filtered.vcf.gz" \\
+        "${prefix.id}.hard-filtered.vcf.gz.tbi" \\
+        joint_small_variants_usage.txt
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

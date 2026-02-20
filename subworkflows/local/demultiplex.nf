@@ -16,7 +16,7 @@ include { INPUT_CHECK as VERIFY_FASTQ_LIST } from '../../subworkflows/local/inpu
 
 // Illumina run directory
 ch_illumina_run_dir = params.illumina_rundir
-    ? Channel.fromPath(params.illumina_rundir.split(',') as List, type: 'dir', checkIfExists: true).collect()
+    ? Channel.fromPath(params.illumina_rundir.split(',') as List, type: 'dir', checkIfExists: true)
     : Channel.empty()
 
 /*
@@ -33,22 +33,20 @@ workflow DEMULTIPLEX {
     main:
     ch_versions = Channel.empty()
 
-    // Verify presence of Illumina run directory if there are samples to demultiplex
-    ch_samplesheet.map{
-        !it.isEmpty() && !params.illumina_rundir
-            ? error("Please specify the path to the directory containing the Illumina run data.")
-            : it
-    }
-
     // Flowcell specific demultiplex channel: [ val(flowcell), path(samplesheet), path(illumina run dir) ]
     ch_demux_data = ch_samplesheet
+                        .map{
+                            !it.isEmpty() && !params.illumina_rundir
+                                ? error("Please specify the path to the directory containing the Illumina run data.")
+                                : it
+                        }
                         .splitCsv(header: true, quote: '"')
                         .map{ [ it['Flowcell ID'].split('_').last().takeRight(9), it ] }
                         .groupTuple(by: 0)
                         .map{
                             flowcell, rows ->
                                 def columns = rows[0].keySet() as List
-                                def samplesheet = file("Samplesheet_${flowcell}.csv")
+                                def samplesheet = file("${workDir}/Samplesheet_${flowcell}.csv")
                                 samplesheet.text = columns.join(',') + '\n' +
                                     rows.collect{ r ->
                                         columns.collect{ c ->
@@ -59,7 +57,7 @@ workflow DEMULTIPLEX {
                                 [ flowcell, samplesheet ]
                         }
                         .join(
-                            ch_illumina_run_dir.map{ [ it[0].name.toString().split('_').last().takeRight(9), it[0] ] },
+                            ch_illumina_run_dir.map{ dir -> [ dir.name.toString().split('_').last().takeRight(9), dir ] },
                             by: 0
                         )
 
@@ -75,12 +73,16 @@ workflow DEMULTIPLEX {
     // MODULE: Demultiplex samples
     //
     DRAGEN_DEMULTIPLEX (
-        CREATE_DEMULTIPLEX_SAMPLESHEET.out.demux_data
-            .count()
-            .combine(CREATE_DEMULTIPLEX_SAMPLESHEET.out.demux_data)
+        CREATE_DEMULTIPLEX_SAMPLESHEET.out.samplesheet
+            .map{ flowcell, samplesheet -> [ flowcell, samplesheet ] }
+            .join(
+                ch_illumina_run_dir.map{ dir -> [ dir.name.toString().split('_').last().takeRight(9), dir ] },
+                by: 0
+            )
+            .combine(CREATE_DEMULTIPLEX_SAMPLESHEET.out.samplesheet.count())
             .map{
-                count, flowcell, samplesheet, illumina_run_dir ->
-                    def meta = ['flowcell': count > 1 ? flowcell : '']
+                flowcell, samplesheet, illumina_run_dir, num_samples ->
+                    def meta = ['flowcell': num_samples > 1 ? flowcell : null ]
                     [ meta, samplesheet, illumina_run_dir ]
             }
     )
