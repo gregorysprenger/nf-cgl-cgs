@@ -12,6 +12,7 @@ Table of contents:
     - [Batch joint genotyping](#batch-joint-genotyping)
     - [Save QC metrics in different location](#save-qc-metrics-in-different-location)
     - [Transfer data to AWS S3](#transfer-data-to-aws-s3)
+    - [Validation samples](#validation-samples)
   - [Running the pipeline](#running-the-pipeline)
   - [Core Nextflow arguments](#core-nextflow-arguments)
     - [`-profile`](#-profile)
@@ -156,6 +157,10 @@ The Illumina run directory that contains base call information of samples that n
 --illumina_rundir '[path to Illumina run directory]'
 ```
 
+> [!NOTE]
+> Multiple Illumina run directories can be provided as a comma-separated list.
+> For example: `--illumina_rundir '[path to first run directory],[path to second run directory]'`
+
 #### MGI samplesheet
 
 An Excel (.xlsx) samplesheet with information about the samples that needs to be demuliplexed must be created before running this pipeline. Use the following parameter to specify its location:
@@ -163,6 +168,10 @@ An Excel (.xlsx) samplesheet with information about the samples that needs to be
 ```bash
 --input '[path to samplesheet file]'
 ```
+
+> [!NOTE]
+> Multiple MGI samplesheets can be provided as a comma-separated list.
+> For example: `--input '[path to first samplesheet],[path to second samplesheet]'`
 
 ##### MGI samplesheet example
 
@@ -240,6 +249,14 @@ After the analysis is complete, the specified files can be synchronized to an AW
 --transfer_data true
 ```
 
+### Validation samples
+
+Use this parameter to treat all input samples as validation samples. This will align and joint genotype all samples, regardless of their accession format.
+
+```bash
+--validation_samples true
+```
+
 ## Running the pipeline
 
 The typical command for running the pipeline is as follows:
@@ -250,6 +267,7 @@ nextflow run \
   -r v1.0.0 \
   -profile docker \
   --input ./samplesheet.xlsx \
+  --illumina_rundir ./run_dir \
   --outdir ./results
 ```
 

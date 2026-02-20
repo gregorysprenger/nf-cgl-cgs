@@ -27,6 +27,7 @@ def parseArgs() -> argparse.Namespace:
     parser.add_argument(
         "-m",
         "--mgi_worksheet",
+        nargs="*",
         help="Path to MGI worksheet that contains sequencing information for each sample.",
     )
     parser.add_argument(
@@ -406,6 +407,13 @@ def save_genoox_metrics(
         )
         cleaned_mgi_worksheet = cleaned_mgi_worksheet[required_columns]
 
+    # Filter for SAMPLE ID values that are strings and start with 'G'
+    is_genoox_sample = cleaned_mgi_worksheet["SAMPLE ID"].str.startswith("G", na=False)
+    cleaned_mgi_worksheet = cleaned_mgi_worksheet[is_genoox_sample]
+
+    if cleaned_mgi_worksheet.empty:
+        return
+
     # Save as Excel spreadsheet
     cleaned_mgi_worksheet.to_excel(
         f"{outdir}/{filename_prefix}_Genoox.xlsx",
@@ -470,7 +478,12 @@ def main() -> None:
 
     # Check inputs
     inputdir = os.path.abspath(args.inputdir)
-    mgi_worksheet = read_file_to_dataframe(args.mgi_worksheet)
+    if args.mgi_worksheet:
+        mgi_worksheet = pd.concat(
+            [read_file_to_dataframe(f) for f in args.mgi_worksheet], ignore_index=True
+        )
+    else:
+        mgi_worksheet = read_file_to_dataframe(None)
     outdir = get_output_directory(args.outdir)
 
     if args.prefix:

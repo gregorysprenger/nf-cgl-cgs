@@ -19,7 +19,7 @@ include { TRANSFER_DATA_AWS                    } from '../modules/local/transfer
 
 // Original input file - has not gone through XLSX -> CSV conversion
 if (params.input) {
-    ch_input_file = Channel.fromPath(params.input).collect()
+    ch_input_file = Channel.fromPath(params.input.split(',') as List).collect()
 } else {
     ch_input_file = Channel.empty()
 }
@@ -193,6 +193,7 @@ workflow DRAGEN_CGS {
         DRAGEN_ALIGN_CONTROL (
             JOINT_GENOTYPING.out.dragen_usage
                     .collect()
+                    .ifEmpty("no_joint_genotyping")  // Proceed with control alignment even if no joint genotyping
                     .combine(ch_samples.filter{
                         meta, reads, fastq_list ->
                             meta?.acc instanceof String && !meta?.acc.startsWith("G")
@@ -270,7 +271,7 @@ workflow DRAGEN_CGS {
         )
         ch_versions = ch_versions.mix(TRANSFER_DATA_AWS.out.versions)
 
-        ch_transfer_logs = TRANSFER_DATA_AWS.out.transfer_logs
+        TRANSFER_DATA_AWS.out.transfer_logs
                             .collectFile(
                                 name: "transfer_data_aws.log",
                                 storeDir: "${params.outdir}/pipeline_info"

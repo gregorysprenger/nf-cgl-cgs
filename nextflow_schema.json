@@ -58,6 +58,12 @@
                     "description": "When true, treats all inputs as validation samples, aligning and joint genotyping regardless of accession format.",
                     "default": false
                 },
+                "min_fastq_size": {
+                    "type": "integer",
+                    "description": "Minimum expected size of FastQ files in MB. Files smaller than this will cause an error.",
+                    "default": 10,
+                    "fa_icon": "fas fa-hdd"
+                },
                 "email": {
                     "type": "string",
                     "description": "Email address for completion summary.",

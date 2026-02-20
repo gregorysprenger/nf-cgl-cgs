@@ -23,6 +23,25 @@ workflow INPUT_CHECK {
     ch_samples         = Channel.empty()
     ch_mgi_samplesheet = Channel.empty()
 
+    /*
+    ================================================================================
+                        Check if batch name is part of Illumina run directory
+    ================================================================================
+    */
+
+    if (params.batch_name && params.illumina_rundir && !params.validation_samples) {
+        def dateMatch = params.batch_name.find(/(\d{4}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01]))/)
+        if (dateMatch) {
+            def runDirName   = new File(params.illumina_rundir).name
+            def dateInRunDir = runDirName.split('_').any{ it.contains(dateMatch) }
+
+            if (!dateInRunDir) {
+                error "Date in batch name ('${dateMatch}') not found in Illumina run directory name ('${runDirName}'). Run directory parts checked: ${runDirName.split('_').join(', ')}. If this is a validation run, please set '--validation_samples' to true."
+            }
+        } else {
+            error "Could not find an 8-digit date (YYYYMMDD) in '--batch_name ${params.batch_name}'. If this is a validation run, please set '--validation_samples' to true"
+        }
+    }
 
     /*
     ================================================================================
@@ -67,6 +86,17 @@ workflow INPUT_CHECK {
 
                                 def R1 = file(it['Read1File'], checkIfExists: true)
                                 def R2 = file(it['Read2File'], checkIfExists: true)
+
+                                // Ensure FastQ size > min_fastq_size unless validation samples are used
+                                if (!params.validation_samples) {
+                                    def MIN_FASTQ_SIZE_BYTES = params.min_fastq_size * 1024 * 1024
+                                    if (R1.size() < MIN_FASTQ_SIZE_BYTES) {
+                                        error("FastQ file '${R1.name}' is ${R1.size()} bytes, less than ${params.min_fastq_size}MB minimum!")
+                                    }
+                                    if (R2.size() < MIN_FASTQ_SIZE_BYTES) {
+                                        error("FastQ file '${R2.name}' is ${R2.size()} bytes, less than ${params.min_fastq_size}MB minimum!")
+                                    }
+                                }
 
                                 def regexPattern = /\w\d{2}-\d+/
                                 def matcher = it.RGSM =~ regexPattern
