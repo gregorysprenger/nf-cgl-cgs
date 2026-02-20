@@ -107,18 +107,14 @@ workflow JOINT_GENOTYPING {
                                             def joint_lines  = joint.readLines()
                                             def sample_lines = sample.readLines()
 
-                                            def autosome_line = sample_lines.find{ it =~ "Percent Autosome Callability" }
-                                            def indel_count   = 0
-                                            def indel_percent = 0.0
+                                            def indels_list = joint_sample_lines.findAll{
+                                                                                    it.contains("Insertions") ||
+                                                                                    it.contains("Deletions" ) ||
+                                                                                    it.contains("Indels")
+                                                                                }
 
-                                            def joint_sample_lines = joint_lines.findAll{ line -> line.split(',').contains(sample_name) }.collect{ line ->
-                                                if (line =~ "Insertions|Deletions|Indels") {
-                                                    def parts      = line.split(',')
-                                                    indel_count   += parts[3].toInteger()
-                                                    indel_percent += parts[4].toFloat()
-                                                }
-                                                (autosome_line && line =~ "Percent Autosome Callability") ? autosome_line : line
-                                            }
+                                            def indel_count   = indels_list.collect{ it.split(',')[3].toInteger() }.sum()
+                                            def indel_percent = indels_list.collect{ it.split(',')[4].toFloat()   }.sum()
 
                                             def output = [
                                                 joint_lines.find{  it =~ "Number of samples" },

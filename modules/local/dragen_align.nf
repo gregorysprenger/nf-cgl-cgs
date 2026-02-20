@@ -7,7 +7,7 @@ process DRAGEN_ALIGN {
         : 'dockerreg01.accounts.ad.wustl.edu/cgl/dragen:v4.3.6' }"
 
     input:
-    tuple val(meta), path(reads, stageAs: "fastq_files/*"), path(fastq_list)
+    tuple val(meta), path(reads, stageAs: "fastq_files/*"), path(fastq_list), path(alignment_file)
     tuple val(intermediate_directory_value), path(intermediate_directory)
     tuple val(qc_contamination_value)      , path(qc_contamination_file)
     path(adapter1_file)
@@ -15,6 +15,7 @@ process DRAGEN_ALIGN {
     path(dbsnp_file)
     path(qc_coverage_region_file)
     path(reference_directory)
+    path(cram_reference_file)
 
     output:
     tuple val(meta), path("${meta.id}/*")  , emit: dragen_output
@@ -26,13 +27,31 @@ process DRAGEN_ALIGN {
     task.ext.when == null || task.ext.when
 
     script:
-    def exe_path       = ['awsbatch','dragenaws'].any{ workflow.profile.contains(it) } ? "/opt/edico" : "/opt/dragen/4.3.6"
+    def exe_path = ['awsbatch','dragenaws'].any{ workflow.profile.contains(it) } ? "/opt/edico" : "/opt/dragen/4.3.6"
+
+    def input
+    if (alignment_file && alignment_file.name.toLowerCase().endsWith('.bam')) {
+        input = "--bam-input ${alignment_file}"
+    } else if (alignment_file && alignment_file.name.toLowerCase().endsWith('.cram')) {
+        input = "--cram-input ${alignment_file}"
+    } else if (fastq_list && fastq_list.name.toLowerCase().endsWith('.csv')) {
+        input = "--fastq-list ${fastq_list} --fastq-list-sample-id ${meta.id}"
+    } else {
+        error("Input file is not a BAM, CRAM, or CSV file.")
+    }
+
+    def cram_ref = cram_reference_file ? cram_reference_file.find{
+                        def pathStr = it.toString().toLowerCase()
+                        pathStr.endsWith('.fa') || pathStr.endsWith('.fasta')
+                    } : []
+
     def alignment_args = [
         task.ext.dragen_license_args                  ?: "",
         meta.sex?.toLowerCase() in ['male', 'female'] ? "--sample-sex ${meta.sex}"                                   : "",
         dbsnp_file                                    ? "--dbsnp ${dbsnp_file}"                                      : "",
         meta.create_gvcf                              ? "--vc-emit-ref-confidence GVCF"                              : "",
         reference_directory                           ? "--ref-dir ${reference_directory}"                           : "",
+        cram_ref                                      ? "--cram-reference ${cram_ref}"                               : "",
         adapter1_file                                 ? "--trim-adapter-read1 ${adapter1_file}"                      : "",
         adapter2_file                                 ? "--trim-adapter-read2 ${adapter2_file}"                      : "",
         qc_contamination_file                         ? "--qc-cross-cont-vcf ${qc_contamination_file}"               : "",
@@ -45,26 +64,25 @@ process DRAGEN_ALIGN {
     mkdir -p ${meta.id}
 
     ${exe_path}/bin/dragen \\
-        --fastq-list ${fastq_list} \\
-        --fastq-list-sample-id ${meta.id} \\
-        --output-file-prefix ${meta.id} \\
-        --output-directory ${meta.id} \\
-        --force \\
+        ${input} \\
         ${alignment_args} \\
-        --enable-sv true \\
-        --enable-cnv true \\
-        --enable-sort true \\
-        --output-format BAM \\
-        --enable-map-align true \\
-        --read-trimmers adapter \\
-        --gc-metrics-enable true \\
-        --sv-output-contigs true \\
-        --enable-bam-indexing true \\
-        --enable-variant-caller true \\
-        --enable-map-align-output true \\
-        --enable-duplicate-marking true \\
-        --qc-coverage-ignore-overlaps true \\
         --cnv-enable-self-normalization true \\
+        --enable-bam-indexing true \\
+        --enable-cnv true \\
+        --enable-duplicate-marking true \\
+        --enable-map-align true \\
+        --enable-map-align-output true \\
+        --enable-sort true \\
+        --enable-sv true \\
+        --enable-variant-caller true \\
+        --force \\
+        --gc-metrics-enable true \\
+        --output-directory ${meta.id} \\
+        --output-file-prefix ${meta.id} \\
+        --output-format BAM \\
+        --qc-coverage-ignore-overlaps true \\
+        --read-trimmers adapter \\
+        --sv-output-contigs true \\
         --variant-annotation-assembly GRCh38
 
     # Create md5sum for files
@@ -86,13 +104,31 @@ process DRAGEN_ALIGN {
     """
 
     stub:
-    def exe_path       = ['awsbatch','dragenaws'].any{ workflow.profile.contains(it) } ? "/opt/edico" : "/opt/dragen/4.3.6"
+    def exe_path = ['awsbatch','dragenaws'].any{ workflow.profile.contains(it) } ? "/opt/edico" : "/opt/dragen/4.3.6"
+
+    def input
+    if (alignment_file && alignment_file.name.toLowerCase().endsWith('.bam')) {
+        input = "--bam-input ${alignment_file}"
+    } else if (alignment_file && alignment_file.name.toLowerCase().endsWith('.cram')) {
+        input = "--cram-input ${alignment_file}"
+    } else if (fastq_list && fastq_list.name.toLowerCase().endsWith('.csv')) {
+        input = "--fastq-list ${fastq_list} --fastq-list-sample-id ${meta.id}"
+    } else {
+        error("Input file is not a BAM, CRAM, or CSV file.")
+    }
+
+    def cram_ref = cram_reference_file ? cram_reference_file.find{
+                        def pathStr = it.toString().toLowerCase()
+                        pathStr.endsWith('.fa') || pathStr.endsWith('.fasta')
+                    } : []
+
     def alignment_args = [
         task.ext.dragen_license_args                  ?: "",
         meta.sex?.toLowerCase() in ['male', 'female'] ? "--sample-sex ${meta.sex}"                                   : "",
         dbsnp_file                                    ? "--dbsnp ${dbsnp_file}"                                      : "",
         meta.create_gvcf                              ? "--vc-emit-ref-confidence GVCF"                              : "",
         reference_directory                           ? "--ref-dir ${reference_directory}"                           : "",
+        cram_ref                                      ? "--cram-reference ${cram_ref}"                               : "",
         adapter1_file                                 ? "--trim-adapter-read1 ${adapter1_file}"                      : "",
         adapter2_file                                 ? "--trim-adapter-read2 ${adapter2_file}"                      : "",
         qc_contamination_file                         ? "--qc-cross-cont-vcf ${qc_contamination_file}"               : "",
@@ -118,26 +154,25 @@ process DRAGEN_ALIGN {
 
     cat <<-END_CMDS > "${meta.id}/${meta.id}.txt"
     ${exe_path}/bin/dragen \\
-        --fastq-list ${fastq_list} \\
-        --fastq-list-sample-id ${meta.id} \\
-        --output-file-prefix ${meta.id} \\
-        --output-directory ${meta.id} \\
-        --force \\
+        ${input} \\
         ${alignment_args} \\
-        --enable-sv true \\
-        --enable-cnv true \\
-        --enable-sort true \\
-        --output-format BAM \\
-        --enable-map-align true \\
-        --read-trimmers adapter \\
-        --gc-metrics-enable true \\
-        --sv-output-contigs true \\
-        --enable-bam-indexing true \\
-        --enable-variant-caller true \\
-        --enable-map-align-output true \\
-        --enable-duplicate-marking true \\
-        --qc-coverage-ignore-overlaps true \\
         --cnv-enable-self-normalization true \\
+        --enable-bam-indexing true \\
+        --enable-cnv true \\
+        --enable-duplicate-marking true \\
+        --enable-map-align true \\
+        --enable-map-align-output true \\
+        --enable-sort true \\
+        --enable-sv true \\
+        --enable-variant-caller true \\
+        --force \\
+        --gc-metrics-enable true \\
+        --output-directory ${meta.id} \\
+        --output-file-prefix ${meta.id} \\
+        --output-format BAM \\
+        --qc-coverage-ignore-overlaps true \\
+        --read-trimmers adapter \\
+        --sv-output-contigs true \\
         --variant-annotation-assembly GRCh38
 
     # Create md5sum for files

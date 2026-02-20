@@ -93,12 +93,40 @@ workflow DEMULTIPLEX {
     //
     VERIFY_FASTQ_LIST (
         [],
-        DRAGEN_DEMULTIPLEX.out.fastq_list
+        DRAGEN_DEMULTIPLEX.out.fastq_list,
+        Channel.empty()
     )
     ch_versions = ch_versions.mix(VERIFY_FASTQ_LIST.out.versions)
 
+    // Use 'params.demux_outdir' path for paths in 'fastq_list.csv' and save
+    if (params.demux_outdir) {
+        def batch_name = params.batch_name ?: new java.util.Date().format('yyyyMMdd') + '_CGS'
+
+        ch_fastq_list = VERIFY_FASTQ_LIST.out.samples
+            .map{ meta, reads, fastq_list, alignment_file -> fastq_list }
+            .splitCsv( header: true )
+            .map{
+                row ->
+                    def read1 = row['Read1File'].split('/')[-2..-1].join('/')
+                    def read2 = row['Read2File'].split('/')[-2..-1].join('/')
+
+                    // Get absolute path of 'params.demux_outdir'
+                    def demux_outdir = file(params.demux_outdir).toAbsolutePath().toString()
+
+                    row['Read1File'] = "${demux_outdir}/${read1}"
+                    row['Read2File'] = "${demux_outdir}/${read2}"
+
+                    return "${row.keySet().join(',')}\n${row.values().join(',')}\n"
+            }
+            .collectFile(
+                name      : "fastq_list.csv",
+                keepHeader: true,
+                storeDir  : "${params.demux_outdir}/${batch_name}/Reports/"
+            )
+    }
+
     emit:
-    samples  = VERIFY_FASTQ_LIST.out.samples  // channel: [ val(meta), path(file) ]
+    samples  = VERIFY_FASTQ_LIST.out.samples  // channel: [ val(meta), path(reads), path(fastq_list), path(alignment_file) ]
     versions = ch_versions                    // channel: [ path(file) ]
 
 }

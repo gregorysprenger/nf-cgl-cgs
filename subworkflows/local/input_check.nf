@@ -5,6 +5,7 @@
 */
 
 include { CONVERT_XLSX_TO_CSV } from '../../modules/local/convert_xlsx_to_csv'
+include { UPDATE_SAMPLE_NAME  } from '../../modules/local/update_sample_name'
 
 /*
 ========================================================================================
@@ -17,11 +18,13 @@ workflow INPUT_CHECK {
     take:
     mgi_samplesheet  //  string: Path to input MGI samplesheet
     ch_fastq_list    //  channel: [ path(file) ]
+    ch_bam_cram_list //  channel: [ path(file) ]
 
     main:
-    ch_versions        = Channel.empty()
-    ch_samples         = Channel.empty()
-    ch_mgi_samplesheet = Channel.empty()
+    ch_versions         = Channel.empty()
+    ch_samples          = Channel.empty()
+    ch_bam_cram_samples = Channel.empty()
+    ch_mgi_samplesheet  = Channel.empty()
 
     /*
     ================================================================================
@@ -50,17 +53,18 @@ workflow INPUT_CHECK {
     */
 
     if (mgi_samplesheet) {
-        samplesheet = Channel.fromPath(mgi_samplesheet.split(',') as List, checkIfExists: true)
+        mgi_files   = mgi_samplesheet.split(',') as List
+        samplesheet = Channel.fromPath(mgi_files, checkIfExists: true)
 
         // Verify MGI samplesheet has a file extension in [xlsx,csv,tsv]
-        if (samplesheet.map{ hasExtension(it, 'xlsx') }) {
+        if (mgi_files.any{ hasExtension(it, '.xlsx') }) {
             CONVERT_XLSX_TO_CSV (
                 samplesheet
             )
             ch_versions        = ch_versions.mix(CONVERT_XLSX_TO_CSV.out.versions)
             ch_mgi_samplesheet = ch_mgi_samplesheet.mix(CONVERT_XLSX_TO_CSV.out.csv)
 
-        } else if (samplesheet.any{ hasExtension(it, 'csv') || hasExtension(it, 'tsv') }) {
+        } else if (mgi_files.any{ hasExtension(it, '.csv') || hasExtension(it, '.tsv') }) {
             ch_mgi_samplesheet = ch_mgi_samplesheet.mix(samplesheet)
         } else {
             error("MGI samplesheet input does not end in '.{xlsx,csv,tsv}'!")
@@ -73,16 +77,16 @@ workflow INPUT_CHECK {
     ================================================================================
     */
 
-    // Process the fastq list to create samples channel and the updated fastq list for alignment
-    ch_processed_fastq = ch_fastq_list
-                            .filter{ it.size() > 0 }
-                            .flatMap{ fastq_list_file ->
-                                def data = parseFastqList(fastq_list_file)
-                                def requiredColumns = ['RGID', 'RGSM', 'RGLB', 'Lane', 'Read1File', 'Read2File']
-                                data.collect{ row ->
-                                    if (!row.keySet().containsAll(requiredColumns)) {
-                                        error("Missing required columns in input FastQ list!")
-                                    }
+    ch_samples = ch_samples.mix(
+                    ch_fastq_list
+                        .filter{ it != [] }
+                        .flatMap{
+                            def data = parseInputList(it)
+                            def requiredColumns = ['RGID', 'RGSM', 'RGLB', 'Lane', 'Read1File', 'Read2File']
+                            data.collect{
+                                if (!it.keySet().containsAll(requiredColumns)) {
+                                    error("Missing required columns in input FastQ list!")
+                                }
 
                                     def R1 = file(row['Read1File'], checkIfExists: true)
                                     def R2 = file(row['Read2File'], checkIfExists: true)
@@ -97,38 +101,40 @@ workflow INPUT_CHECK {
                                         }
                                     }
 
-                                    def regexPattern = /\w\d{2}-\d+/
-                                    def matcher = row.RGSM =~ regexPattern
-                                    def acc = matcher.find() ? matcher.group(0) : row.RGSM
-                                    def meta = ['id': row.RGSM, 'acc': acc, 'RGSM': row.RGSM]
+                                def regexPattern = /\w\d{2}-\d+/
+                                def matcher = it.RGSM =~ regexPattern
+                                def acc = matcher.find() ? matcher.group(0) : it.RGSM
+                                def meta = [
+                                    'id'  : it.RGSM,
+                                    'acc' : acc,
+                                    'RGSM': it.RGSM
+                                ]
 
-                                    // Create a new map for the updated fastq list to ensure column order
-                                    def updated_row = [
-                                        'RGID': row.RGID,
-                                        'RGSM': row.RGSM,
-                                        'RGLB': row.RGLB,
-                                        'Lane': row.Lane,
-                                        'Read1File': "fastq_files/${R1.name}",
-                                        'Read2File': "fastq_files/${R2.name}"
-                                    ]
-
-                                    [ meta, [R1, R2], updated_row ]
-                                }
+                                [ meta.acc, meta, [ R1, R2 ] ]
                             }
-                            .multiMap{ meta, reads, updated_row ->
-                                samples: [ meta, reads ]
-                                csv_rows: updated_row
-                            }
+                        }
+                        .groupTuple()
+                        .combine(
+                            ch_fastq_list
+                                .filter{ it != [] }
+                                .map{
+                                    def data = parseInputList(it)
+                                    data.each{
+                                        if (it) {
+                                            it['Read1File'] = "fastq_files/${it['Read1File'].split('/')[-1]}"
+                                            it['Read2File'] = "fastq_files/${it['Read2File'].split('/')[-1]}"
+                                        }
+                                    }
 
-    ch_updated_fastq_list = ch_processed_fastq.csv_rows
-                                .collect()
-                                .map{ rows ->
-                                    if (rows.isEmpty()) return  [ [], [] ]
-                                    def header = rows[0].keySet().join(',')
-                                    def content = rows.collect{ it.values().join(',') }.join('\n')
-                                    [ [header], [content] ]
+                                    if (data) {
+                                        def header = data[0].keySet().join(',')
+                                        def content = data.collect { it.values().join(',') }.join('\n')
+
+                                        [ [ header ], [ content ] ]
+                                    } else {
+                                        [ [], [] ]
+                                    }
                                 }
-                                .filter{ it != [ [], [] ] }
                                 .flatten()
                                 .collectFile(
                                     newLine : true,
@@ -136,15 +142,67 @@ workflow INPUT_CHECK {
                                     storeDir: "${workflow.workDir}",
                                     name    : "updated_fastq_list.csv",
                                 )
+                        )
+                        .map{ id, meta, reads, fastq_list -> [ meta[0], reads.flatten(), fastq_list, [] ] }
+                )
 
-    ch_samples = ch_processed_fastq.samples
-                    .map{ meta, reads -> [ meta.id, meta, reads ] }
-                    .groupTuple()
-                    .map{ id, metas, reads -> [ metas[0], reads.flatten() ] }
-                    .combine(ch_updated_fastq_list)
+    /*
+    ================================================================================
+                        Process input BAM/CRAM list
+    ================================================================================
+    */
+
+    ch_bam_cram_samples = ch_bam_cram_samples.mix(
+                            ch_bam_cram_list
+                                .filter{ it != [] }
+                                .flatMap{
+                                    def data = parseInputList(it)
+
+                                    // Verify CRAM reference file is provided if a CRAM file is in the input samplesheet
+                                    if (data.any{ row -> row.containsKey('File') && hasExtension(row['File'], '.cram') } && !params.cram_reference) {
+                                        error("A CRAM reference file must be provided when using a CRAM file as input.")
+                                    }
+
+                                    def requiredColumns = ['ID', 'File']
+                                    data.collect{
+                                        if (!it.keySet().containsAll(requiredColumns)) {
+                                            error("Missing required columns in input BAM/CRAM list!")
+                                        }
+
+                                        def alignment_file = file(it['File'], checkIfExists: true)
+
+                                        // Ensure BAM/CRAM size > min_bam_cram_size unless validation samples are used
+                                        if (!params.validation_samples) {
+                                            def MIN_BAM_CRAM_SIZE_BYTES = params.min_bam_cram_size * 1024 * 1024
+                                            if (alignment_file.size() < MIN_BAM_CRAM_SIZE_BYTES) {
+                                                error("BAM/CRAM file '${alignment_file.name}' is ${alignment_file.size()} bytes, less than ${params.min_bam_cram_size}MB minimum!")
+                                            }
+                                        }
+
+                                        if (hasExtension(alignment_file, '.bam') || hasExtension(alignment_file, '.cram')) {
+                                            def regexPattern = /\w\d{2}-\d+/
+                                            def matcher = it['ID'] =~ regexPattern
+                                            def acc = matcher.find() ? matcher.group(0) : it['ID']
+
+                                            [ ["id": it['ID'], "acc": acc], alignment_file ]
+                                        } else {
+                                            error("Input file is not a BAM or CRAM file.")
+                                        }
+                                    }
+                                }
+                        )
+
+    UPDATE_SAMPLE_NAME (
+        ch_bam_cram_samples
+    )
+    ch_versions = ch_versions.mix(UPDATE_SAMPLE_NAME.out.versions)
+
+    ch_samples = ch_samples.mix(
+        UPDATE_SAMPLE_NAME.out.updated_alignment.map{ meta, alignment_file -> [ meta, [], [], alignment_file ] }
+    )
 
     emit:
-    samples         = ch_samples          // channel: [ val(sample_info), path(reads), path(fastq_list) ]
+    samples         = ch_samples          // channel: [ val(sample_info), path(reads), path(fastq_list), path(alignment_file) ]
     mgi_samplesheet = ch_mgi_samplesheet  // channel: [ path(file) ]
     versions        = ch_versions         // channel: [ path(file) ]
 
@@ -161,9 +219,9 @@ def hasExtension(it, extension) {
     it.toString().toLowerCase().endsWith(extension.toLowerCase())
 }
 
-// Parse FastQ list
-def parseFastqList(file) {
-    def separator = file.endsWith("tsv") ? '\t' : ','
+// Parse FastQ or BAM/CRAM list
+def parseInputList(file) {
+    def separator = hasExtension(file, '.tsv') ? '\t' : ','
     def lines = file.readLines()
     if (lines.isEmpty()) {
         return []

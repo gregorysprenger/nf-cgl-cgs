@@ -37,6 +37,13 @@ if (params.refdir) {
     ch_reference_dir = []
 }
 
+// CRAM reference file
+if (params.cram_reference) {
+    ch_cram_reference_file = Channel.fromPath("${params.cram_reference}*", checkIfExists: true).collect()
+} else {
+    ch_cram_reference_file = []
+}
+
 // DRAGEN dbSNP annotation VCF
 if (params.dbsnp) {
     ch_dbsnp_file = Channel.fromPath(params.dbsnp, checkIfExists: true).collect()
@@ -93,7 +100,7 @@ workflow DRAGEN_CGS {
 
     take:
     ch_samplesheet  // channel: [ path(file) ]
-    ch_samples      // channel: [ val(meta), path(file) ]
+    ch_samples      // channel: [ val(meta), path(reads), path(fastq_list), path(alignment_file) ]
 
     main:
     ch_versions       = Channel.empty()
@@ -114,7 +121,7 @@ workflow DRAGEN_CGS {
     // Fetch gender for samples
     if (params.sample_info) {
         ch_samples = ch_samples
-                        .map{ meta, reads, fastq_list -> [ meta?.acc ?: meta?.id, meta, reads, fastq_list ] }
+                        .map{ meta, reads, fastq_list, alignment_file -> [ meta?.acc ?: meta?.id, meta, reads, fastq_list, alignment_file ] }
                         .join(
                             ch_sample_information
                                 .splitCsv(header: true)
@@ -123,13 +130,13 @@ workflow DRAGEN_CGS {
                         )
                         .filter{ it[1] != null }
                         .map{
-                            acc, meta, reads, fastq_list, gender ->
+                            acc, meta, reads, fastq_list, alignment_file, gender ->
                                 if (meta) {
                                     def meta_new = meta.clone()
                                     meta_new['sex']   = (gender == 'm' || gender == 'male')   ? 'male'   :
                                                         (gender == 'f' || gender == 'female') ? 'female' : ''
 
-                                    [ meta_new, reads, fastq_list ]
+                                    [ meta_new, reads, fastq_list, alignment_file ]
                                 }
                         }
     }
@@ -138,21 +145,21 @@ workflow DRAGEN_CGS {
     ch_samples = ch_samples
                     .combine(ch_samples.count().map{ it > 1 && params.create_gvcf })
                     .map{
-                        meta, reads, fastq_list, create_gvcf ->
+                        meta, reads, fastq_list, alignment_file, create_gvcf ->
                             def meta_new = meta.clone()
                             meta_new['create_gvcf'] = create_gvcf
 
-                            [ meta_new, reads, fastq_list ]
+                            [ meta_new, reads, fastq_list, alignment_file ]
                     }
 
     // Verify no duplicate samples exist
     ch_samples
-        .map{ meta, reads, fastq_list -> [ reads ] }
+        .map{ meta, reads, fastq_list, alignment_file -> meta.id }
         .collect()
         .map{
-            def duplicates = it.findAll{ sample -> it.count(sample) > 1 }.unique()
+            def duplicates = it.findAll{ id -> it.count(id) > 1 }.unique()
             if (duplicates) {
-                error "Duplicate entries found in channel:\n${duplicates.flatten()}"
+                error "Duplicate sample IDs found in channel:\n${duplicates.join('\n')}"
             }
         }
 
@@ -161,7 +168,7 @@ workflow DRAGEN_CGS {
     //
     DRAGEN_ALIGN (
         ch_samples.filter{
-            meta, reads, fastq_list ->
+            meta, reads, fastq_list, alignment_file ->
                 params.validation_samples || (meta?.acc instanceof String && meta?.acc.startsWith("G"))
         },
         ch_intermediate_dir,
@@ -170,7 +177,8 @@ workflow DRAGEN_CGS {
         ch_adapter2_file,
         ch_dbsnp_file,
         ch_qc_coverage_region,
-        ch_reference_dir
+        ch_reference_dir,
+        ch_cram_reference_file
     )
     ch_versions       = ch_versions.mix(DRAGEN_ALIGN.out.versions)
     ch_dragen_usage   = ch_dragen_usage.mix(DRAGEN_ALIGN.out.usage)
@@ -195,13 +203,13 @@ workflow DRAGEN_CGS {
                     .collect()
                     .ifEmpty("no_joint_genotyping")  // Proceed with control alignment even if no joint genotyping
                     .combine(ch_samples.filter{
-                        meta, reads, fastq_list ->
+                        meta, reads, fastq_list, alignment_file ->
                             meta?.acc instanceof String && !meta?.acc.startsWith("G")
                     })
                     .map{
-                        done, meta, reads, fastq_list ->
+                        done, meta, reads, fastq_list, alignment_file ->
                             meta['create_gvcf'] = false
-                            [ meta, reads, fastq_list ]
+                            [ meta, reads, fastq_list, alignment_file ]
                     },
             ch_intermediate_dir,
             ch_qc_cross_contamination,
@@ -209,7 +217,8 @@ workflow DRAGEN_CGS {
             ch_adapter2_file,
             ch_dbsnp_file,
             ch_qc_coverage_region,
-            ch_reference_dir
+            ch_reference_dir,
+            ch_cram_reference_file
         )
         ch_versions       = ch_versions.mix(DRAGEN_ALIGN_CONTROL.out.versions)
         ch_dragen_usage   = ch_dragen_usage.mix(DRAGEN_ALIGN_CONTROL.out.usage)
