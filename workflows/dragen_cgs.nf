@@ -101,7 +101,7 @@ workflow DRAGEN_CGS {
     ch_dragen_metrics = Channel.empty()
 
     // Validate ris2 profile compatibility and queue settings
-    if (workflow.profile?.toString().split(',')?.contains('ris2')) {
+    if (workflow.profile?.tokenize(',')?.contains('ris2')) {
         if (workflow.profile.tokenize(',').intersect(['dragen2', 'dragen4', 'dragen5', 'dragen6']).size() >= 1) {
             error("Profile conflict: 'ris2' (Slurm) cannot be used with 'dragen2', 'dragen4', 'dragen5' or 'dragen6' profiles. Please use 'ris' profile instead or change the DRAGEN profile.")
         }
