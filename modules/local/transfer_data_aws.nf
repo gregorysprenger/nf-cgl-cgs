@@ -19,10 +19,12 @@ process TRANSFER_DATA_AWS {
     script:
     def prefix = task.ext.prefix
     """
+    export RCLONE_CONFIG_SOURCE_S3_TYPE=s3
     export RCLONE_CONFIG_SOURCE_S3_REGION=\$AWS_REGION
     export RCLONE_CONFIG_SOURCE_S3_ACCESS_KEY_ID=\$AWS_ACCESS_KEY
     export RCLONE_CONFIG_SOURCE_S3_SECRET_ACCESS_KEY=\$AWS_SECRET_KEY
 
+    export RCLONE_CONFIG_DEST_S3_TYPE=s3
     export RCLONE_CONFIG_DEST_S3_REGION=\$GNX_REGION
     export RCLONE_CONFIG_DEST_S3_ACCESS_KEY_ID=\$GNX_ACCESS_KEY
     export RCLONE_CONFIG_DEST_S3_SECRET_ACCESS_KEY=\$GNX_SECRET_KEY
@@ -32,36 +34,18 @@ process TRANSFER_DATA_AWS {
         BATCH_DEST_S3_FOLDER="\${BATCH_DEST_S3_FOLDER}${meta.id}/"
     fi
 
-    mkdir -p lists
-
-    # Group S3 files & write list files
-    declare -A listfiles
-    for full_path in ${s3_files.join(' ')}; do
-        dir=\$(dirname "\$full_path")
-        [[ "\$dir" != */ ]] && dir="\${dir}/"
-        file=\$(basename "\$full_path")
-
-        safe_key=\$(echo "\$dir" | sed 's/[^a-zA-Z0-9]/_/g')
-        list_file="lists/\${safe_key}.txt"
-
-        if [ -z "\${listfiles[\$dir]+x}" ]; then
-            listfiles[\$dir]=\$list_file
-            : > "\$list_file"
-        fi
-
-        printf '%s\\n' "\$file" >> "\${listfiles[\$dir]}"
-    done
-
-    # Copy each directory’s files
-    for dir in "\${!listfiles[@]}"; do
-        list_file="\${listfiles[\$dir]}"
-        nfiles=\$(wc -l < "\$list_file" | tr -d '[:space:]')
-        echo "Directory: \$dir (\$nfiles files)"
+    # Create a single file list for all S3 files to transfer
+    if [ ${s3_files.size()} -gt 0 ]; then
+        echo "Preparing to transfer ${s3_files.size()} S3 files..."
+        for full_path in ${s3_files.join(' ')}; do
+            # Remove the remote name 'source_s3:' from the path for the --files-from list
+            echo "\${full_path#source_s3:}" >> s3_files_to_transfer.txt
+        done
 
         rclone copy \\
-            "\$dir" \\
+            source_s3: \\
             "\$BATCH_DEST_S3_FOLDER" \\
-            --files-from "\$list_file" \\
+            --files-from s3_files_to_transfer.txt \\
             --progress \\
             --retries 10 \\
             --no-traverse \\
@@ -69,8 +53,8 @@ process TRANSFER_DATA_AWS {
             --transfers ${task.cpus} \\
             --log-file transfer_data_aws.log \\
             --s3-location-constraint "\${RCLONE_CONFIG_DEST_S3_REGION}" \\
-            || error "Rclone failed for \$dir"
-    done
+            || { echo "Rclone failed for S3 files."; cat transfer_data_aws.log; exit 1; }
+    fi
 
     # Copy local files if present
     if [[ -d "local_files" ]] && [[ -n "${local_files}" ]]; then
@@ -86,7 +70,7 @@ process TRANSFER_DATA_AWS {
             --transfers ${task.cpus} \\
             --log-file transfer_data_aws.log \\
             --s3-location-constraint "\${RCLONE_CONFIG_DEST_S3_REGION}" \\
-            || error "Rclone failed for local_files/*"
+            || { echo "Rclone failed for local_files/*."; cat transfer_data_aws.log; exit 1; }
     fi
 
     echo "Finished sample: ${meta.id}"
@@ -100,10 +84,12 @@ process TRANSFER_DATA_AWS {
     stub:
     def prefix = task.ext.prefix
     """
+    export RCLONE_CONFIG_SOURCE_S3_TYPE=s3
     export RCLONE_CONFIG_SOURCE_S3_REGION=\$AWS_REGION
     export RCLONE_CONFIG_SOURCE_S3_ACCESS_KEY_ID=\$AWS_ACCESS_KEY
     export RCLONE_CONFIG_SOURCE_S3_SECRET_ACCESS_KEY=\$AWS_SECRET_KEY
 
+    export RCLONE_CONFIG_DEST_S3_TYPE=s3
     export RCLONE_CONFIG_DEST_S3_REGION=\$GNX_REGION
     export RCLONE_CONFIG_DEST_S3_ACCESS_KEY_ID=\$GNX_ACCESS_KEY
     export RCLONE_CONFIG_DEST_S3_SECRET_ACCESS_KEY=\$GNX_SECRET_KEY
@@ -113,36 +99,18 @@ process TRANSFER_DATA_AWS {
         BATCH_DEST_S3_FOLDER="\${BATCH_DEST_S3_FOLDER}${meta.id}/"
     fi
 
-    mkdir -p lists
-
-    # Group S3 files & write list files
-    declare -A listfiles
-    for full_path in ${s3_files.join(' ')}; do
-        dir=\$(dirname "\$full_path")
-        [[ "\$dir" != */ ]] && dir="\${dir}/"
-        file=\$(basename "\$full_path")
-
-        safe_key=\$(echo "\$dir" | sed 's/[^a-zA-Z0-9]/_/g')
-        list_file="lists/\${safe_key}.txt"
-
-        if [ -z "\${listfiles[\$dir]+x}" ]; then
-            listfiles[\$dir]=\$list_file
-            : > "\$list_file"
-        fi
-
-        printf '%s\\n' "\$file" >> "\${listfiles[\$dir]}"
-    done
-
-    # Copy each directory’s files
-    for dir in "\${!listfiles[@]}"; do
-        list_file="\${listfiles[\$dir]}"
-        nfiles=\$(wc -l < "\$list_file" | tr -d '[:space:]')
-        echo "Directory: \$dir (\$nfiles files)"
+    # Create a single file list for all S3 files to transfer
+    if [ ${s3_files.size()} -gt 0 ]; then
+        echo "Preparing to transfer ${s3_files.size()} S3 files..."
+        for full_path in ${s3_files.join(' ')}; do
+            # Remove the remote name 'source_s3:' from the path for the --files-from list
+            echo "\${full_path#source_s3:}" >> s3_files_to_transfer.txt
+        done
 
         rclone copy \\
-            "\$dir" \\
+            source_s3: \\
             "\$BATCH_DEST_S3_FOLDER" \\
-            --files-from "\$list_file" \\
+            --files-from s3_files_to_transfer.txt \\
             --progress \\
             --retries 10 \\
             --no-traverse \\
@@ -150,9 +118,8 @@ process TRANSFER_DATA_AWS {
             --transfers ${task.cpus} \\
             --log-file transfer_data_aws.log \\
             --s3-location-constraint "\${RCLONE_CONFIG_DEST_S3_REGION}" \\
-            --dry-run \\
-            || error "Rclone failed for \$dir"
-    done
+            --dry-run
+    fi
 
     # Copy local files if present
     if [[ -d "local_files" ]] && [[ -n "${local_files}" ]]; then
@@ -168,8 +135,7 @@ process TRANSFER_DATA_AWS {
             --transfers ${task.cpus} \\
             --log-file transfer_data_aws.log \\
             --s3-location-constraint "\${RCLONE_CONFIG_DEST_S3_REGION}" \\
-            --dry-run \\
-            || error "Rclone failed for local_files/*"
+            --dry-run
     fi
 
     echo "Finished sample: ${meta.id}"
