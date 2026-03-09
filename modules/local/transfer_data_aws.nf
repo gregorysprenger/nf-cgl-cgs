@@ -37,13 +37,18 @@ process TRANSFER_DATA_AWS {
     # Create a single file list for all S3 files to transfer
     if [ ${s3_files.size()} -gt 0 ]; then
         echo "Preparing to transfer ${s3_files.size()} S3 files..."
+        # Get source directory from the first file. This assumes all files for a given sample are in the same directory.
+        first_file_full_path="${s3_files[0]}"
+        s3_source_dir=\$(dirname "\$first_file_full_path")
+
         for full_path in ${s3_files.join(' ')}; do
-            # Remove the remote name 'source_s3:' from the path for the --files-from list
-            echo "\${full_path#source_s3:}" >> s3_files_to_transfer.txt
+            # Get just the filename for the --files-from list
+            file_name=\$(basename "\$full_path")
+            echo "\$file_name" >> s3_files_to_transfer.txt
         done
 
         rclone copy \\
-            source_s3: \\
+            "\$s3_source_dir" \\
             "\$BATCH_DEST_S3_FOLDER" \\
             --files-from s3_files_to_transfer.txt \\
             --progress \\
@@ -102,13 +107,18 @@ process TRANSFER_DATA_AWS {
     # Create a single file list for all S3 files to transfer
     if [ ${s3_files.size()} -gt 0 ]; then
         echo "Preparing to transfer ${s3_files.size()} S3 files..."
+        # Get source directory from the first file. This assumes all files for a given sample are in the same directory.
+        first_file_full_path="${s3_files[0]}"
+        s3_source_dir=\$(dirname "\$first_file_full_path")
+
         for full_path in ${s3_files.join(' ')}; do
-            # Remove the remote name 'source_s3:' from the path for the --files-from list
-            echo "\${full_path#source_s3:}" >> s3_files_to_transfer.txt
+            # Get just the filename for the --files-from list
+            file_name=\$(basename "\$full_path")
+            echo "\$file_name" >> s3_files_to_transfer.txt
         done
 
         rclone copy \\
-            source_s3: \\
+            "\$s3_source_dir" \\
             "\$BATCH_DEST_S3_FOLDER" \\
             --files-from s3_files_to_transfer.txt \\
             --progress \\
@@ -146,3 +156,4 @@ process TRANSFER_DATA_AWS {
     END_VERSIONS
     """
 }
+
