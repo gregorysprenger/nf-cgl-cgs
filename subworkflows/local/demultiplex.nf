@@ -10,21 +10,23 @@ include { INPUT_CHECK as VERIFY_FASTQ_LIST } from '../../subworkflows/local/inpu
 
 
 // Validate illumina run completion status
+import groovy.xml.XmlSlurper
+
 def validate_run = { f ->
     def xml
     try {
-        xml = new XmlSlurper().parse(f)
+        xml = new XmlSlurper().parse(f.toFile())
     } catch (Exception e) {
         error("${f} exists but could not be parsed as XML: ${e.message}")
     }
 
     // Find all RunStatus elements anywhere in the document, regardless of namespace
-    def runStatusNodes = xml.'**'.findAll { it.name() == 'RunStatus' }
+    def runStatusNodes = xml.'**'.findAll{ it.name() == 'RunStatus' }
     def runStatuses = runStatusNodes
-        .collect { it.text()?.trim() }
-        .findAll { it }
+        .collect{ it.text()?.trim() }
+        .findAll{ it }
 
-    if (runStatuses.any { it == 'RunCompleted' }) {
+    if (runStatuses.any{ it == 'RunCompleted' }) {
         log.info "[DEMULTIPLEX] Run status 'RunCompleted' confirmed for ${f} – continuing."
         return f.parent
     }
@@ -43,12 +45,6 @@ def validate_run = { f ->
     }
     error("${f} exists but did not complete successfully: ${runStatusInfo} (expected 'RunCompleted').")
 }
-
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    CREATE CHANNELS FOR INPUT PARAMETERS
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
 
 /*
 ========================================================================================
@@ -120,7 +116,7 @@ workflow DEMULTIPLEX {
                                 [ flowcell, samplesheet ]
                         }
                         .join(
-                            ch_illumina_run_dir.map{ [ it.name.toString().split('_').last().takeRight(9), it ] },
+                            ch_illumina_run_dir.filter{ it != null }.map{ [ it.name.toString().split('_').last().takeRight(9), it ] },
                             by: 0
                         )
 
