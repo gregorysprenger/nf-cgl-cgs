@@ -128,7 +128,7 @@ workflow DEMULTIPLEX {
     )
     ch_versions = ch_versions.mix(CREATE_DEMULTIPLEX_SAMPLESHEET.out.versions)
 
-    // Determine how many distinct flowcells will be demultiplexed, based on the
+    // Determine how many distinct flowcells will be demultiplexed, based on the 'demux_data' channel output
     def ch_demux_flowcell_count = CREATE_DEMULTIPLEX_SAMPLESHEET.out.demux_data
                                     .map{ it[0] }
                                     .unique()
