@@ -8,9 +8,9 @@ process CREATE_DEMULTIPLEX_SAMPLESHEET {
     tuple val(flowcell), path(samplesheet), path(illumina_run_dir)
 
     output:
-    tuple val(flowcell), path("*demux_samplesheet.csv"), path(illumina_run_dir), emit: demux_data
-    path("*runinfo.csv")                                                       , emit: runinfo
-    path("versions.yml")                                                       , emit: versions
+    tuple val(flowcell), path("*demux_samplesheet.csv"), emit: samplesheet
+    path("*runinfo.csv")                               , emit: runinfo
+    path("versions.yml")                               , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -29,9 +29,8 @@ process CREATE_DEMULTIPLEX_SAMPLESHEET {
 
     stub:
     """
-    touch \\
-        ${flowcell}.demux_samplesheet.csv \\
-        ${flowcell}.runinfo.csv
+    touch ${flowcell}.runinfo.csv \\
+        ${flowcell}.demux_samplesheet.csv
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

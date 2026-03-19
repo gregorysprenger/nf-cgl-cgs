@@ -99,13 +99,18 @@ workflow DEMULTIPLEX {
 
     // Flowcell specific demultiplex channel: [ val(flowcell), path(samplesheet), path(illumina run dir) ]
     ch_demux_data = ch_samplesheet
+                        .map{
+                            !it.isEmpty() && !params.illumina_rundir
+                                ? error("Please specify the path to the directory containing the Illumina run data.")
+                                : it
+                        }
                         .splitCsv(header: true, quote: '"')
                         .map{ [ it['Flowcell ID'].split('_').last().takeRight(9), it ] }
                         .groupTuple(by: 0)
                         .map{
                             flowcell, rows ->
                                 def columns = rows[0].keySet() as List
-                                def samplesheet = file("Samplesheet_${flowcell}.csv")
+                                def samplesheet = file("${workDir}/Samplesheet_${flowcell}.csv")
                                 samplesheet.text = columns.join(',') + '\n' +
                                     rows.collect{ r ->
                                         columns.collect{ c ->
@@ -152,7 +157,8 @@ workflow DEMULTIPLEX {
     //
     VERIFY_FASTQ_LIST (
         [],
-        DRAGEN_DEMULTIPLEX.out.fastq_list
+        DRAGEN_DEMULTIPLEX.out.fastq_list,
+        Channel.empty()
     )
     ch_versions = ch_versions.mix(VERIFY_FASTQ_LIST.out.versions)
 
@@ -161,7 +167,7 @@ workflow DEMULTIPLEX {
         def batch_name = params.batch_name ?: new java.util.Date().format('yyyyMMdd') + '_CGS'
 
         ch_fastq_list = VERIFY_FASTQ_LIST.out.samples
-            .map{ meta, reads, fastq_list -> fastq_list }
+            .map{ meta, reads, fastq_list, alignment_file -> fastq_list }
             .splitCsv( header: true )
             .map{
                 row ->
@@ -187,7 +193,7 @@ workflow DEMULTIPLEX {
     }
 
     emit:
-    samples  = VERIFY_FASTQ_LIST.out.samples  // channel: [ val(meta), path(file) ]
+    samples  = VERIFY_FASTQ_LIST.out.samples  // channel: [ val(meta), path(reads), path(fastq_list), path(alignment_file) ]
     versions = ch_versions                    // channel: [ path(file) ]
 
 }

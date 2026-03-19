@@ -39,6 +39,7 @@ workflow PIPELINE_INITIALISATION {
     demux_outdir      //  string: The output directory where the demultiplexed data will be saved
     input             //  string: Path to input MGI samplesheet
     fastq_list        //  string: Path to input fastq_list.csv
+    bam_cram_list     //  string: Path to input bam_cram_list.csv
 
     main:
     ch_versions = Channel.empty()
@@ -83,13 +84,14 @@ workflow PIPELINE_INITIALISATION {
     // Create channel from input file provided through params.input
     //
     INPUT_CHECK (
-        input ?: [],
-        fastq_list ? Channel.fromPath(fastq_list, checkIfExists: true) : Channel.empty().ifEmpty([])
+        input         ?: [],
+        fastq_list    ? Channel.fromPath(fastq_list,    checkIfExists: true) : Channel.empty().ifEmpty([]),
+        bam_cram_list ? Channel.fromPath(bam_cram_list, checkIfExists: true) : Channel.empty().ifEmpty([])
     )
     ch_versions = ch_versions.mix(INPUT_CHECK.out.versions)
 
     emit:
-    samples         = INPUT_CHECK.out.samples          // channel: [ val(meta), path(reads), path(fastq_list) ]
+    samples         = INPUT_CHECK.out.samples          // channel: [ val(meta), path(reads), path(fastq_list), path(alignment_file) ]
     mgi_samplesheet = INPUT_CHECK.out.mgi_samplesheet  // channel: [ path(file) ]
     versions        = ch_versions                      // channel: [ path(file) ]
 
