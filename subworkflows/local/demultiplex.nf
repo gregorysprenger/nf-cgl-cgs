@@ -8,16 +8,43 @@ include { CREATE_DEMULTIPLEX_SAMPLESHEET   } from '../../modules/local/create_de
 include { DRAGEN_DEMULTIPLEX               } from '../../modules/local/dragen_demultiplex'
 include { INPUT_CHECK as VERIFY_FASTQ_LIST } from '../../subworkflows/local/input_check'
 
-/*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    CREATE CHANNELS FOR INPUT PARAMETERS
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-*/
 
-// Illumina run directory
-ch_illumina_run_dir = params.illumina_rundir
-    ? Channel.fromPath(params.illumina_rundir.split(',') as List, type: 'dir', checkIfExists: true)
-    : Channel.empty()
+// Validate illumina run completion status
+import groovy.xml.XmlSlurper
+
+def validate_run = { f ->
+    def xml
+    try {
+        xml = new XmlSlurper().parse(f.toFile())
+    } catch (Exception e) {
+        error("${f} exists but could not be parsed as XML: ${e.message}")
+    }
+
+    // Find all RunStatus elements anywhere in the document, regardless of namespace
+    def runStatusNodes = xml.'**'.findAll{ it.name() == 'RunStatus' }
+    def runStatuses = runStatusNodes
+        .collect{ it.text()?.trim() }
+        .findAll{ it }
+
+    if (runStatuses.any{ it == 'RunCompleted' }) {
+        log.info "[DEMULTIPLEX] Run status 'RunCompleted' confirmed for ${f} – continuing."
+        return f.parent
+    }
+
+    def runStatusInfo
+    if (!runStatusNodes || runStatusNodes.isEmpty()) {
+        runStatusInfo = "RunStatus tag not found"
+    } else if (runStatuses && !runStatuses.isEmpty()) {
+        if (runStatuses.size() == 1) {
+            runStatusInfo = "found status '${runStatuses[0]}'"
+        } else {
+            runStatusInfo = "found statuses '${runStatuses.join("', '")}'"
+        }
+    } else {
+        runStatusInfo = "RunStatus tag empty or malformed"
+    }
+    error("${f} exists but did not complete successfully: ${runStatusInfo} (expected 'RunCompleted').")
+}
 
 /*
 ========================================================================================
@@ -31,7 +58,44 @@ workflow DEMULTIPLEX {
     ch_samplesheet  // channel: [ path(file) ]
 
     main:
-    ch_versions = Channel.empty()
+    ch_illumina_run_dir = Channel.empty()
+    ch_versions         = Channel.empty()
+
+    // Verify presence of Illumina run directory if there are samples to demultiplex
+    ch_samplesheet.map{
+        !it.isEmpty() && !params.illumina_rundir
+            ? error("Please specify the path to the directory containing the Illumina run data.")
+            : it
+    }
+
+    // Watch for RunCompletionStatus.xml files in each specified Illumina run directory
+    if (params.illumina_rundir) {
+        for (dirRaw in params.illumina_rundir.toString().split(',')) {
+            def dir = dirRaw.trim()
+            if (!dir) {
+                continue
+            }
+            if (!file(dir).isDirectory()) {
+                error("Illumina run directory not found: ${dir}")
+            }
+            def xml = file("${dir}/RunCompletionStatus.xml")
+            log.info "[DEMULTIPLEX] Checking for ${xml} (will wait if missing) …"
+
+            def chNew
+            if (xml.exists()) {
+                log.info "[DEMULTIPLEX] ${xml} file exists – continuing."
+                chNew = Channel.fromPath(xml.toString())
+            } else {
+                chNew = Channel.watchPath(xml.toString())
+                            .take(1)
+                            .map{
+                                log.info "[DEMULTIPLEX] ${xml} appeared – continuing."
+                                it
+                            }
+            }
+            ch_illumina_run_dir = ch_illumina_run_dir.mix(chNew.map(validate_run))
+        }
+    }
 
     // Flowcell specific demultiplex channel: [ val(flowcell), path(samplesheet), path(illumina run dir) ]
     ch_demux_data = ch_samplesheet
@@ -57,7 +121,7 @@ workflow DEMULTIPLEX {
                                 [ flowcell, samplesheet ]
                         }
                         .join(
-                            ch_illumina_run_dir.map{ dir -> [ dir.name.toString().split('_').last().takeRight(9), dir ] },
+                            ch_illumina_run_dir.filter{ it != null }.map{ [ it.name.toString().split('_').last().takeRight(9), it ] },
                             by: 0
                         )
 
@@ -69,21 +133,21 @@ workflow DEMULTIPLEX {
     )
     ch_versions = ch_versions.mix(CREATE_DEMULTIPLEX_SAMPLESHEET.out.versions)
 
+    // Determine how many distinct flowcells will be demultiplexed, based on the 'demux_data' channel output
+    def ch_demux_flowcell_count = CREATE_DEMULTIPLEX_SAMPLESHEET.out.demux_data
+                                    .map{ it[0] }
+                                    .unique()
+                                    .count()
+
     //
     // MODULE: Demultiplex samples
     //
     DRAGEN_DEMULTIPLEX (
-        CREATE_DEMULTIPLEX_SAMPLESHEET.out.samplesheet
-            .map{ flowcell, samplesheet -> [ flowcell, samplesheet ] }
-            .join(
-                ch_illumina_run_dir.map{ dir -> [ dir.name.toString().split('_').last().takeRight(9), dir ] },
-                by: 0
-            )
-            .combine(CREATE_DEMULTIPLEX_SAMPLESHEET.out.samplesheet.count())
-            .map{
-                flowcell, samplesheet, illumina_run_dir, num_samples ->
-                    def meta = ['flowcell': num_samples > 1 ? flowcell : null ]
-                    [ meta, samplesheet, illumina_run_dir ]
+        CREATE_DEMULTIPLEX_SAMPLESHEET.out.demux_data
+            .combine(ch_demux_flowcell_count)
+            .map{ flowcell, samplesheet, illumina_run_dir, flowcell_count ->
+                def meta = [ 'flowcell': flowcell_count > 1 ? flowcell : '' ]
+                [ meta, samplesheet, illumina_run_dir ]
             }
     )
     ch_versions = ch_versions.mix(DRAGEN_DEMULTIPLEX.out.versions)
@@ -107,8 +171,11 @@ workflow DEMULTIPLEX {
             .splitCsv( header: true )
             .map{
                 row ->
-                    def read1 = row['Read1File'].split('/')[-2..-1].join('/')
-                    def read2 = row['Read2File'].split('/')[-2..-1].join('/')
+                    def read1_parts = row['Read1File'].split('/')
+                    def read1 = read1_parts.size() > 1 ? read1_parts[-2..-1].join('/') : read1_parts[-1]
+
+                    def read2_parts = row['Read2File'].split('/')
+                    def read2 = read2_parts.size() > 1 ? read2_parts[-2..-1].join('/') : read2_parts[-1]
 
                     // Get absolute path of 'params.demux_outdir'
                     def demux_outdir = file(params.demux_outdir).toAbsolutePath().toString()
