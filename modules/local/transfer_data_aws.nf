@@ -34,12 +34,22 @@ process TRANSFER_DATA_AWS {
         BATCH_DEST_S3_FOLDER="\${BATCH_DEST_S3_FOLDER}${meta.id}/"
     fi
 
+    rm -f s3_files_to_transfer.txt
+
     # Create a single file list for all S3 files to transfer
     if [ ${s3_files.size()} -gt 0 ]; then
         echo "Preparing to transfer ${s3_files.size()} S3 files..."
-        # Get source directory from the first file. This assumes all files for a given sample are in the same directory.
-        first_file_full_path="${s3_files[0]}"
-        s3_source_dir=\$(dirname "\$first_file_full_path")
+
+        # Validate all files share the same source directory
+        for full_path in ${s3_files.join(' ')}; do
+            this_dir=\$(dirname "\$full_path")
+            if [ "\$this_dir" != "\$s3_source_dir" ]; then
+                echo "ERROR: Files span multiple S3 directories. Cannot use single-source transfer."
+                echo "  Expected: \$s3_source_dir"
+                echo "  Found:    \$this_dir"
+                exit 1
+            fi
+        done
 
         for full_path in ${s3_files.join(' ')}; do
             # Get just the filename for the --files-from list
@@ -104,12 +114,22 @@ process TRANSFER_DATA_AWS {
         BATCH_DEST_S3_FOLDER="\${BATCH_DEST_S3_FOLDER}${meta.id}/"
     fi
 
+    rm -f s3_files_to_transfer.txt
+
     # Create a single file list for all S3 files to transfer
     if [ ${s3_files.size()} -gt 0 ]; then
         echo "Preparing to transfer ${s3_files.size()} S3 files..."
-        # Get source directory from the first file. This assumes all files for a given sample are in the same directory.
-        first_file_full_path="${s3_files[0]}"
-        s3_source_dir=\$(dirname "\$first_file_full_path")
+
+        # Validate all files share the same source directory
+        for full_path in ${s3_files.join(' ')}; do
+            this_dir=\$(dirname "\$full_path")
+            if [ "\$this_dir" != "\$s3_source_dir" ]; then
+                echo "ERROR: Files span multiple S3 directories. Cannot use single-source transfer."
+                echo "  Expected: \$s3_source_dir"
+                echo "  Found:    \$this_dir"
+                exit 1
+            fi
+        done
 
         for full_path in ${s3_files.join(' ')}; do
             # Get just the filename for the --files-from list
