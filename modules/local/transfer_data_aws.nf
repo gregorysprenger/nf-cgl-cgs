@@ -40,6 +40,9 @@ process TRANSFER_DATA_AWS {
     if [ ${s3_files.size()} -gt 0 ]; then
         echo "Preparing to transfer ${s3_files.size()} S3 files..."
 
+        # Get source directory from the first file. This assumes all files for a given sample are in the same directory.
+        s3_source_dir=\$(dirname "${s3_files[0]}")
+
         # Validate all files share the same source directory
         for full_path in ${s3_files.join(' ')}; do
             this_dir=\$(dirname "\$full_path")
@@ -120,6 +123,9 @@ process TRANSFER_DATA_AWS {
     if [ ${s3_files.size()} -gt 0 ]; then
         echo "Preparing to transfer ${s3_files.size()} S3 files..."
 
+        # Get source directory from the first file. This assumes all files for a given sample are in the same directory.
+        s3_source_dir=\$(dirname "${s3_files[0]}")
+
         # Validate all files share the same source directory
         for full_path in ${s3_files.join(' ')}; do
             this_dir=\$(dirname "\$full_path")
@@ -176,4 +182,3 @@ process TRANSFER_DATA_AWS {
     END_VERSIONS
     """
 }
-
