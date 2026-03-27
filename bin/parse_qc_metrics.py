@@ -272,9 +272,13 @@ def save_genoox_metrics(
 
     if cleaned_mgi_worksheet["SAMPLE ID"].isnull().all() or cleaned_mgi_worksheet.empty:
         cleaned_mgi_worksheet = cleaned_mgi_worksheet.merge(mapping_metrics, on="SAMPLE ID", how="right")
+        cleaned_mgi_worksheet = cleaned_mgi_worksheet.merge(mapping_metrics, on="SAMPLE ID", how="right")
         cleaned_mgi_worksheet = cleaned_mgi_worksheet[required_columns]
 
-    is_genoox_sample = cleaned_mgi_worksheet["SAMPLE ID"].str.startswith("G", na=False)
+    # Filter for SAMPLE ID values that are strings and start with 'G' or contain 'WCN-'
+    is_genoox_sample = cleaned_mgi_worksheet["SAMPLE ID"].str.startswith("G", na=False) | cleaned_mgi_worksheet[
+        "SAMPLE ID"
+    ].str.contains("WCN-", na=False)
     cleaned_mgi_worksheet = cleaned_mgi_worksheet[is_genoox_sample]
 
     if cleaned_mgi_worksheet.empty:
@@ -345,6 +349,7 @@ def main() -> None:
 
     inputdir = os.path.abspath(args.inputdir)
     if args.mgi_worksheet:
+        mgi_worksheet = pd.concat([read_file_to_dataframe(f) for f in args.mgi_worksheet], ignore_index=True)
         mgi_worksheet = pd.concat([read_file_to_dataframe(f) for f in args.mgi_worksheet], ignore_index=True)
     else:
         mgi_worksheet = read_file_to_dataframe(None)

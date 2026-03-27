@@ -101,7 +101,7 @@ workflow INPUT_CHECK {
                                         }
                                     }
 
-                                def regexPattern = /\w\d{2}-\d+/
+                                def regexPattern = /\w\d{2}-\d+|\d*WCN-\d*CN\d*/
                                 def matcher = it.RGSM =~ regexPattern
                                 def acc = matcher.find() ? matcher.group(0) : it.RGSM
                                 def meta = [
