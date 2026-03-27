@@ -12,10 +12,12 @@ include { BCFTOOLS_SPLIT_VCF          } from '../../modules/local/bcftools_split
 
 // Save metric files to a directory
 def saveMetricFile(channel, fileExt, outputDir) {
+    def targetDir = file(outputDir)
     channel.collectFile{
         sample, content ->
-            new File("${outputDir}/${sample}").mkdirs()
-            [ "${outputDir}/${sample}/${sample}.${fileExt}", content ]
+            def sampleDir = targetDir.resolve(sample)
+            sampleDir.mkdirs()
+            [ sampleDir.resolve("${sample}.${fileExt}"), content ]
     }
 }
 
@@ -103,9 +105,9 @@ workflow JOINT_GENOTYPING {
                                     .combine(ch_dragen_output.flatMap{ it.findAll{ it.toString().endsWith('vc_metrics.csv') } })
                                     .map{
                                         joint, sample ->
-                                            def sample_name  = sample.getSimpleName().toString()
-                                            def joint_lines  = joint.readLines()
-                                            def sample_lines = sample.readLines()
+                                            def sample_name        = sample.getSimpleName().toString()
+                                            def joint_sample_lines = joint.readLines()
+                                            def sample_lines       = sample.readLines()
 
                                             def indels_list = joint_sample_lines.findAll{
                                                                                     it.contains("Insertions") ||
@@ -117,9 +119,9 @@ workflow JOINT_GENOTYPING {
                                             def indel_percent = indels_list.collect{ it.split(',')[4].toFloat()   }.sum()
 
                                             def output = [
-                                                joint_lines.find{  it =~ "Number of samples" },
-                                                sample_lines.find{ it =~ "Reads Processed"   },
-                                                sample_lines.find{ it =~ "Child Sample"      },
+                                                joint_sample_lines.find{ it =~ "Number of samples" },
+                                                sample_lines.find{       it =~ "Reads Processed"   },
+                                                sample_lines.find{       it =~ "Child Sample"      },
                                                 joint_sample_lines,
                                                 "JOINT CALLER POSTFILTER,${sample_name},Number of Indels,${indel_count},${indel_percent.round(2)}"
                                             ].flatten().findAll().join('\n')
