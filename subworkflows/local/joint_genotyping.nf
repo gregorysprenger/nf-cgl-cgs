@@ -16,7 +16,7 @@ def saveMetricFile(channel, fileExt, outputDir) {
     channel.collectFile{
         sample, content ->
             def sampleDir = targetDir.resolve(sample)
-            sampleDir.mkdirs()
+            java.nio.file.Files.createDirectories(sampleDir)
             [ sampleDir.resolve("${sample}.${fileExt}"), content ]
     }
 }
