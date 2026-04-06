@@ -33,7 +33,7 @@ workflow NF_DRAGEN_CGS {
 
     take:
     mgi_samplesheet // channel: [ path(file) ]
-    samples         // channel: [ val(meta), path(file) ]
+    samples         // channel: [ val(meta), path(reads), path(fastq_list), path(alignment_file) ]
 
     main:
     //
@@ -71,7 +71,8 @@ workflow {
         params.outdir,
         params.demux_outdir,
         params.input,
-        params.fastq_list
+        params.fastq_list,
+        params.bam_cram_list
     )
     ch_versions = ch_versions.mix(PIPELINE_INITIALISATION.out.versions)
 
