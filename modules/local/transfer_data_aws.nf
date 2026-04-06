@@ -30,17 +30,23 @@ process TRANSFER_DATA_AWS {
     fi
 
     if [ -d "local_files" ]; then
-        rclone copy \\
-            local_files/ \\
-            "\$BATCH_DEST_S3_FOLDER" \\
-            --progress \\
-            --retries 10 \\
-            --copy-links \\
-            --log-level INFO \\
-            --transfers ${task.cpus} \\
-            --log-file transfer_data_aws.log \\
-            --s3-location-constraint "\${RCLONE_CONFIG_DEST_S3_REGION}" \\
-            || { echo "Rclone failed for local_files/"; exit 1; }
+        if [ -n "\$(ls -A local_files)" ]; then
+            echo "Uploading local files from local_files/"
+            rclone copy \\
+                local_files/ \\
+                "\$BATCH_DEST_S3_FOLDER" \\
+                --progress \\
+                --retries 10 \\
+                --copy-links \\
+                --log-level INFO \\
+                --transfers ${task.cpus} \\
+                --log-file transfer_data_aws.log \\
+                --s3-location-constraint "\${RCLONE_CONFIG_DEST_S3_REGION}" \\
+                || { echo "Error: Rclone failed for local_files/"; exit 1; }
+        else
+            echo "Error: 'local_files' directory exists but is empty. No local files to transfer."
+            exit 1
+        fi
     fi
 
     echo "Finished sample: ${meta.id}"
@@ -65,18 +71,24 @@ process TRANSFER_DATA_AWS {
     fi
 
     if [ -d "local_files" ]; then
-        rclone copy \\
-            local_files/ \\
-            "\$BATCH_DEST_S3_FOLDER" \\
-            --progress \\
-            --retries 10 \\
-            --copy-links \\
-            --log-level INFO \\
-            --transfers ${task.cpus} \\
-            --log-file transfer_data_aws.log \\
-            --s3-location-constraint "\${RCLONE_CONFIG_DEST_S3_REGION}" \\
-            --dry-run \\
-            || { echo "Rclone failed for local_files/"; exit 1; }
+        if [ -n "\$(ls -A local_files)" ]; then
+            echo "Uploading local files from local_files/"
+            rclone copy \\
+                local_files/ \\
+                "\$BATCH_DEST_S3_FOLDER" \\
+                --progress \\
+                --retries 10 \\
+                --copy-links \\
+                --log-level INFO \\
+                --transfers ${task.cpus} \\
+                --log-file transfer_data_aws.log \\
+                --s3-location-constraint "\${RCLONE_CONFIG_DEST_S3_REGION}" \\
+                --dry-run \\
+                || { echo "Error: Rclone failed for local_files/ (dry-run)"; exit 1; }
+        else
+            echo "Error: 'local_files' directory exists but is empty. No local files to transfer (dry-run)."
+            exit 1
+        fi
     fi
 
     echo "Finished sample: ${meta.id}"
