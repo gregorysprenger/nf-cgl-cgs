@@ -7,7 +7,7 @@ process TRANSFER_DATA_AWS {
     container "dockerreg01.accounts.ad.wustl.edu/cgl/rclone@sha256:1d82d564b8da03893be1b8c6e16557d45e10b496080fd7569a89f312e55c2bfe"
 
     input:
-    tuple val(meta), path(local_files, stageAs: "local_files/*")
+    tuple val(meta), val(s3_files), path(local_files, stageAs: "local_files/*")
 
     output:
     path("transfer_data_aws.log"), emit: transfer_logs
