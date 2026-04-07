@@ -258,6 +258,7 @@ workflow DRAGEN_CGS {
                     .groupTuple()
                     .join(JOINT_GENOTYPING.out.metric_files.collect().ifEmpty([]))
                     .map{ id, vcf_files, metric_files -> [ id, vcf_files + metric_files ] }
+                    .ifEmpty([ [], [], [] ])
             )
             .map{
                 sample_name, dragen_files, joint_files ->
