@@ -133,8 +133,8 @@ workflow DEMULTIPLEX {
     )
     ch_versions = ch_versions.mix(CREATE_DEMULTIPLEX_SAMPLESHEET.out.versions)
 
-    // Determine how many distinct flowcells will be demultiplexed, based on the 'demux_data' channel output
-    def ch_demux_flowcell_count = CREATE_DEMULTIPLEX_SAMPLESHEET.out.demux_data
+    // Determine how many distinct flowcells will be demultiplexed, based on the 'samplesheet' channel output
+    def ch_demux_flowcell_count = CREATE_DEMULTIPLEX_SAMPLESHEET.out.samplesheet
                                     .map{ it[0] }
                                     .unique()
                                     .count()
@@ -143,7 +143,8 @@ workflow DEMULTIPLEX {
     // MODULE: Demultiplex samples
     //
     DRAGEN_DEMULTIPLEX (
-        CREATE_DEMULTIPLEX_SAMPLESHEET.out.demux_data
+        CREATE_DEMULTIPLEX_SAMPLESHEET.out.samplesheet
+            .join(ch_demux_data.map{ flowcell, samplesheet, rundir -> [ flowcell, rundir ] }, by: 0)
             .combine(ch_demux_flowcell_count)
             .map{ flowcell, samplesheet, illumina_run_dir, flowcell_count ->
                 def meta = [ 'flowcell': flowcell_count > 1 ? flowcell : '' ]
