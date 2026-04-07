@@ -88,8 +88,8 @@ workflow INPUT_CHECK {
                                     error("Missing required columns in input FastQ list!")
                                 }
 
-                                    def R1 = file(row['Read1File'], checkIfExists: true)
-                                    def R2 = file(row['Read2File'], checkIfExists: true)
+                                    def R1 = file(it['Read1File'], checkIfExists: true)
+                                    def R2 = file(it['Read2File'], checkIfExists: true)
 
                                     if (!params.validation_samples) {
                                         def MIN_FASTQ_SIZE_BYTES = params.min_fastq_size * 1024 * 1024
