@@ -169,7 +169,7 @@ workflow DRAGEN_CGS {
     DRAGEN_ALIGN (
         ch_samples.filter{
             meta, reads, fastq_list, alignment_file ->
-                params.validation_samples || (meta?.acc instanceof String && meta?.acc.startsWith("G"))
+                params.validation_samples || (meta?.acc instanceof String && (meta?.acc.startsWith("G") || meta?.acc.contains("WCN-")))
         },
         ch_intermediate_dir,
         ch_qc_cross_contamination,
@@ -204,7 +204,7 @@ workflow DRAGEN_CGS {
                     .ifEmpty("no_joint_genotyping")  // Proceed with control alignment even if no joint genotyping
                     .combine(ch_samples.filter{
                         meta, reads, fastq_list, alignment_file ->
-                            meta?.acc instanceof String && !meta?.acc.startsWith("G")
+                            meta?.acc instanceof String && !meta?.acc.startsWith("G") && !meta?.acc.contains("WCN-")
                     })
                     .map{
                         done, meta, reads, fastq_list, alignment_file ->
