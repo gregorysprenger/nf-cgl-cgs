@@ -201,7 +201,7 @@ workflow DRAGEN_CGS {
         DRAGEN_ALIGN_CONTROL (
             JOINT_GENOTYPING.out.dragen_usage
                     .collect()
-                    .ifEmpty("no_joint_genotyping")  // Proceed with control alignment even if no joint genotyping
+                    .ifEmpty("no_joint_genotyping")
                     .combine(ch_samples.filter{
                         meta, reads, fastq_list, alignment_file ->
                             meta?.acc instanceof String && !meta?.acc.startsWith("G")
@@ -257,12 +257,12 @@ workflow DRAGEN_CGS {
                     .map{ file -> [ file.baseName.split('\\.')[0], file ] }
                     .groupTuple()
                     .join(JOINT_GENOTYPING.out.metric_files.collect().ifEmpty([]))
-                    .map{ id, vcf_files, metric_files -> [ id, vcf_files + metric_files ] }
-                    .ifEmpty([ [], [], [] ])
+                    .map{ id, vcf_files, metric_files -> [ id, vcf_files + metric_files ] },
+                remainder: true
             )
             .map{
                 sample_name, dragen_files, joint_files ->
-                    def all_files = [dragen_files + joint_files ?: []].flatten().collectEntries{ [ (file(it).name): it ] }.values()
+                    def all_files = [dragen_files + (joint_files ?: [])].flatten().collectEntries{ [ (file(it).name): it ] }.values()
 
                     [ ["id": sample_name], all_files ]
             }
