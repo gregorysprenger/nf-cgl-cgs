@@ -274,7 +274,10 @@ def save_genoox_metrics(
         cleaned_mgi_worksheet = cleaned_mgi_worksheet.merge(mapping_metrics, on="SAMPLE ID", how="right")
         cleaned_mgi_worksheet = cleaned_mgi_worksheet[required_columns]
 
-    is_genoox_sample = cleaned_mgi_worksheet["SAMPLE ID"].str.startswith("G", na=False)
+    # Filter for SAMPLE ID values that are strings and start with 'G' or contain 'WCN-'
+    is_genoox_sample = cleaned_mgi_worksheet["SAMPLE ID"].str.startswith("G", na=False) | cleaned_mgi_worksheet[
+        "SAMPLE ID"
+    ].str.contains("WCN-", na=False)
     cleaned_mgi_worksheet = cleaned_mgi_worksheet[is_genoox_sample]
 
     if cleaned_mgi_worksheet.empty:
