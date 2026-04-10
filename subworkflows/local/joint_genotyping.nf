@@ -105,9 +105,9 @@ workflow JOINT_GENOTYPING {
                                     .combine(ch_dragen_output.flatMap{ it.findAll{ it.toString().endsWith('vc_metrics.csv') } })
                                     .map{
                                         joint, sample ->
-                                            def sample_name        = sample.getSimpleName().toString()
-                                            def joint_sample_lines = joint.readLines()
-                                            def sample_lines       = sample.readLines()
+                                            def sample_name         = sample.getSimpleName().toString()
+                                            def joint_sample_lines  = joint.readLines()
+                                            def sample_lines        = sample.readLines()
 
                                             def indels_list = joint_sample_lines.findAll{
                                                                                     it.contains("Insertions") ||
@@ -119,6 +119,9 @@ workflow JOINT_GENOTYPING {
                                             def indel_percent = indels_list.collect{ it.split(',')[4].toFloat()   }.sum()
 
                                             def output = [
+                                                joint_sample_lines.find{ it =~ "Number of samples" },
+                                                sample_lines.find{       it =~ "Reads Processed"   },
+                                                sample_lines.find{       it =~ "Child Sample"      },
                                                 joint_sample_lines.find{ it =~ "Number of samples" },
                                                 sample_lines.find{       it =~ "Reads Processed"   },
                                                 sample_lines.find{       it =~ "Child Sample"      },
