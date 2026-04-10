@@ -91,17 +91,17 @@ workflow INPUT_CHECK {
                                     def R1 = file(it['Read1File'], checkIfExists: true)
                                     def R2 = file(it['Read2File'], checkIfExists: true)
 
-                                    if (!params.validation_samples) {
-                                        def MIN_FASTQ_SIZE_BYTES = params.min_fastq_size * 1024 * 1024
-                                        if (R1.size() < MIN_FASTQ_SIZE_BYTES) {
-                                            error("FastQ file '${R1.name}' is ${R1.size()} bytes, less than ${params.min_fastq_size}MB minimum!")
-                                        }
-                                        if (R2.size() < MIN_FASTQ_SIZE_BYTES) {
-                                            error("FastQ file '${R2.name}' is ${R2.size()} bytes, less than ${params.min_fastq_size}MB minimum!")
-                                        }
+                                if (!params.validation_samples) {
+                                    def MIN_FASTQ_SIZE_BYTES = params.min_fastq_size * 1024 * 1024
+                                    if (R1.size() < MIN_FASTQ_SIZE_BYTES) {
+                                        error("FastQ file '${R1.name}' is ${R1.size()} bytes, less than ${params.min_fastq_size}MB minimum!")
                                     }
+                                    if (R2.size() < MIN_FASTQ_SIZE_BYTES) {
+                                        error("FastQ file '${R2.name}' is ${R2.size()} bytes, less than ${params.min_fastq_size}MB minimum!")
+                                    }
+                                }
 
-                                def regexPattern = /\w\d{2}-\d+/
+                                def regexPattern = /\w\d{2}-\d+|\d*WCN-\d*CN\d*/
                                 def matcher = it.RGSM =~ regexPattern
                                 def acc = matcher.find() ? matcher.group(0) : it.RGSM
                                 def meta = [

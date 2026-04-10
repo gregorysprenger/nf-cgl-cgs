@@ -12,10 +12,12 @@ include { BCFTOOLS_SPLIT_VCF          } from '../../modules/local/bcftools_split
 
 // Save metric files to a directory
 def saveMetricFile(channel, fileExt, outputDir) {
+    def targetDir = file(outputDir)
     channel.collectFile{
         sample, content ->
-            new File("${outputDir}/${sample}").mkdirs()
-            [ "${outputDir}/${sample}/${sample}.${fileExt}", content ]
+            def sampleDir = targetDir.resolve(sample)
+            java.nio.file.Files.createDirectories(sampleDir)
+            [ sampleDir.resolve("${sample}.${fileExt}"), content ]
     }
 }
 

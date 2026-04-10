@@ -107,6 +107,16 @@ workflow DRAGEN_CGS {
     ch_dragen_usage   = Channel.empty()
     ch_dragen_metrics = Channel.empty()
 
+    // Validate ris2 profile compatibility and queue settings
+    if (workflow.profile?.tokenize(',')?.contains('ris2')) {
+        if (workflow.profile.tokenize(',').intersect(['dragen2', 'dragen4', 'dragen5', 'dragen6']).size() >= 1) {
+            error("Profile conflict: 'ris2' (Slurm) cannot be used with 'dragen2', 'dragen4', 'dragen5' or 'dragen6' profiles. Please use 'ris' profile instead or change the DRAGEN profile.")
+        }
+        if (!params.queue || params.queue == 'pathology') {
+            error("params.queue must be specified for ris2 profile. The default 'pathology' is not valid for Slurm.")
+        }
+    }
+
     //
     // SUBWORKFLOW: Demultiplex samples
     //
@@ -169,7 +179,7 @@ workflow DRAGEN_CGS {
     DRAGEN_ALIGN (
         ch_samples.filter{
             meta, reads, fastq_list, alignment_file ->
-                params.validation_samples || (meta?.acc instanceof String && meta?.acc.startsWith("G"))
+                params.validation_samples || (meta?.acc instanceof String && (meta?.acc.startsWith("G") || meta?.acc.contains("WCN-")))
         },
         ch_intermediate_dir,
         ch_qc_cross_contamination,
@@ -204,7 +214,7 @@ workflow DRAGEN_CGS {
                     .ifEmpty("no_joint_genotyping")
                     .combine(ch_samples.filter{
                         meta, reads, fastq_list, alignment_file ->
-                            meta?.acc instanceof String && !meta?.acc.startsWith("G")
+                            meta?.acc instanceof String && !meta?.acc.startsWith("G") && !meta?.acc.contains("WCN-")
                     })
                     .map{
                         done, meta, reads, fastq_list, alignment_file ->
