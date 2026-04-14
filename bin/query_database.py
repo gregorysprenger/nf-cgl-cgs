@@ -25,7 +25,7 @@ def parse_args() -> argparse.Namespace:
     db_group = parser.add_argument_group("Database Connection")
     db_group.add_argument("-s", "--server", default=env("COPATHBI_SERVER"))
     db_group.add_argument("-d", "--database", default=env("COPATHBI_DATABASE"))
-    db_group.add_argument("-u", "--username", default=env("COPATHBI_USERNAME"))
+    db_group.add_argument("-u", "--username", default=env("COPATHBI_USER"))
     db_group.add_argument("-p", "--password", default=env("COPATHBI_PASSWORD"))
 
     query_group = parser.add_argument_group("Query parameters")

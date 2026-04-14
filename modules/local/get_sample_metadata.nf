@@ -26,9 +26,9 @@ process GET_SAMPLE_METADATA {
         --password \$COPATHBI_PASSWORD \\
         --columns Sex \\
         --filter-col SpcNum \\
-        --output ${prefix.id}.csv \\
+        --output "${prefix.id}.csv" \\
         --table FranklinOrder \\
-        --filter-values ${samples}
+        --filter-values "${samples}"
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

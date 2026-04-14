@@ -27,6 +27,30 @@ Table of contents:
 
 ## Setup
 
+This section describes the configuration and credentials required to successfully run the pipeline.
+
+### Required: CoPathBI
+The pipeline requires access to the CoPathBI database for retrieving sample information. To enable this, you need to configure Nextflow secrets with your database credentials. Follow these steps:
+
+1. Store your credentials securely using Nextflow's secrets feature.
+2. Set the `NXF_ENABLE_SECRETS` environment variable to an appropriate value.
+
+Here's an example of how to store a Nextflow secret (replace `<KEY>` with your actual key):
+
+```bash
+nextflow secrets set GNX_ACCESS_KEY <KEY>
+```
+
+#### CoPathBI database connection
+
+| Secret            | Description                                    |
+| ----------------- | ---------------------------------------------- |
+| COPATHBI_SERVER   | The server name of the CoPathBI database.      |
+| COPATHBI_DATABASE | The name of the CoPathBI database.             |
+| COPATHBI_USER     | The user name to access the CoPathBI database. |
+| COPATHBI_PASSWORD | The password to access the CoPathBI database.  |
+
+
 ### Optional: AWS
 
 To utilize this pipeline with AWS, the use of Nextflow secrets are required. Below are instructions on setting Nextflow secrets:
@@ -39,17 +63,6 @@ Here is an example of how to store a Nextflow secret (replace <KEY> with your ke
 ```bash
 nextflow secrets set GNX_ACCESS_KEY <KEY>
 ```
-
-#### Sample information
-
-| Secret            | Description                                    |
-| ----------------- | ---------------------------------------------- |
-| COPATHBI_SERVER   | The server name of the CoPathBI database.      |
-| COPATHBI_DATABASE | The name of the CoPathBI database.             |
-| COPATHBI_USER     | The user name to access the CoPathBI database. |
-| COPATHBI_PASSWORD | The password to access the CoPathBI database.  |
-
-
 
 #### AWS: Data transfers
 

@@ -142,7 +142,7 @@ workflow DRAGEN_CGS {
                             .map{ [ it.SpcNum, it.Sex?.toLowerCase() ] },
                         remainder: true
                     )
-                    .filter{ it[1] != null }
+                    .filter{ it[5] != null || (it[1].acc != null && it[1].acc != '') }
                     .map{
                         acc, meta, reads, fastq_list, alignment_file, gender ->
                             def meta_new = meta.clone()
