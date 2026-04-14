@@ -40,6 +40,17 @@ Here is an example of how to store a Nextflow secret (replace <KEY> with your ke
 nextflow secrets set GNX_ACCESS_KEY <KEY>
 ```
 
+#### Sample information
+
+| Secret            | Description                                    |
+| ----------------- | ---------------------------------------------- |
+| COPATHBI_SERVER   | The server name of the CoPathBI database.      |
+| COPATHBI_DATABASE | The name of the CoPathBI database.             |
+| COPATHBI_USER     | The user name to access the CoPathBI database. |
+| COPATHBI_PASSWORD | The password to access the CoPathBI database.  |
+
+
+
 #### AWS: Data transfers
 
 | Secret         | Description                                                                              |
@@ -69,6 +80,7 @@ nextflow secrets set GNX_ACCESS_KEY <KEY>
 | ------------------- | ------------------------------------------- |
 | AWS_DRAGEN_USER     | Username to access Illumina's DRAGEN on AWS |
 | AWS_DRAGEN_PASSWORD | Password to access Illumina's DRAGEN on AWS |
+
 
 ## Input parameters
 
