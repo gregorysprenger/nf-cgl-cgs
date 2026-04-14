@@ -202,7 +202,7 @@ workflow INPUT_CHECK {
     )
 
     emit:
-    samples         = ch_samples          // channel: [ val(sample_info), path(reads), path(fastq_list), path(alignment_file) ]
+    samples         = ch_samples          // channel: [ val(meta), path(reads), path(fastq_list), path(alignment_file) ]
     mgi_samplesheet = ch_mgi_samplesheet  // channel: [ path(file) ]
     versions        = ch_versions         // channel: [ path(file) ]
 

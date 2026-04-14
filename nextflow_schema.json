@@ -27,11 +27,6 @@
                     "format": "file-path",
                     "description": "Path to samplesheet containing the columns: ID, File. Used to provide BAM or CRAM files as input."
                 },
-                "sample_info": {
-                    "type": "string",
-                    "format": "file-path",
-                    "description": "Path to samplesheet containing sample information."
-                },
                 "batch_name": {
                     "type": "string",
                     "description": "Name of sequence batch. If not provided, it will be in the format of `<year><month><day>_CGS`."

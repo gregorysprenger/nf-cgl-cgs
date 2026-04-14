@@ -24,12 +24,6 @@ if (params.input) {
 } else {
     ch_input_file = Channel.empty()
 }
-// Sample information
-if (params.sample_info) {
-    ch_sample_information = Channel.fromPath(params.sample_info, checkIfExists: true).collect()
-} else {
-    ch_sample_information = Channel.empty()
-}
 
 // DRAGEN reference directory
 if (params.refdir) {
