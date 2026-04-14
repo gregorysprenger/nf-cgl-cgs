@@ -86,6 +86,11 @@
                     "type": "string",
                     "description": "MultiQC report title. Printed as page header, used for filename if not otherwise specified.",
                     "fa_icon": "fas fa-file-signature"
+                },
+                "bcl_first_tile": {
+                    "type": "boolean",
+                    "description": "Only demultiplex the first tile of the flowcell.",
+                    "default": false
                 }
             }
         },
