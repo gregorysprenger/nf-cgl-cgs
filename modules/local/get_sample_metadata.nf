@@ -17,18 +17,14 @@ process GET_SAMPLE_METADATA {
 
     script:
     def prefix  = task.ext.prefix
-    def samples = sample_names.join(' ')
+    def samples = sample_names.collect{ "--filter-values '" + it + "'" }.join(' ')
     """
-    query_database.py \\
-        --server \$COPATHBI_SERVER \\
-        --database \$COPATHBI_DATABASE \\
-        --username \$COPATHBI_USER \\
-        --password \$COPATHBI_PASSWORD \\
-        --columns Sex \\
-        --filter-col SpcNum \\
-        --output "${prefix.id}.csv" \\
-        --table FranklinOrder \\
-        --filter-values "${samples}"
+    query_database.py \
+        --columns Sex \
+        --filter-col SpcNum \
+        --output "${prefix.id}.csv" \
+        --table FranklinOrder \
+        ${samples}
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
@@ -37,8 +33,9 @@ process GET_SAMPLE_METADATA {
     """
 
     stub:
+    def prefix = task.ext.prefix
     """
-    touch \"${task.ext.prefix.id}.csv\"
+    touch "${prefix.id}.csv"
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

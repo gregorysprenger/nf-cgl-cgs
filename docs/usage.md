@@ -38,7 +38,7 @@ The pipeline requires access to the CoPathBI database for retrieving sample info
 Here's an example of how to store a Nextflow secret (replace `<KEY>` with your actual key):
 
 ```bash
-nextflow secrets set GNX_ACCESS_KEY <KEY>
+nextflow secrets set COPATHBI_SERVER <KEY>
 ```
 
 #### CoPathBI database connection
