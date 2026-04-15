@@ -163,8 +163,27 @@ def main() -> None:
             print("\n".join(columns))
             return
 
+
         query, params = build_query(args)
         row_count = execute_and_stream_to_csv(conn_string, query, args.output, params)
+
+        # Integrity check: if filter-values were provided, ensure all are present in the results
+        if args.filter_values:
+            # Read the output CSV and check the number of unique filter_col values
+            try:
+                with open(args.output, newline='', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    found = set(row[args.filter_col] for row in reader)
+                missing = set(args.filter_values) - found
+                if missing:
+                    logger.error("Missing results for filter values: %s", ", ".join(missing))
+                    sys.exit(2)
+                if len(found) != len(args.filter_values):
+                    logger.error("Mismatch between requested and returned sample count.")
+                    sys.exit(2)
+            except Exception as e:
+                logger.error("Error during integrity check: %s", e)
+                sys.exit(2)
 
         if row_count == 0:
             logger.info("No results found.")

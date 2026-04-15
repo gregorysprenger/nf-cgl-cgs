@@ -35,4 +35,14 @@ process GET_SAMPLE_METADATA {
         python: \$(python3 --version 2>&1 | awk '{print \$2}')
     END_VERSIONS
     """
+
+    stub:
+    """
+    touch \"${task.ext.prefix.id}.csv\"
+
+    cat <<-END_VERSIONS > versions.yml
+    "${task.process}":
+        python: \$(python3 --version 2>&1 | awk '{print \$2}')
+    END_VERSIONS
+    """
 }
