@@ -27,11 +27,6 @@
                     "format": "file-path",
                     "description": "Path to samplesheet containing the columns: ID, File. Used to provide BAM or CRAM files as input."
                 },
-                "sample_info": {
-                    "type": "string",
-                    "format": "file-path",
-                    "description": "Path to samplesheet containing sample information."
-                },
                 "batch_name": {
                     "type": "string",
                     "description": "Name of sequence batch. If not provided, it will be in the format of `<year><month><day>_CGS`."
@@ -86,6 +81,11 @@
                     "type": "string",
                     "description": "MultiQC report title. Printed as page header, used for filename if not otherwise specified.",
                     "fa_icon": "fas fa-file-signature"
+                },
+                "bcl_first_tile": {
+                    "type": "boolean",
+                    "description": "Only demultiplex the first tile of the flowcell.",
+                    "default": false
                 }
             }
         },

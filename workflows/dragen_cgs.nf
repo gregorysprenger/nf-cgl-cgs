@@ -5,6 +5,7 @@
 */
 
 include { DEMULTIPLEX                          } from '../subworkflows/local/demultiplex'
+include { GET_SAMPLE_METADATA                  } from '../modules/local/get_sample_metadata'
 include { DRAGEN_ALIGN                         } from '../modules/local/dragen_align'
 include { DRAGEN_ALIGN as DRAGEN_ALIGN_CONTROL } from '../modules/local/dragen_align'
 include { JOINT_GENOTYPING                     } from '../subworkflows/local/joint_genotyping'
@@ -22,12 +23,6 @@ if (params.input) {
     ch_input_file = Channel.fromPath(params.input.split(',') as List).collect()
 } else {
     ch_input_file = Channel.empty()
-}
-// Sample information
-if (params.sample_info) {
-    ch_sample_information = Channel.fromPath(params.sample_info, checkIfExists: true).collect()
-} else {
-    ch_sample_information = Channel.empty()
 }
 
 // DRAGEN reference directory
@@ -128,28 +123,35 @@ workflow DRAGEN_CGS {
         ch_samples  = ch_samples.mix(DEMULTIPLEX.out.samples)
     }
 
-    // Fetch gender for samples
-    if (params.sample_info) {
-        ch_samples = ch_samples
-                        .map{ meta, reads, fastq_list, alignment_file -> [ meta?.acc ?: meta?.id, meta, reads, fastq_list, alignment_file ] }
-                        .join(
-                            ch_sample_information
-                                .splitCsv(header: true)
-                                .map{ [ it['Accession'].join(''), it['gender'].join('').toLowerCase() ] },
-                            remainder: true
-                        )
-                        .filter{ it[1] != null }
-                        .map{
-                            acc, meta, reads, fastq_list, alignment_file, gender ->
-                                if (meta) {
-                                    def meta_new = meta.clone()
-                                    meta_new['sex']   = (gender == 'm' || gender == 'male')   ? 'male'   :
-                                                        (gender == 'f' || gender == 'female') ? 'female' : ''
+    //
+    // MODULE: Fetch sample metadata
+    //
+    GET_SAMPLE_METADATA (
+        ch_samples
+            .map{ meta, reads, fastq_list, alignment_file -> meta.acc ?: meta.id }
+            .collect()
+            .filter{ it.size() > 0 }
+    )
+    ch_versions = ch_versions.mix(GET_SAMPLE_METADATA.out.versions)
 
-                                    [ meta_new, reads, fastq_list, alignment_file ]
-                                }
-                        }
-    }
+    // Join sample metadata to existing channel by sample ID (SpcNum) and filter out samples with missing metadata
+    ch_samples = ch_samples
+                    .map{ meta, reads, fastq_list, alignment_file -> [ meta?.acc ?: meta?.id, meta, reads, fastq_list, alignment_file ] }
+                    .join(
+                        GET_SAMPLE_METADATA.out.metadata
+                            .splitCsv(header: true)
+                            .map{ [ it.SpcNum, it.Sex?.toLowerCase() ] },
+                        remainder: true
+                    )
+                    .filter{ acc, meta, reads, fastq_list, alignment_file, gender -> (meta != null) && (acc != null) }
+                    .map{
+                        acc, meta, reads, fastq_list, alignment_file, gender ->
+                            def meta_new = meta.clone()
+                            meta_new['sex']   = (gender == 'm' || gender == 'male')   ? 'male'   :
+                                                (gender == 'f' || gender == 'female') ? 'female' : ''
+
+                            [ meta_new, reads, fastq_list, alignment_file ]
+                    }
 
     // Automatically determine if GVCF should be created
     ch_samples = ch_samples

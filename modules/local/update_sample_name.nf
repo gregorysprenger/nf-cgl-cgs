@@ -2,7 +2,7 @@ process UPDATE_SAMPLE_NAME {
     tag "${meta.id}"
     label 'process_low'
 
-    container 'mgibio/samtools:v1.21-noble'
+    container 'docker.io/mgibio/samtools:v1.21-noble'
 
     input:
     tuple val(meta), path(alignment_file)

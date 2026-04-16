@@ -18,13 +18,15 @@ process DRAGEN_DEMULTIPLEX {
     task.ext.when == null || task.ext.when
 
     script:
-    def prefix   = task.ext.prefix
-    def exe_path = ['awsbatch'].any{ workflow.profile.contains(it) } ? "/opt/edico" : "/opt/dragen/4.3.6"
+    def prefix     = task.ext.prefix
+    def exe_path   = ['awsbatch'].any{ workflow.profile.contains(it) } ? "/opt/edico"             : "/opt/dragen/4.3.6"
+    def first_tile = params.bcl_first_tile                             ? "--first-tile-only true" : ""
     """
     # Perform demultiplexing of samples
     ${exe_path}/bin/dragen \\
         --bcl-conversion-only true \\
         --bcl-only-matched-reads true \\
+        ${first_tile} \\
         --strict-mode true \\
         --sample-sheet ${samplesheet} \\
         --bcl-input-directory ${illumina_run_dir} \\
@@ -55,8 +57,9 @@ process DRAGEN_DEMULTIPLEX {
     """
 
     stub:
-    def prefix   = task.ext.prefix
-    def exe_path = ['awsbatch'].any{ workflow.profile.contains(it) } ? "/opt/edico" : "/opt/dragen/4.3.6"
+    def prefix     = task.ext.prefix
+    def exe_path   = ['awsbatch'].any{ workflow.profile.contains(it) } ? "/opt/edico"             : "/opt/dragen/4.3.6"
+    def first_tile = params.bcl_first_tile                             ? "--first-tile-only true" : ""
     """
     cp -r ${projectDir}/assets/stub/demux_fastq "${prefix.id}"
     cp "${prefix.id}/Reports/fastq_list.csv" fastq_list.scratch.csv
@@ -65,6 +68,7 @@ process DRAGEN_DEMULTIPLEX {
     ${exe_path}/bin/dragen \\
         --bcl-conversion-only true \\
         --bcl-only-matched-reads true \\
+        ${first_tile} \\
         --strict-mode true \\
         --sample-sheet ${samplesheet} \\
         --bcl-input-directory ${illumina_run_dir} \\

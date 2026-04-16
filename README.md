@@ -48,7 +48,6 @@ nextflow run \
   --input "samplesheet_1.xlsx,samplesheet_2.xlsx" \
   --illumina_rundir "<RUNDIR_1>,<RUNDIR_2>" \
   --batch_name 20240717_cGS \
-  --sample_info daily_accession_log.csv \
   --demux_outdir <DEMUX OUTDIR> \
   --outdir <OUTDIR>
 ```
@@ -62,7 +61,6 @@ nextflow run \
   -profile <docker/singularity/institute> \
   --fastq_list fastq_list.csv \
   --batch_name 20240717_cGS \
-  --sample_info daily_accession_log.csv \
   --outdir <OUTDIR>
 ```
 
