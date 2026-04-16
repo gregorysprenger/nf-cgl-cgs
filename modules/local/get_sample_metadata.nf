@@ -17,7 +17,7 @@ process GET_SAMPLE_METADATA {
 
     script:
     def prefix  = task.ext.prefix
-    def samples = sample_names.collect{ "--filter-values '" + it + "'" }.join(' ')
+    def samples = "--filter-values ${sample_names.collect{ "'${it}'" }.join(' ')}"
     """
     query_database.py \
         --columns Sex \
