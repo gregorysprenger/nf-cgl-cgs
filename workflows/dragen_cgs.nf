@@ -130,6 +130,7 @@ workflow DRAGEN_CGS {
         ch_samples
             .map{ meta, reads, fastq_list, alignment_file -> meta.acc ?: meta.id }
             .collect()
+            .filter{ it.size() > 0 }
     )
     ch_versions = ch_versions.mix(GET_SAMPLE_METADATA.out.versions)
 
