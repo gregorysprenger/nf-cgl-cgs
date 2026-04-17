@@ -247,6 +247,17 @@ workflow DRAGEN_CGS {
 
     // Transfer data to AWS bucket
     if (params.transfer_data) {
+        // Group VCF files by sample id
+        def vcf_by_id = JOINT_GENOTYPING.out.vcf_files
+            .flatMap()
+            .map{ file -> [ file.baseName.split('\\.')[0], file ] }
+            .groupTuple()
+
+        // Group metric files by sample id
+        def metrics_by_id = JOINT_GENOTYPING.out.metric_files
+            .map{ file -> [ file.baseName.split('\\.')[0], file ] }
+            .groupTuple()
+
         ch_upload_files = DRAGEN_ALIGN.out.dragen_output
             .map{
                 meta, files ->
@@ -262,12 +273,18 @@ workflow DRAGEN_CGS {
                     [ meta.id, files.findAll{ f -> extensions.any{ f.toString().toLowerCase().contains(it) } } ]
             }
             .join(
-                JOINT_GENOTYPING.out.vcf_files
-                    .flatMap()
-                    .map{ file -> [ file.baseName.split('\\.')[0], file ] }
-                    .groupTuple()
-                    .join(JOINT_GENOTYPING.out.metric_files.collect().ifEmpty([]))
-                    .map{ id, vcf_files, metric_files -> [ id, vcf_files + metric_files ] },
+                vcf_by_id
+                    .join(metrics_by_id)
+                    .map{
+                        id, vcf_files, metric_files ->
+                            if (!vcf_files) vcf_files = []
+                            if (!(vcf_files instanceof List)) vcf_files = [vcf_files]
+
+                            if (!metric_files) metric_files = []
+                            if (!(metric_files instanceof List)) metric_files = [metric_files]
+
+                            [ id, vcf_files + metric_files ]
+                    },
                 remainder: true
             )
             .map{
