@@ -102,6 +102,8 @@ workflow DRAGEN_CGS {
     ch_dragen_usage   = Channel.empty()
     ch_dragen_metrics = Channel.empty()
 
+    def isClinicalAcc = { it -> it instanceof String && (it.startsWith("G") || it.contains("WCN-")) }
+
     // Validate ris2 profile compatibility and queue settings
     if (workflow.profile?.tokenize(',')?.contains('ris2')) {
         if (workflow.profile.tokenize(',').intersect(['dragen2', 'dragen4', 'dragen5', 'dragen6']).size() >= 1) {
@@ -129,6 +131,7 @@ workflow DRAGEN_CGS {
     GET_SAMPLE_METADATA (
         ch_samples
             .map{ meta, reads, fastq_list, alignment_file -> meta.acc ?: meta.id }
+            .filter{ isClinicalAcc(it) }
             .collect()
             .filter{ it.size() > 0 }
     )
@@ -181,7 +184,7 @@ workflow DRAGEN_CGS {
     DRAGEN_ALIGN (
         ch_samples.filter{
             meta, reads, fastq_list, alignment_file ->
-                params.validation_samples || (meta?.acc instanceof String && (meta?.acc.startsWith("G") || meta?.acc.contains("WCN-")))
+                params.validation_samples || isClinicalAcc(meta?.acc)
         },
         ch_intermediate_dir,
         ch_qc_cross_contamination,
@@ -216,7 +219,7 @@ workflow DRAGEN_CGS {
                     .ifEmpty("no_joint_genotyping")
                     .combine(ch_samples.filter{
                         meta, reads, fastq_list, alignment_file ->
-                            meta?.acc instanceof String && !meta?.acc.startsWith("G") && !meta?.acc.contains("WCN-")
+                            meta?.acc instanceof String && !isClinicalAcc(meta?.acc)
                     })
                     .map{
                         done, meta, reads, fastq_list, alignment_file ->
