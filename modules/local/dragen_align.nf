@@ -3,8 +3,8 @@ process DRAGEN_ALIGN {
     label 'dragen'
 
     container "${ ['awsbatch','dragenaws'].any{ workflow.profile.contains(it) }
-        ? 'job-definition://dragen_v4-3-6'
-        : 'dockerreg01.accounts.ad.wustl.edu/cgl/dragen:v4.3.6' }"
+        ? 'job-definition://dragen_v4-5-4'
+        : 'dockerreg01.accounts.ad.wustl.edu/cgl/dragen@sha256:6eccdcf10b7b6eb171e80c5650d308c3194ad5917441e847ff423f9454593d12' }"
 
     input:
     tuple val(meta), path(reads, stageAs: "fastq_files/*"), path(fastq_list), path(alignment_file)
