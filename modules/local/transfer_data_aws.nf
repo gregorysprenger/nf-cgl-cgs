@@ -1,5 +1,4 @@
 process TRANSFER_DATA_AWS {
-    tag "${meta.id}"
     label 'process_low'
     label 'transfer_data_aws'
 

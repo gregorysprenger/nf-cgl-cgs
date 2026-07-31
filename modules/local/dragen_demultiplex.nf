@@ -1,5 +1,4 @@
 process DRAGEN_DEMULTIPLEX {
-    tag "${task.ext.prefix.id}"
     label 'dragen'
 
     container "${ ['awsbatch'].any{ workflow.profile.contains(it) }

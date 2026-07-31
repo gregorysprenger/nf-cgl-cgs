@@ -1,5 +1,4 @@
 process DRAGEN_JOINT_CNV {
-    tag "${task.ext.prefix.id}"
     label 'dragen'
 
     container "${ ['awsbatch','dragenaws'].any{ workflow.profile.contains(it) }

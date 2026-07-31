@@ -1,5 +1,4 @@
 process CREATE_DEMULTIPLEX_SAMPLESHEET {
-    tag "${illumina_run_dir.name}"
     label 'process_low'
 
     container "ghcr.io/dhslab/docker-python3:231224"

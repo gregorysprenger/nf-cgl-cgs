@@ -1,5 +1,4 @@
 process GET_SAMPLE_METADATA {
-    tag "${task.ext.prefix.id}"
     label 'process_low'
     label 'database_metadata'
 

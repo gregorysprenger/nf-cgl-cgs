@@ -1,5 +1,4 @@
 process UPDATE_SAMPLE_NAME {
-    tag "${meta.id}"
     label 'process_low'
 
     container 'docker.io/mgibio/samtools:v1.21-noble'

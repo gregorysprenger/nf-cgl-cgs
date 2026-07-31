@@ -1,5 +1,4 @@
 process BCFTOOLS_SPLIT_VCF {
-    tag "${joint_vcf_file}"
     label 'process_medium'
 
     container "docker.io/mgibio/bcftools-cwl:1.12"

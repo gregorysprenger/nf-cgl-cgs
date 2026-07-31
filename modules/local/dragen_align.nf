@@ -1,5 +1,4 @@
 process DRAGEN_ALIGN {
-    tag "${meta.id}"
     label 'dragen'
 
     container "${ ['awsbatch','dragenaws'].any{ workflow.profile.contains(it) }

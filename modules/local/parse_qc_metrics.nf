@@ -1,5 +1,4 @@
 process PARSE_QC_METRICS {
-    tag "${task.ext.prefix.id}"
     label 'process_low'
 
     container 'dockerreg01.accounts.ad.wustl.edu/cgl/pandas-excel@sha256:1958093220d5785115b73f69e0894b366f75fac646131e5394972ae68d9e4202'

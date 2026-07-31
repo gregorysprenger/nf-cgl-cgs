@@ -1,5 +1,4 @@
 process STAGE_DATA {
-    tag "${meta.id}"
     label 'process_low'
     label 'stage_data'
 
