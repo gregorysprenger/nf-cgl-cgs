@@ -3,14 +3,46 @@
 import argparse
 import datetime as dt
 import glob
-import os
 import logging
+import os
 from functools import reduce
 from typing import Optional
 
 import pandas as pd
 
 logger = logging.getLogger(__name__)
+
+WORKSHEET_COLUMNS = [
+    "ACCESSION NUMBER",
+    "RUN ID",
+    "SAMPLE ID",
+    "Total DNA yield (ng)",
+    "260/280",
+    "Library Input (ng)",
+]
+
+MGI_COLUMN_RENAMES = {
+    "Total input reads": "TOTAL_READS",
+    "PCT Number of duplicate marked reads": "PCT_DUPLICATE_READS",
+    "PCT Mapped reads": "PCT_MAPPED_READS",
+    "Total bases": "TOTAL_BASES",
+    "Total giga bases": "TOTAL_GIGA_BASES",
+    "PCT Mismatched bases R1": "MISMATCHED_RATE_R1",
+    "PCT Mismatched bases R2": "MISMATCHED_RATE_R2",
+    "PCT Q30 bases R1": "PCT_Q30_BASES_1",
+    "PCT Q30 bases R2": "PCT_Q30_BASES_2",
+    "Insert length: mean": "MEAN_INS_SIZE",
+    "Average alignment coverage over genome": "AVG_ALIGN_GENOME_COVERAGE",
+    "Average autosomal coverage over genome": "AVG_AUTOSOMAL_GENOME_COVERAGE",
+    "PCT of genome with coverage [  20x: inf)": "PCT_GENOME_20x",
+    "PCT of genome with coverage [  10x: inf)": "PCT_GENOME_10x",
+    "Average autosomal coverage over QC coverage region": "AVG_AUTOSOMAL_EXOME_COVERAGE",
+    "PCT of QC coverage region with coverage [  20x: inf)": "PCT_EXOME_20x",
+    "Uniformity of coverage (PCT > 0.2*mean) over genome": "PCT_UNIFORM_COVERAGE",
+    "PCT Aligned reads in genome": "PCT_GENOME_ALIGNED_READS",
+}
+
+MGI_QC_COLUMNS = WORKSHEET_COLUMNS + list(MGI_COLUMN_RENAMES.values())
 
 METRIC_CONFIGS = {
     "mapping": {
@@ -78,411 +110,265 @@ METRIC_CONFIGS = {
 }
 
 
-def parseArgs() -> argparse.Namespace:
+def parse_args() -> argparse.Namespace:
     """Parse command line arguments.
 
     Returns:
         Parsed command line arguments.
     """
-    parser = argparse.ArgumentParser(
-        description="Find, parse, and create summary QC metric files.", add_help=False
-    )
-
-    parser.add_argument(
-        "-h", "--help", action="help", help="Show usage information and exit."
-    )
+    parser = argparse.ArgumentParser(description="Find, parse, and create summary QC metric files.")
     parser.add_argument(
         "-m",
         "--mgi_worksheet",
         nargs="*",
+        default=[],
         help="Path to MGI worksheet that contains sequencing information for each sample.",
     )
-    parser.add_argument(
-        "-i",
-        "--inputdir",
-        help="Directory to search for QC metric files.",
-        required=True,
-    )
-    parser.add_argument(
-        "-o", "--outdir", help="Directory to save summary QC metric files."
-    )
-    parser.add_argument(
-        "-p", "--prefix", help="Filename prefix to append to output files."
-    )
+    parser.add_argument("-i", "--inputdir", required=True, help="Directory to search for QC metric files.")
+    parser.add_argument("-o", "--outdir", help="Directory to save summary QC metric files.")
+    parser.add_argument("-p", "--prefix", help="Filename prefix to append to output files.")
 
     return parser.parse_args()
 
 
-def parse_metrics(
-    files: list[str], metric_dict: dict, line_startswith: str
-) -> pd.DataFrame:
-    """Parse list of files for items in dictionary.
+def parse_metrics(files: list[str], metric_dict: dict[str, int], section_header: str) -> pd.DataFrame:
+    """Parse DRAGEN metric files into one row per sample.
 
     Args:
-        files: List of files to search through for metrics.
-        metric_dict: Dictionary that maps a value and index of substring to find.
-        line_startswith: Only search for metric strings in lines that start with this substring.
+        files: Metric files to parse. The SAMPLE ID is taken from the filename.
+        metric_dict: Metric name to the column index holding its value.
+        section_header: Only search for metrics in lines containing this substring.
 
     Returns:
-        DataFrame that contains specified metrics in metric_dict for all specified files.
+        DataFrame with a SAMPLE ID column and one column per metric found.
     """
-    data_list = []
+    metrics_by_name = {}
+    for name, col_idx in metric_dict.items():
+        metrics_by_name.setdefault(name.removeprefix("PCT "), []).append((name, col_idx))
 
-    search_map = {}
-    for key, idx in metric_dict.items():
-        if key.startswith("PCT "):
-            search_map.setdefault(key[4:], []).append((key, idx))
-        else:
-            search_map.setdefault(key, []).append((key, idx))
-
+    rows = []
     for file in files:
-        data_dict = {}
-        data_dict["SAMPLE ID"] = os.path.basename(file).split(".")[0]
+        row = {"SAMPLE ID": os.path.basename(file).split(".")[0]}
 
         try:
-            with open(file, "r") as f:
+            with open(file) as f:
                 for line in f:
-                    if (
-                        line_startswith
-                        and not line.startswith(line_startswith)
-                        and line_startswith not in line
-                    ):
+                    if section_header not in line:
                         continue
 
-                    parts = line.strip().split(",")
-                    for search_key, metrics in search_map.items():
-                        if any(
-                            part.strip() == search_key
-                            or part.strip() == f"PCT {search_key}"
-                            for part in parts
-                        ):
-                            for metric_name, col_idx in metrics:
-                                if col_idx < len(parts):
-                                    data_dict[metric_name] = parts[col_idx].strip()
-                            break
-        except (OSError, IOError):
+                    parts = [part.strip() for part in line.split(",")]
+                    metrics = next(
+                        (
+                            metrics_by_name[key]
+                            for key in (p.removeprefix("PCT ") for p in parts)
+                            if key in metrics_by_name
+                        ),
+                        [],
+                    )
+                    row.update({name: parts[col_idx] for name, col_idx in metrics if col_idx < len(parts)})
+        except OSError as error:
+            logger.warning("Could not read %s: %s", file, error)
             continue
 
-        data_list.append(data_dict)
+        rows.append(row)
 
-    return pd.DataFrame(data_list) if data_list else pd.DataFrame(columns=["SAMPLE ID"])
+    return pd.DataFrame(rows) if rows else pd.DataFrame(columns=["SAMPLE ID"])
 
 
-def save_mgi_metrics(
-    mgi_worksheet: pd.DataFrame,
-    qc_dfs: dict[str, pd.DataFrame],
-    filename_prefix: str,
-    outdir: str,
-) -> None:
-    """Save required QC metrics for MGI.
+def collect_qc_metrics(inputdir: str) -> dict[str, pd.DataFrame]:
+    """Find and parse every DRAGEN metric file under a directory.
 
     Args:
-        mgi_worksheet: QC metrics sheet.
-        qc_dfs: Dictionary containing parsed QC DataFrames.
-        filename_prefix: Prefix for output filenames.
-        outdir: Output directory to save file.
-    """
-    df = mgi_worksheet.copy()
-    for key in ["mapping", "wgs", "qc_region"]:
-        if not qc_dfs[key].empty:
-            df = pd.merge(df, qc_dfs[key], on="SAMPLE ID", how="outer")
-
-    columns_to_rename = {
-        "Total input reads": "TOTAL_READS",
-        "PCT Number of duplicate marked reads": "PCT_DUPLICATE_READS",
-        "PCT Mapped reads": "PCT_MAPPED_READS",
-        "Total bases": "TOTAL_BASES",
-        "Total giga bases": "TOTAL_GIGA_BASES",
-        "PCT Mismatched bases R1": "MISMATCHED_RATE_R1",
-        "PCT Mismatched bases R2": "MISMATCHED_RATE_R2",
-        "PCT Q30 bases R1": "PCT_Q30_BASES_1",
-        "PCT Q30 bases R2": "PCT_Q30_BASES_2",
-        "Insert length: mean": "MEAN_INS_SIZE",
-        "Average alignment coverage over genome": "AVG_ALIGN_GENOME_COVERAGE",
-        "Average autosomal coverage over genome": "AVG_AUTOSOMAL_GENOME_COVERAGE",
-        "PCT of genome with coverage [  20x: inf)": "PCT_GENOME_20x",
-        "PCT of genome with coverage [  10x: inf)": "PCT_GENOME_10x",
-        "Average autosomal coverage over QC coverage region": "AVG_AUTOSOMAL_EXOME_COVERAGE",
-        "PCT of QC coverage region with coverage [  20x: inf)": "PCT_EXOME_20x",
-        "Uniformity of coverage (PCT > 0.2*mean) over genome": "PCT_UNIFORM_COVERAGE",
-        "PCT Aligned reads in genome": "PCT_GENOME_ALIGNED_READS",
-    }
-
-    df.rename(columns=columns_to_rename, inplace=True)
-
-    cols = [
-        "ACCESSION NUMBER",
-        "RUN ID",
-        "SAMPLE ID",
-        "Total DNA yield (ng)",
-        "260/280",
-        "Library Input (ng)",
-        "Capture Input (ng)",
-    ] + list(columns_to_rename.values())
-
-    df = df[[c for c in cols if c in df.columns]]
-    df.to_excel(
-        f"{outdir}/{filename_prefix}_MGI_QC.xlsx",
-        index=False,
-        sheet_name="MGI QC metrics",
-        engine="openpyxl",
-    )
-
-
-def save_all_metrics(
-    all_qc_dataframes: list[pd.DataFrame], filename_prefix: str, outdir: str
-) -> None:
-    """Save all QC metrics.
-
-    Args:
-        all_qc_dataframes: List of QC metric DataFrames.
-        filename_prefix: Prefix for output filenames.
-        outdir: Output directory to save file.
-    """
-
-    def merge_dfs(left: pd.DataFrame, right: pd.DataFrame) -> pd.DataFrame:
-        """Merge two DataFrames on the SAMPLE ID column.
-
-        Args:
-            left: First DataFrame to merge.
-            right: Second DataFrame to merge.
-
-        Returns:
-            Merged DataFrame.
-        """
-        return (
-            pd.merge(left, right, on="SAMPLE ID", how="outer")
-            if not right.empty
-            else left
-        )
-
-    all_qc_metrics = reduce(
-        merge_dfs,
-        all_qc_dataframes,
-    )
-    all_qc_metrics.to_excel(
-        f"{outdir}/{filename_prefix}_QC.xlsx",
-        index=False,
-        sheet_name="QC metrics",
-        engine="openpyxl",
-    )
-
-
-def save_genoox_metrics(
-    mgi_worksheet: pd.DataFrame,
-    mapping_metrics: pd.DataFrame,
-    filename_prefix: str,
-    outdir: str,
-) -> None:
-    """Create Excel workbook that contains the following sheets: QC Metrics - qPCR.
-
-    Args:
-        mgi_worksheet: QC metrics sheet from the MGI worksheet input.
-        mapping_metrics: Metrics pulled from '*.mapping_metrics.csv' files - ONLY SAMPLE_ID column is used.
-        filename_prefix: Prefix for output filenames.
-        outdir: Output directory to save file.
-    """
-    required_columns = [
-        "ACCESSION NUMBER",
-        "RUN ID",
-        "SAMPLE ID",
-        "Total DNA yield (ng)",
-        "260/280",
-        "Library Input (ng)",
-    ]
-    cleaned_mgi_worksheet = mgi_worksheet[
-        [c for c in required_columns if c in mgi_worksheet.columns]
-    ].copy()
-
-    if cleaned_mgi_worksheet["SAMPLE ID"].isnull().all() or cleaned_mgi_worksheet.empty:
-        cleaned_mgi_worksheet = cleaned_mgi_worksheet.merge(
-            mapping_metrics, on="SAMPLE ID", how="right"
-        )
-        cleaned_mgi_worksheet = cleaned_mgi_worksheet[required_columns]
-
-    # Filter for SAMPLE ID values that are strings and start with 'G' or contain 'WCN-'
-    is_genoox_sample = cleaned_mgi_worksheet["SAMPLE ID"].str.startswith(
-        "G", na=False
-    ) | cleaned_mgi_worksheet["SAMPLE ID"].str.contains("WCN-", na=False)
-    cleaned_mgi_worksheet = cleaned_mgi_worksheet[is_genoox_sample]
-
-    if cleaned_mgi_worksheet.empty:
-        return
-
-    cleaned_mgi_worksheet.to_excel(
-        f"{outdir}/{filename_prefix}_Genoox.xlsx",
-        sheet_name="QC Metrics - qPCR",
-        index=False,
-        engine="openpyxl",
-    )
-
-
-def read_file_to_dataframe(file: Optional[str]) -> pd.DataFrame:
-    """
-    Read input file to DataFrame.
-
-    Args:
-        file: Input file to read.
+        inputdir: Directory to search recursively for QC metric files.
 
     Returns:
-        DataFrame containing data from input file.
+        Mapping of METRIC_CONFIGS key to the DataFrame parsed from those files.
     """
-    if not file:
-        df = pd.DataFrame()
-    else:
-        try:
-            if file.endswith(".tsv"):
-                df = pd.read_csv(file, sep="\t")
-            elif file.endswith(".csv"):
-                df = pd.read_csv(file, sep=",")
-            elif file.endswith(".xlsx"):
-                df = pd.read_excel(file, sheet_name="QC Metrics")
-            else:
-                df = pd.DataFrame()
-        except (ValueError, FileNotFoundError):
+    qc_dfs = {
+        key: parse_metrics(
+            sorted(glob.glob(f"{inputdir}/**/*{config['suffix']}", recursive=True)),
+            config["metrics"],
+            config["header"],
+        )
+        for key, config in METRIC_CONFIGS.items()
+    }
+
+    mapping_metrics = qc_dfs["mapping"]
+    if "Total bases" in mapping_metrics:
+        mapping_metrics.insert(
+            min(3, len(mapping_metrics.columns)),
+            "Total giga bases",
+            round(pd.to_numeric(mapping_metrics["Total bases"], errors="coerce") / 1e9, 2),
+        )
+
+    return qc_dfs
+
+
+def read_worksheet(file: str) -> pd.DataFrame:
+    """Read an MGI worksheet, keeping only the worksheet columns.
+
+    Args:
+        file: Worksheet to read (.csv, .tsv, or .xlsx).
+
+    Returns:
+        DataFrame with WORKSHEET_COLUMNS and whitespace-stripped text values.
+    """
+    try:
+        if file.endswith(".xlsx"):
+            df = pd.read_excel(file, sheet_name="QC Metrics")
+        elif file.endswith((".csv", ".tsv")):
+            df = pd.read_csv(file, sep="\t" if file.endswith(".tsv") else ",")
+        else:
+            logger.warning("Unsupported worksheet format: %s", file)
             df = pd.DataFrame()
+    except (ValueError, FileNotFoundError) as error:
+        logger.warning("Could not read %s: %s", file, error)
+        df = pd.DataFrame()
 
-    if "Content_Desc" in df:
-        if "SAMPLE ID" not in df:
-            df.rename(columns={"Content_Desc": "SAMPLE ID"}, inplace=True)
-        elif df["SAMPLE ID"].fillna("").eq("").all():
-            df["SAMPLE ID"] = df["Content_Desc"]
+    sample_ids = df.get("SAMPLE ID")
+    if "Content_Desc" in df and (sample_ids is None or sample_ids.fillna("").eq("").all()):
+        df["SAMPLE ID"] = df["Content_Desc"]
 
-    cols = [
-        "ACCESSION NUMBER",
-        "RUN ID",
-        "SAMPLE ID",
-        "Total DNA yield (ng)",
-        "260/280",
-        "Library Input (ng)",
-    ]
+    df = df.reindex(columns=WORKSHEET_COLUMNS)
 
-    df = df.reindex(columns=cols)
-
-    obj_cols = df.select_dtypes(include=["object"]).columns
-    if not obj_cols.empty:
-        df[obj_cols] = df[obj_cols].fillna("").apply(lambda x: x.str.strip())
+    text_cols = df.select_dtypes("object").columns
+    df[text_cols] = df[text_cols].apply(lambda col: col.fillna("").astype(str).str.strip())
 
     return df
+
+
+def drop_flowcell(run_ids: pd.Series) -> Optional[str]:
+    """Drop the flowcell from run IDs and return the first non-empty result.
+
+    Run IDs (e.g. 20231211_LH00195_0065_B22GLYYLT3) end with the flowcell, so runs
+    that differ only by flowcell collapse to a single run ID (e.g. 20231211_LH00195_0065).
+
+    Args:
+        run_ids: Series of run IDs.
+
+    Returns:
+        First run ID without its flowcell, or None if all run IDs are empty.
+    """
+    stripped = (str(r).strip() for r in run_ids.dropna())
+    return next((r.rsplit("_", 1)[0] for r in stripped if r), None)
+
+
+def load_worksheets(files: list[str]) -> pd.DataFrame:
+    """Read and combine MGI worksheets, collapsing rows that differ only by RUN ID.
+
+    Args:
+        files: Worksheets to read. May be empty.
+
+    Returns:
+        Combined worksheet, where RUN ID holds a single run ID, without flowcell, for each collapsed row.
+    """
+    if not files:
+        return pd.DataFrame(columns=WORKSHEET_COLUMNS)
+
+    worksheet = pd.concat(map(read_worksheet, files), ignore_index=True)
+    key_cols = [c for c in WORKSHEET_COLUMNS if c != "RUN ID"]
+
+    return pd.DataFrame(
+        worksheet.groupby(key_cols, dropna=False, sort=False, as_index=False).agg({"RUN ID": drop_flowcell})[
+            WORKSHEET_COLUMNS
+        ]
+    )
+
+
+def align_sample_ids(qc_dfs: dict[str, pd.DataFrame], worksheet: pd.DataFrame) -> None:
+    """Rewrite QC SAMPLE IDs in place to match their MGI worksheet spelling.
+
+    Args:
+        qc_dfs: Parsed QC DataFrames. Modified in place.
+        worksheet: Worksheet supplying the canonical SAMPLE ID spellings.
+    """
+    worksheet_ids = sorted({str(w_id).strip() for w_id in worksheet["SAMPLE ID"].dropna()})
+    worksheet_ids_upper = {w_id.upper(): w_id for w_id in worksheet_ids}
+
+    remap = {}
+    for qc_id in sorted({qc_id for df in qc_dfs.values() for qc_id in df["SAMPLE ID"].dropna()}):
+        qc_id_stripped = qc_id.strip()
+        qc_id_upper = qc_id_stripped.upper()
+        if not qc_id_upper:
+            continue
+
+        if qc_id_upper in worksheet_ids_upper:
+            matches = [worksheet_ids_upper[qc_id_upper]]
+        else:
+            n = len(qc_id_stripped)
+            matches = [
+                w_id
+                for w_id in worksheet_ids
+                if w_id.upper().startswith(qc_id_upper) and len(w_id) > n and not w_id[n].isalnum()
+            ]
+
+        if len(matches) > 1:
+            logger.warning("Ambiguous prefix match for %s: %s. Skipping remapping.", qc_id_stripped, matches)
+        elif matches and matches[0] != qc_id:
+            remap[qc_id] = matches[0]
+
+    if remap:
+        logger.info("Remapping SAMPLE IDs: %s", remap)
+        for df in qc_dfs.values():
+            df["SAMPLE ID"] = df["SAMPLE ID"].replace(remap)
+
+
+def merge_on_sample_id(dfs: list[pd.DataFrame]) -> pd.DataFrame:
+    """Outer merge DataFrames on SAMPLE ID, skipping empty ones after the first.
+
+    Args:
+        dfs: DataFrames to merge.
+
+    Returns:
+        Merged DataFrame.
+    """
+    return reduce(lambda left, right: left if right.empty else left.merge(right, on="SAMPLE ID", how="outer"), dfs)
+
+
+def genoox_metrics(worksheet: pd.DataFrame, mapping_metrics: pd.DataFrame) -> pd.Series:
+    """Select Genoox samples (IDs starting with 'G' or containing 'WCN-') from the worksheet.
+
+    Args:
+        worksheet: Combined MGI worksheet.
+        mapping_metrics: Mapping metrics, used for SAMPLE IDs when the worksheet has none.
+
+    Returns:
+        Worksheet rows for Genoox samples.
+    """
+    if worksheet["SAMPLE ID"].isnull().all():
+        worksheet = mapping_metrics[["SAMPLE ID"]].reindex(columns=WORKSHEET_COLUMNS)
+
+    sample_ids = worksheet["SAMPLE ID"]
+    return worksheet[sample_ids.str.startswith("G", na=False) | sample_ids.str.contains("WCN-", na=False, regex=False)]
 
 
 def main() -> None:
     """Parse QC metrics for all files and save to Excel workbooks."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
-    args = parseArgs()
-
-    inputdir = os.path.abspath(args.inputdir)
-    if args.mgi_worksheet:
-        mgi_worksheet = pd.concat(
-            [read_file_to_dataframe(f) for f in args.mgi_worksheet], ignore_index=True
-        )
-    else:
-        mgi_worksheet = read_file_to_dataframe(None)
+    args = parse_args()
 
     outdir = os.path.abspath(args.outdir) if args.outdir else os.getcwd()
     os.makedirs(outdir, exist_ok=True)
+    prefix = args.prefix or f"{dt.date.today():%Y%m%d}_CGS"
 
-    if args.prefix:
-        filename_prefix = args.prefix
-    else:
-        timestamp = dt.date.today().strftime("%Y%m%d")
-        filename_prefix = f"{timestamp}_CGS"
-
-    metric_files = [
-        f.strip() for f in glob.glob(f"{inputdir}/**/*metrics.csv", recursive=True)
-    ]
-
-    files_by_type = {k: [] for k in METRIC_CONFIGS}
-
-    for f in metric_files:
-        for key, config in METRIC_CONFIGS.items():
-            if f.endswith(config["suffix"]):
-                files_by_type[key].append(f)
-                break
-
-    # Prepare worksheet IDs for prefix matching
-    worksheet_ids = []
-    worksheet_upper_map = {}
-    if not mgi_worksheet.empty and "SAMPLE ID" in mgi_worksheet.columns:
-        # Sort worksheet IDs for deterministic matching if multiple prefixes exist
-        worksheet_ids = sorted(
-            mgi_worksheet["SAMPLE ID"]
-            .dropna()
-            .astype(str)
-            .str.strip()
-            .unique()
-            .tolist()
+    def write_excel(df: pd.DataFrame, name: str, sheet_name: str) -> None:
+        df.to_excel(
+            os.path.join(outdir, f"{prefix}_{name}.xlsx"), index=False, sheet_name=sheet_name, engine="openpyxl"
         )
-        worksheet_upper_map = {w.upper(): w for w in worksheet_ids}
 
-    qc_dfs = {}
-    for key, config in METRIC_CONFIGS.items():
-        df = parse_metrics(files_by_type[key], config["metrics"], config["header"])
-        if key == "mapping" and "Total bases" in df.columns:
-            df.insert(
-                3, "Total giga bases", round(df["Total bases"].astype(float) / 1e9, 2)
-            )
+    worksheet = load_worksheets(args.mgi_worksheet)
+    qc_dfs = collect_qc_metrics(os.path.abspath(args.inputdir))
+    align_sample_ids(qc_dfs, worksheet)
 
-        # Prefix match SAMPLE ID with mgi_worksheet if available to avoid duplicate rows during merge
-        if worksheet_ids and not df.empty and "SAMPLE ID" in df.columns:
-            mapping = {}
-            for qc_id in df["SAMPLE ID"].unique():
-                if pd.isna(qc_id) or not str(qc_id).strip():
-                    continue
+    mgi_qc = merge_on_sample_id([worksheet] + [qc_dfs[key] for key in ["mapping", "wgs", "qc_region"]])
+    write_excel(mgi_qc.rename(columns=MGI_COLUMN_RENAMES).filter(items=MGI_QC_COLUMNS), "MGI_QC", "MGI QC metrics")
 
-                qc_id_str = str(qc_id).strip()
-                qc_id_upper = qc_id_str.upper()
+    genoox = genoox_metrics(worksheet, qc_dfs["mapping"])
+    if not genoox.empty:
+        write_excel(genoox, "Genoox", "QC Metrics - qPCR")
 
-                # Skip if there is an exact case-insensitive match
-                if qc_id_upper in worksheet_upper_map:
-                    continue
-
-                # Find worksheet IDs where the QC ID is a prefix followed by a non-alphanumeric separator.
-                # Note: This logic assumes that the QC ID (e.g. from filename) is a prefix of the
-                # worksheet ID. The reverse scenario is not currently handled.
-                matches = [
-                    w_id
-                    for w_id in worksheet_ids
-                    if (
-                        w_id.upper().startswith(qc_id_upper)
-                        and len(w_id) > len(qc_id_str)
-                        and not w_id[len(qc_id_str)].isalnum()
-                    )
-                ]
-
-                if len(matches) == 1:
-                    mapping[qc_id] = matches[0]
-                elif len(matches) > 1:
-                    logger.warning(
-                        "Ambiguous prefix match for %s: %s. Skipping remapping.",
-                        qc_id_str,
-                        matches,
-                    )
-
-            if mapping:
-                logger.info("Remapping SAMPLE IDs for %s metrics: %s", key, mapping)
-                df["SAMPLE ID"] = df["SAMPLE ID"].replace(mapping)
-
-        qc_dfs[key] = df
-
-    # Create output files
-    ## MGI metrics
-    save_mgi_metrics(mgi_worksheet, qc_dfs, filename_prefix, outdir)
-
-    ## Genoox metrics
-    save_genoox_metrics(
-        mgi_worksheet,
-        qc_dfs["mapping"],
-        filename_prefix,
-        outdir,
-    )
-
-    ## All metrics
-    all_qc_dataframes = [mgi_worksheet] + [
-        qc_dfs[k] for k in ["mapping", "wgs", "qc_region", "vc", "cnv"]
-    ]
-    save_all_metrics(all_qc_dataframes, f"{filename_prefix}_All", outdir)
+    write_excel(merge_on_sample_id([worksheet, *qc_dfs.values()]), "All_QC", "QC metrics")
 
 
 if __name__ == "__main__":
