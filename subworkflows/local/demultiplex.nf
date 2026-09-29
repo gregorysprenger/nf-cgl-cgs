@@ -167,8 +167,7 @@ workflow DEMULTIPLEX {
     if (params.demux_outdir) {
         def batch_name = params.batch_name ?: new java.util.Date().format('yyyyMMdd') + '_CGS'
 
-        ch_fastq_list = VERIFY_FASTQ_LIST.out.samples
-            .map{ meta, reads, fastq_list, alignment_file -> fastq_list }
+        ch_fastq_list = DRAGEN_DEMULTIPLEX.out.fastq_list
             .splitCsv( header: true )
             .map{
                 row ->

@@ -7,7 +7,7 @@ process DRAGEN_ALIGN {
         : 'dockerreg01.accounts.ad.wustl.edu/cgl/dragen:v4.3.6' }"
 
     input:
-    tuple val(meta), path(reads, stageAs: "fastq_files/*"), path(fastq_list), path(alignment_file)
+    tuple val(meta), path(reads, stageAs: "fastq_files/*/*"), path(fastq_list), path(alignment_file)
     tuple val(intermediate_directory_value), path(intermediate_directory)
     tuple val(qc_contamination_value)      , path(qc_contamination_file)
     path(adapter1_file)
