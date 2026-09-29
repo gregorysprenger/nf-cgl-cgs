@@ -5,6 +5,7 @@
 */
 
 include { DEMULTIPLEX                          } from '../subworkflows/local/demultiplex'
+include { CONCATENATE_FASTQ_FILES              } from '../modules/local/concatenate_fastq_files'
 include { GET_SAMPLE_METADATA                  } from '../modules/local/get_sample_metadata'
 include { DRAGEN_ALIGN                         } from '../modules/local/dragen_align'
 include { DRAGEN_ALIGN as DRAGEN_ALIGN_CONTROL } from '../modules/local/dragen_align'
@@ -95,14 +96,22 @@ if (params.qc_cross_contamination?.toString()?.startsWith('resources/')) {
 workflow DRAGEN_CGS {
 
     take:
-    ch_samplesheet  // channel: [ path(file) ]
-    ch_samples      // channel: [ val(meta), path(reads), path(fastq_list), path(alignment_file) ]
+    ch_samplesheet           // channel: [ path(file) ]
+    ch_fastq_list_samples    // channel: [ val(meta), path(reads), path(fastq_list), path(alignment_file) ]
 
     main:
     ch_versions           = Channel.empty()
     ch_dragen_usage       = Channel.empty()
     ch_dragen_metrics     = Channel.empty()
     ch_dragen_control_out = Channel.empty()
+
+    def groupByFastqId = {
+        ch ->
+            ch.filter{ meta, reads, fastq_list, alignment_file -> reads && reads != [] }
+                .map{ meta, reads, fastq_list, alignment_file -> [ meta.id, meta, [reads].flatten() ] }
+                .groupTuple()
+                .map{ id, metas, reads_lists -> [ id, metas[0], reads_lists.flatten() ] }
+    }
 
     def isClinicalAcc = { it -> it instanceof String && (it.startsWith("G") || it.contains("WCN-")) }
 
@@ -124,8 +133,28 @@ workflow DRAGEN_CGS {
             ch_samplesheet
         )
         ch_versions = ch_versions.mix(DEMULTIPLEX.out.versions)
-        ch_samples  = ch_samples.mix(DEMULTIPLEX.out.samples)
     }
+
+    ch_fastq_to_concat = groupByFastqId(ch_fastq_list_samples)
+        .join(groupByFastqId(DEMULTIPLEX.out.samples), remainder: true)
+        .map{ id, meta, fastq_reads, demux_meta, demux_reads ->
+            [ meta ?: demux_meta, fastq_reads ?: [], demux_reads ?: [] ]
+        }
+
+    //
+    // MODULE: Concatenate FASTQ files
+    //
+    CONCATENATE_FASTQ_FILES(
+        ch_fastq_to_concat
+    )
+    ch_versions = ch_versions.mix(CONCATENATE_FASTQ_FILES.out.versions)
+
+    ch_samples = CONCATENATE_FASTQ_FILES.out.samples
+        .map{ meta, reads, fastq_list -> [ meta, reads, fastq_list, [] ] }
+        .mix(
+            ch_fastq_list_samples
+                .filter{ meta, reads, fastq_list, alignment_file -> alignment_file && alignment_file != [] }
+        )
 
     //
     // MODULE: Fetch sample metadata
