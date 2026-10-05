@@ -134,11 +134,12 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def parse_metrics(files: list[str], metric_dict: dict[str, int], section_header: str) -> pd.DataFrame:
+def parse_metrics(files: list[str], suffix: str, metric_dict: dict[str, int], section_header: str) -> pd.DataFrame:
     """Parse DRAGEN metric files into one row per sample.
 
     Args:
-        files: Metric files to parse. The SAMPLE ID is taken from the filename.
+        files: Metric files to parse. The SAMPLE ID is the filename without suffix.
+        suffix: Metric file suffix, e.g. '.mapping_metrics.csv'.
         metric_dict: Metric name to the column index holding its value.
         section_header: Only search for metrics in lines containing this substring.
 
@@ -151,7 +152,7 @@ def parse_metrics(files: list[str], metric_dict: dict[str, int], section_header:
 
     rows = []
     for file in files:
-        row = {"SAMPLE ID": os.path.basename(file).split(".")[0]}
+        row = {"SAMPLE ID": os.path.basename(file).removesuffix(suffix)}
 
         try:
             with open(file) as f:
@@ -190,6 +191,7 @@ def collect_qc_metrics(inputdir: str) -> dict[str, pd.DataFrame]:
     qc_dfs = {
         key: parse_metrics(
             sorted(glob.glob(f"{inputdir}/**/*{config['suffix']}", recursive=True)),
+            config["suffix"],
             config["metrics"],
             config["header"],
         )
