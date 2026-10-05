@@ -1,11 +1,11 @@
 process CREATE_DEMUX_FASTQ_LIST {
+    tag "${task.ext.prefix.id}"
     label 'process_single'
 
     container 'dockerreg01.accounts.ad.wustl.edu/cgl/pandas-excel@sha256:1958093220d5785115b73f69e0894b366f75fac646131e5394972ae68d9e4202'
 
     input:
-    path(fastq_lists, stageAs: "fastq_lists/fastq_list_*.csv")
-    val(demux_outdir)
+    tuple val(meta), path(fastq_lists, stageAs: "fastq_lists/fastq_list_*.csv")
 
     output:
     path("fastq_list.csv"), emit: fastq_list
@@ -15,12 +15,10 @@ process CREATE_DEMUX_FASTQ_LIST {
     task.ext.when == null || task.ext.when
 
     script:
-    def outdir = file("${demux_outdir}/${task.ext.prefix.id}").toAbsolutePath().toString()
     """
     create_demux_fastq_list.py \\
         --fastq_lists fastq_lists/*.csv \\
-        --demux_outdir ${outdir} \\
-        --output fastq_list.csv
+        --outdir .
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

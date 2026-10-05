@@ -58,9 +58,6 @@ def check_output_file(path: str) -> None:
 def read_rows(lines: list[str]) -> tuple[list[str], list[dict[str, str]]]:
     """Parse and validate fastq list CSV lines.
 
-    FastQ paths are not checked on disk: they are not staged into this task, and INPUT_CHECK
-    already verifies they exist and meet the minimum size.
-
     Args:
         lines: Fastq list CSV lines, header first.
 
@@ -118,6 +115,9 @@ def create_fastq_list(rows: list[dict[str, str]]) -> list[dict[str, str]]:
 
     Returns:
         Updated fastq list rows.
+
+    Raises:
+        FastqListError: If more than one row has the same (RGID, Lane) after disambiguation.
     """
     # Source directories per RGID, in first-seen order
     dirs_by_rgid = defaultdict(list)
@@ -149,7 +149,7 @@ def create_fastq_list(rows: list[dict[str, str]]) -> list[dict[str, str]]:
     read_groups = [(row["RGID"], row["Lane"]) for row in updated_rows]
     duplicates = sorted({rg for rg in read_groups if read_groups.count(rg) > 1})
     if duplicates:
-        logger.warning("(RGID, Lane) pairs shared by more than one row: %s", duplicates)
+        raise FastqListError(f"(RGID, Lane) pairs shared by more than one row: {duplicates}.")
 
     return updated_rows
 

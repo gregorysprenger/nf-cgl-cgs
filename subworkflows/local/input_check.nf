@@ -121,14 +121,20 @@ workflow INPUT_CHECK {
                     def entries = [ metas, read_pairs, rows ].transpose().sort{
                         entry -> [ entry[1][0].toString(), entry[2]['RGID'], entry[2]['Lane'] ].join('\t')
                     }
-                    def meta = entries[0][0]
 
-                    def ignored_samples = entries.collect{ it[2]['RGSM'] }.unique().findAll{ it != meta.id }
-                    if (ignored_samples) {
-                        log.warn("Accession '${acc}' has FastQ rows for RGSM ${ignored_samples}, which DRAGEN will ignore when aligning sample '${meta.id}'.")
+                    // Name the sample after the RGSM matching the accession, else the first RGSM alphabetically
+                    def rgsms = entries.collect{ it[2]['RGSM'] }.unique().sort()
+                    def rgsm  = rgsms.contains(acc) ? acc : rgsms[0]
+                    def meta  = entries.find{ it[0].id == rgsm }[0]
+
+                    // DRAGEN only aligns fastq list rows matching '--fastq-list-sample-id ${meta.id}', so set every
+                    // row's RGSM to the sample ID to keep the FastQ files of all RGSMs in this accession
+                    def other_samples = rgsms - meta.id
+                    if (other_samples) {
+                        log.warn("Accession '${acc}' has FastQ rows for RGSM ${other_samples}, which will be aligned as part of sample '${meta.id}'.")
                     }
 
-                    [ meta, entries.collect{ it[1] }.flatten(), entries.collect{ it[2] } ]
+                    [ meta, entries.collect{ it[1] }.flatten(), entries.collect{ it[2] + [ 'RGSM': meta.id ] } ]
             }
     )
     ch_versions = ch_versions.mix(CREATE_FASTQ_LIST.out.versions)

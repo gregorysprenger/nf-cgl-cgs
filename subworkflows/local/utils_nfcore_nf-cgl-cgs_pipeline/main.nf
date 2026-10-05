@@ -81,12 +81,14 @@ workflow PIPELINE_INITIALISATION {
     validateInputParameters()
 
     //
-    // Create channel from input file provided through params.input
+    // Create channel from input file provided through params.input. When demultiplexing, the FastQ list is
+    // processed in DEMULTIPLEX instead, so its samples are combined with demultiplexed FastQ files before alignment.
     //
+    def demultiplex = input && params.illumina_rundir
     INPUT_CHECK (
         input         ?: [],
-        fastq_list    ? Channel.fromPath(fastq_list,    checkIfExists: true) : Channel.empty().ifEmpty([]),
-        bam_cram_list ? Channel.fromPath(bam_cram_list, checkIfExists: true) : Channel.empty().ifEmpty([])
+        fastq_list && !demultiplex ? Channel.fromPath(fastq_list, checkIfExists: true) : Channel.empty().ifEmpty([]),
+        bam_cram_list              ? Channel.fromPath(bam_cram_list, checkIfExists: true) : Channel.empty().ifEmpty([])
     )
     ch_versions = ch_versions.mix(INPUT_CHECK.out.versions)
 

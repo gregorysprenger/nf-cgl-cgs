@@ -57,6 +57,7 @@ workflow DEMULTIPLEX {
 
     take:
     ch_samplesheet  // channel: [ path(file) ]
+    ch_fastq_list   // channel: [ path(file) ]
 
     main:
     ch_illumina_run_dir = Channel.empty()
@@ -123,8 +124,20 @@ workflow DEMULTIPLEX {
                         }
                         .join(
                             ch_illumina_run_dir.filter{ it != null }.map{ [ it.name.toString().split('_').last().takeRight(9), it ] },
-                            by: 0
+                            by: 0,
+                            remainder: true
                         )
+                        // An unmatched run directory would otherwise be dropped silently, letting alignment start without demultiplexing
+                        .filter{
+                            flowcell, samplesheet, illumina_run_dir ->
+                                if (!samplesheet) {
+                                    error("Illumina run directory '${illumina_run_dir}' (flowcell '${flowcell}') does not match any 'Flowcell ID' in the input samplesheet.")
+                                }
+                                if (!illumina_run_dir) {
+                                    log.warn("Flowcell '${flowcell}' in the input samplesheet does not match any '--illumina_rundir' and will not be demultiplexed.")
+                                }
+                                illumina_run_dir
+                        }
 
     //
     // MODULE: Create demultiplex samplesheet
@@ -155,22 +168,21 @@ workflow DEMULTIPLEX {
     ch_versions = ch_versions.mix(DRAGEN_DEMULTIPLEX.out.versions)
 
     //
-    // SUBWORKFLOW: Verify fastq_list.csv
+    // SUBWORKFLOW: Verify fastq_list.csv, grouping FastQ files from all flowcells and the input FastQ list by accession
     //
     VERIFY_FASTQ_LIST (
         [],
-        DRAGEN_DEMULTIPLEX.out.fastq_list,
+        DRAGEN_DEMULTIPLEX.out.fastq_list.map{ meta, fastq_list -> fastq_list }.mix(ch_fastq_list),
         Channel.empty()
     )
     ch_versions = ch_versions.mix(VERIFY_FASTQ_LIST.out.versions)
 
     //
-    // MODULE: Create 'fastq_list.csv' report with 'params.demux_outdir' paths
+    // MODULE: Create 'fastq_list.csv' report for each flowcell, keeping the FastQ paths in the work directory
     //
     if (params.demux_outdir) {
         CREATE_DEMUX_FASTQ_LIST (
-            DRAGEN_DEMULTIPLEX.out.fastq_list.collect(),
-            params.demux_outdir
+            DRAGEN_DEMULTIPLEX.out.fastq_list
         )
         ch_versions = ch_versions.mix(CREATE_DEMUX_FASTQ_LIST.out.versions)
     }

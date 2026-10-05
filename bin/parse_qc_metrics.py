@@ -44,6 +44,9 @@ MGI_COLUMN_RENAMES = {
 
 MGI_QC_COLUMNS = WORKSHEET_COLUMNS + list(MGI_COLUMN_RENAMES.values())
 
+# Number of '_' separated parts in a run ID that ends with a flowcell
+RUN_ID_PARTS = 4
+
 METRIC_CONFIGS = {
     "mapping": {
         "suffix": ".mapping_metrics.csv",
@@ -230,6 +233,7 @@ def read_worksheet(file: str) -> pd.DataFrame:
         df["SAMPLE ID"] = df["Content_Desc"]
 
     df = df.reindex(columns=WORKSHEET_COLUMNS)
+    df["SAMPLE ID"] = df["SAMPLE ID"].astype(object)
 
     text_cols = df.select_dtypes("object").columns
     df[text_cols] = df[text_cols].apply(lambda col: col.fillna("").astype(str).str.strip())
@@ -244,19 +248,20 @@ def collapse_run_ids(run_ids: pd.Series) -> Optional[str]:
         run_ids: Series of run IDs for one sample.
 
     Returns:
-        The run ID if there is only one, the shared run ID without flowcell if there are several,
-        all run IDs without flowcell joined by ';' (with a warning) if they don't share one,
-        or None if all run IDs are empty.
+        The run ID if there is only one, the shared run ID without flowcell if several run IDs differ only by
+        flowcell, all full run IDs joined by ';' (with a warning) otherwise, or None if all run IDs are empty.
     """
     unique_ids = list(dict.fromkeys(r for r in (str(r).strip() for r in run_ids.dropna()) if r))
     if len(unique_ids) <= 1:
         return unique_ids[0] if unique_ids else None
 
-    prefixes = list(dict.fromkeys(r.rsplit("_", 1)[0] for r in unique_ids))
-    if len(prefixes) > 1:
-        logger.warning("Rows differ only by RUN ID but runs do not match: %s. Keeping all runs.", unique_ids)
+    # Run IDs are <date>_<instrument>_<run number>_<flowcell>; only strip the flowcell when every ID has one
+    prefixes = {r.rsplit("_", 1)[0] for r in unique_ids}
+    if len(prefixes) == 1 and all(len(r.split("_")) >= RUN_ID_PARTS for r in unique_ids):
+        return prefixes.pop()
 
-    return ";".join(prefixes)
+    logger.warning("Rows differ only by RUN ID but runs do not match: %s. Keeping all runs.", unique_ids)
+    return ";".join(unique_ids)
 
 
 def load_worksheets(files: list[str]) -> pd.DataFrame:
@@ -339,7 +344,7 @@ def genoox_metrics(worksheet: pd.DataFrame, mapping_metrics: pd.DataFrame) -> pd
     Returns:
         Worksheet rows for Genoox samples.
     """
-    if worksheet["SAMPLE ID"].isnull().all():
+    if worksheet["SAMPLE ID"].fillna("").eq("").all():
         worksheet = mapping_metrics[["SAMPLE ID"]].reindex(columns=WORKSHEET_COLUMNS)
 
     sample_ids = worksheet["SAMPLE ID"]
@@ -372,7 +377,8 @@ def main() -> None:
     if not genoox.empty:
         write_excel(genoox, "Genoox", "QC Metrics - qPCR")
 
-    write_excel(merge_on_sample_id([worksheet, *qc_dfs.values()]), "All_QC", "QC metrics")
+    all_qc = merge_on_sample_id([worksheet] + [qc_dfs[key] for key in ["mapping", "wgs", "qc_region", "vc", "cnv"]])
+    write_excel(all_qc, "All_QC", "QC metrics")
 
 
 if __name__ == "__main__":

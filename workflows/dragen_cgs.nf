@@ -26,6 +26,13 @@ if (params.input) {
     ch_input_file = Channel.empty()
 }
 
+// Input FastQ list - combined with demultiplexed FastQ files when demultiplexing
+if (params.fastq_list) {
+    ch_fastq_list = Channel.fromPath(params.fastq_list, checkIfExists: true)
+} else {
+    ch_fastq_list = Channel.empty()
+}
+
 // DRAGEN reference directory
 if (params.refdir) {
     ch_reference_dir = Channel.fromPath(params.refdir, type: 'dir', checkIfExists: true).collect()
@@ -121,7 +128,8 @@ workflow DRAGEN_CGS {
     //
     if (params.input && params.illumina_rundir) {
         DEMULTIPLEX (
-            ch_samplesheet
+            ch_samplesheet,
+            ch_fastq_list.ifEmpty([])
         )
         ch_versions = ch_versions.mix(DEMULTIPLEX.out.versions)
         ch_samples  = ch_samples.mix(DEMULTIPLEX.out.samples)
@@ -139,18 +147,19 @@ workflow DRAGEN_CGS {
     )
     ch_versions = ch_versions.mix(GET_SAMPLE_METADATA.out.versions)
 
-    // Join sample metadata to existing channel by sample ID (SpcNum) and filter out samples with missing metadata
+    // Add sex from sample metadata by accession (SpcNum). A lookup map is used instead of 'join', which
+    // would only give metadata to the first of several samples sharing an accession.
     ch_samples = ch_samples
-                    .map{ meta, reads, fastq_list, alignment_file -> [ meta?.acc ?: meta?.id, meta, reads, fastq_list, alignment_file ] }
-                    .join(
+                    .combine(
                         GET_SAMPLE_METADATA.out.metadata
                             .splitCsv(header: true)
-                            .map{ [ it.SpcNum, it.Sex?.toLowerCase() ] },
-                        remainder: true
+                            .map{ [ it.SpcNum, it.Sex?.toLowerCase() ] }
+                            .toList()
+                            .map{ it.collectEntries() }
                     )
-                    .filter{ acc, meta, reads, fastq_list, alignment_file, gender -> (meta != null) && (acc != null) }
                     .map{
-                        acc, meta, reads, fastq_list, alignment_file, gender ->
+                        meta, reads, fastq_list, alignment_file, sex_by_acc ->
+                            def gender   = sex_by_acc[meta.acc ?: meta.id]
                             def meta_new = meta.clone()
                             meta_new['sex']   = (gender == 'm' || gender == 'male')   ? 'male'   :
                                                 (gender == 'f' || gender == 'female') ? 'female' : ''

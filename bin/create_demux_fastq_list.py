@@ -22,13 +22,10 @@ def parse_args() -> argparse.Namespace:
         Parsed command line arguments.
     """
     parser = argparse.ArgumentParser(
-        description="Combine DRAGEN demultiplex fastq lists, pointing FastQ paths at the demux output directory."
+        description="Combine DRAGEN demultiplex fastq lists, keeping the FastQ paths in the work directory."
     )
     parser.add_argument("-i", "--fastq_lists", nargs="+", required=True, help="Fastq lists from DRAGEN demultiplex.")
-    parser.add_argument(
-        "-d", "--demux_outdir", required=True, help="Absolute path of the directory the FastQ files are published to."
-    )
-    parser.add_argument("-o", "--output", required=True, help="Path to save the combined fastq list.")
+    parser.add_argument("-o", "--outdir", default=".", help="Directory to save the combined 'fastq_list.csv'.")
 
     return parser.parse_args()
 
@@ -72,20 +69,6 @@ def check_output_file(path: str) -> None:
         raise FastqListError(f"Output path '{path}' is a directory.")
 
 
-def demux_path(path: str, demux_outdir: str) -> str:
-    """Point a FastQ path at its published location in the demux output directory.
-
-    Args:
-        path: FastQ path from a DRAGEN demultiplex fastq list.
-        demux_outdir: Directory the FastQ files are published to.
-
-    Returns:
-        FastQ path under demux_outdir, keeping its parent directory if it has one.
-    """
-    parts = path.split("/")
-    return "/".join([demux_outdir, *parts[-2:]]) if len(parts) > 1 else f"{demux_outdir}/{parts[-1]}"
-
-
 def read_fastq_list(path: str) -> tuple[list[str], list[dict[str, str]]]:
     """Read and validate a DRAGEN demultiplex fastq list.
 
@@ -96,7 +79,8 @@ def read_fastq_list(path: str) -> tuple[list[str], list[dict[str, str]]]:
         Column names and rows of the fastq list.
 
     Raises:
-        FastqListError: If the file is inaccessible, is missing required columns, or has malformed rows.
+        FastqListError: If the file is inaccessible, is missing required columns, has malformed rows,
+        or has FastQ paths that are not absolute.
     """
     check_input_file(path)
 
@@ -123,6 +107,13 @@ def read_fastq_list(path: str) -> tuple[list[str], list[dict[str, str]]]:
                     f"Fastq list '{path}' line {line_number} has empty values for: {', '.join(empty)}."
                 )
 
+            # Paths must point at the FastQ files in the DRAGEN demultiplex work directory
+            for column in ("Read1File", "Read2File"):
+                if not os.path.isabs(row[column]):
+                    raise FastqListError(
+                        f"Fastq list '{path}' line {line_number} {column} '{row[column]}' is not an absolute path."
+                    )
+
             rows.append(row)
 
     if not rows:
@@ -131,12 +122,11 @@ def read_fastq_list(path: str) -> tuple[list[str], list[dict[str, str]]]:
     return columns, rows
 
 
-def combine_fastq_lists(fastq_lists: list[str], demux_outdir: str) -> tuple[list[str], list[dict[str, str]]]:
-    """Combine fastq lists, pointing FastQ paths at the demux output directory.
+def combine_fastq_lists(fastq_lists: list[str]) -> tuple[list[str], list[dict[str, str]]]:
+    """Combine fastq lists, keeping their FastQ paths.
 
     Args:
         fastq_lists: Paths to DRAGEN demultiplex fastq lists.
-        demux_outdir: Directory the FastQ files are published to.
 
     Returns:
         Combined column names and rows, sorted for stable output.
@@ -149,11 +139,7 @@ def combine_fastq_lists(fastq_lists: list[str], demux_outdir: str) -> tuple[list
     for fastq_list in fastq_lists:
         list_columns, list_rows = read_fastq_list(fastq_list)
         columns += [c for c in list_columns if c not in columns]
-
-        for row in list_rows:
-            row["Read1File"] = demux_path(row["Read1File"], demux_outdir)
-            row["Read2File"] = demux_path(row["Read2File"], demux_outdir)
-            rows.append(row)
+        rows += list_rows
 
     if not rows:
         raise FastqListError("No FastQ rows found in any input fastq list.")
@@ -192,19 +178,17 @@ def main() -> None:
 
     args = parse_args()
 
-    try:
-        demux_outdir = args.demux_outdir.strip().rstrip("/")
-        if not os.path.isabs(demux_outdir):
-            raise FastqListError(f"Demux output directory '{args.demux_outdir}' must be an absolute path.")
+    output = os.path.join(args.outdir, "fastq_list.csv")
 
-        check_output_file(args.output)
-        columns, rows = combine_fastq_lists(args.fastq_lists, demux_outdir)
-        write_fastq_list(args.output, columns, rows)
+    try:
+        check_output_file(output)
+        columns, rows = combine_fastq_lists(args.fastq_lists)
+        write_fastq_list(output, columns, rows)
     except (FastqListError, OSError, csv.Error, UnicodeDecodeError) as error:
         logger.error(error)
         sys.exit(1)
 
-    logger.info("Wrote %d rows from %d fastq lists to '%s'.", len(rows), len(args.fastq_lists), args.output)
+    logger.info("Wrote %d rows from %d fastq lists to '%s'.", len(rows), len(args.fastq_lists), output)
 
 
 if __name__ == "__main__":
