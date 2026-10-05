@@ -237,20 +237,26 @@ def read_worksheet(file: str) -> pd.DataFrame:
     return df
 
 
-def drop_flowcell(run_ids: pd.Series) -> Optional[str]:
-    """Drop the flowcell from run IDs and return the first non-empty result.
-
-    Run IDs (e.g. 20231211_LH00195_0065_B22GLYYLT3) end with the flowcell, so runs
-    that differ only by flowcell collapse to a single run ID (e.g. 20231211_LH00195_0065).
+def collapse_run_ids(run_ids: pd.Series) -> Optional[str]:
+    """Collapse the run IDs of worksheet rows that differ only by RUN ID.
 
     Args:
-        run_ids: Series of run IDs.
+        run_ids: Series of run IDs for one sample.
 
     Returns:
-        First run ID without its flowcell, or None if all run IDs are empty.
+        The run ID if there is only one, the shared run ID without flowcell if there are several,
+        all run IDs without flowcell joined by ';' (with a warning) if they don't share one,
+        or None if all run IDs are empty.
     """
-    stripped = (str(r).strip() for r in run_ids.dropna())
-    return next((r.rsplit("_", 1)[0] for r in stripped if r), None)
+    unique_ids = list(dict.fromkeys(r for r in (str(r).strip() for r in run_ids.dropna()) if r))
+    if len(unique_ids) <= 1:
+        return unique_ids[0] if unique_ids else None
+
+    prefixes = list(dict.fromkeys(r.rsplit("_", 1)[0] for r in unique_ids))
+    if len(prefixes) > 1:
+        logger.warning("Rows differ only by RUN ID but runs do not match: %s. Keeping all runs.", unique_ids)
+
+    return ";".join(prefixes)
 
 
 def load_worksheets(files: list[str]) -> pd.DataFrame:
@@ -260,7 +266,7 @@ def load_worksheets(files: list[str]) -> pd.DataFrame:
         files: Worksheets to read. May be empty.
 
     Returns:
-        Combined worksheet, where RUN ID holds a single run ID, without flowcell, for each collapsed row.
+        Combined worksheet, where RUN ID is collapsed as described in collapse_run_ids.
     """
     if not files:
         return pd.DataFrame(columns=WORKSHEET_COLUMNS)
@@ -268,11 +274,9 @@ def load_worksheets(files: list[str]) -> pd.DataFrame:
     worksheet = pd.concat(map(read_worksheet, files), ignore_index=True)
     key_cols = [c for c in WORKSHEET_COLUMNS if c != "RUN ID"]
 
-    return pd.DataFrame(
-        worksheet.groupby(key_cols, dropna=False, sort=False, as_index=False).agg({"RUN ID": drop_flowcell})[
-            WORKSHEET_COLUMNS
-        ]
-    )
+    return worksheet.groupby(key_cols, dropna=False, sort=False, as_index=False).agg({"RUN ID": collapse_run_ids})[
+        WORKSHEET_COLUMNS
+    ]
 
 
 def align_sample_ids(qc_dfs: dict[str, pd.DataFrame], worksheet: pd.DataFrame) -> None:
@@ -325,7 +329,7 @@ def merge_on_sample_id(dfs: list[pd.DataFrame]) -> pd.DataFrame:
     return reduce(lambda left, right: left if right.empty else left.merge(right, on="SAMPLE ID", how="outer"), dfs)
 
 
-def genoox_metrics(worksheet: pd.DataFrame, mapping_metrics: pd.DataFrame) -> pd.Series:
+def genoox_metrics(worksheet: pd.DataFrame, mapping_metrics: pd.DataFrame) -> pd.DataFrame:
     """Select Genoox samples (IDs starting with 'G' or containing 'WCN-') from the worksheet.
 
     Args:

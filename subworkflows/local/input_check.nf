@@ -5,6 +5,7 @@
 */
 
 include { CONVERT_XLSX_TO_CSV } from '../../modules/local/convert_xlsx_to_csv'
+include { CREATE_FASTQ_LIST   } from '../../modules/local/create_fastq_list'
 include { UPDATE_SAMPLE_NAME  } from '../../modules/local/update_sample_name'
 
 /*
@@ -77,62 +78,61 @@ workflow INPUT_CHECK {
     ================================================================================
     */
 
-    ch_samples = ch_samples.mix(
-                    ch_fastq_list
-                        .filter{ it != [] }
-                        .flatMap{
-                            def data = parseInputList(it)
-                            def requiredColumns = ['RGID', 'RGSM', 'RGLB', 'Lane', 'Read1File', 'Read2File']
-                            data.collect{
-                                if (!it.keySet().containsAll(requiredColumns)) {
-                                    error("Missing required columns in input FastQ list!")
-                                }
+    CREATE_FASTQ_LIST (
+        ch_fastq_list
+            .filter{ it != [] }
+            .flatMap{
+                def data = parseInputList(it)
+                def requiredColumns = ['RGID', 'RGSM', 'RGLB', 'Lane', 'Read1File', 'Read2File']
+                data.collect{
+                    if (!it.keySet().containsAll(requiredColumns)) {
+                        error("Missing required columns in input FastQ list!")
+                    }
 
-                                def R1 = file(it['Read1File'], checkIfExists: true)
-                                def R2 = file(it['Read2File'], checkIfExists: true)
+                    def R1 = file(it['Read1File'], checkIfExists: true)
+                    def R2 = file(it['Read2File'], checkIfExists: true)
 
-                                if (!params.validation_samples) {
-                                    def MIN_FASTQ_SIZE_BYTES = params.min_fastq_size * 1024 * 1024
-                                    if (R1.size() < MIN_FASTQ_SIZE_BYTES) {
-                                        error("FastQ file '${R1.name}' is ${R1.size()} bytes, less than ${params.min_fastq_size}MB minimum!")
-                                    }
-                                    if (R2.size() < MIN_FASTQ_SIZE_BYTES) {
-                                        error("FastQ file '${R2.name}' is ${R2.size()} bytes, less than ${params.min_fastq_size}MB minimum!")
-                                    }
-                                }
-
-                                def regexPattern = /\w\d{2}-\d+|\d*WCN-\d*CN\d*/
-                                def matcher = it.RGSM =~ regexPattern
-                                def acc = matcher.find() ? matcher.group(0) : it.RGSM
-                                def meta = [
-                                    'id'  : it.RGSM,
-                                    'acc' : acc,
-                                    'RGSM': it.RGSM
-                                ]
-
-                                def read_group = [ 'source_dir': R1.parent?.toString() ?: '', 'row': it ]
-
-                                [ meta.acc, meta, [ R1, R2 ], read_group ]
-                            }
+                    if (!params.validation_samples) {
+                        def MIN_FASTQ_SIZE_BYTES = params.min_fastq_size * 1024 * 1024
+                        if (R1.size() < MIN_FASTQ_SIZE_BYTES) {
+                            error("FastQ file '${R1.name}' is ${R1.size()} bytes, less than ${params.min_fastq_size}MB minimum!")
                         }
-                        .groupTuple()
-                        .map{
-                            acc, metas, read_pairs, read_groups ->
-                                // Sort so FastQ staging order and fastq list content are stable across runs
-                                def entries = [ metas, read_pairs, read_groups ].transpose().sort{
-                                    entry -> [ entry[1][0].toString(), entry[2].row['RGID'], entry[2].row['Lane'] ].join('\t')
-                                }
-                                def meta = entries[0][0]
-
-                                def ignored_samples = entries.collect{ it[2].row['RGSM'] }.unique().findAll{ it != meta.id }
-                                if (ignored_samples) {
-                                    log.warn("Accession '${acc}' has FastQ rows for RGSM ${ignored_samples}, which DRAGEN will ignore when aligning sample '${meta.id}'.")
-                                }
-
-                                def sorted_pairs = entries.collect{ it[1] }
-                                [ meta, sorted_pairs.flatten(), createFastQList(meta, sorted_pairs, entries.collect{ it[2] }), [] ]
+                        if (R2.size() < MIN_FASTQ_SIZE_BYTES) {
+                            error("FastQ file '${R2.name}' is ${R2.size()} bytes, less than ${params.min_fastq_size}MB minimum!")
                         }
-                )
+                    }
+
+                    def regexPattern = /\w\d{2}-\d+|\d*WCN-\d*CN\d*/
+                    def matcher = it.RGSM =~ regexPattern
+                    def acc = matcher.find() ? matcher.group(0) : it.RGSM
+                    def meta = [
+                        'id'  : it.RGSM,
+                        'acc' : acc,
+                        'RGSM': it.RGSM
+                    ]
+
+                    [ meta.acc, meta, [ R1, R2 ], it ]
+                }
+            }
+            .groupTuple()
+            .map{
+                acc, metas, read_pairs, rows ->
+                    // Sort so FastQ staging order and fastq list content are stable across runs
+                    def entries = [ metas, read_pairs, rows ].transpose().sort{
+                        entry -> [ entry[1][0].toString(), entry[2]['RGID'], entry[2]['Lane'] ].join('\t')
+                    }
+                    def meta = entries[0][0]
+
+                    def ignored_samples = entries.collect{ it[2]['RGSM'] }.unique().findAll{ it != meta.id }
+                    if (ignored_samples) {
+                        log.warn("Accession '${acc}' has FastQ rows for RGSM ${ignored_samples}, which DRAGEN will ignore when aligning sample '${meta.id}'.")
+                    }
+
+                    [ meta, entries.collect{ it[1] }.flatten(), entries.collect{ it[2] } ]
+            }
+    )
+    ch_versions = ch_versions.mix(CREATE_FASTQ_LIST.out.versions)
+    ch_samples = ch_samples.mix(CREATE_FASTQ_LIST.out.samples)
 
     /*
     ================================================================================
@@ -205,47 +205,6 @@ workflow INPUT_CHECK {
 // Get file extension
 def hasExtension(it, extension) {
     it.toString().toLowerCase().endsWith(extension.toLowerCase())
-}
-
-// Create per-sample fastq list
-def createFastQList(meta, read_pairs, read_groups) {
-    // Source directories per RGID, in first-seen order
-    def dirs_by_rgid = read_groups
-                        .groupBy{ it.row['RGID'] }
-                        .collectEntries{ rgid, groups -> [ rgid, groups.collect{ it.source_dir }.unique() ] }
-
-    def rows = read_groups.withIndex().collect{ read_group, index ->
-        def row = new LinkedHashMap(read_group.row)
-        def (R1, R2) = read_pairs[index]
-
-        // Index must match the 'fastq_files/*/*' stageAs pattern in DRAGEN_ALIGN
-        row['Read1File'] = "fastq_files/${(2 * index) + 1}/${R1.name}"
-        row['Read2File'] = "fastq_files/${(2 * index) + 2}/${R2.name}"
-
-        // Only disambiguate RGIDs that collide across source directories (e.g. flowcells)
-        def dirs = dirs_by_rgid[row['RGID']]
-        if (dirs.size() > 1) {
-            def dir_names = dirs.collect{ file(it).name }
-            def dir_index = dirs.indexOf(read_group.source_dir)
-            row['RGID'] = dir_names.unique(false).size() == dirs.size()
-                            ? "${dir_names[dir_index]}.${row['RGID']}"
-                            : "${row['RGID']}.${dir_index + 1}"
-        }
-
-        row
-    }
-
-    def columns = rows.collectMany{ it.keySet() as List }.unique()
-    def content = ([ columns.join(',') ] + rows.collect{ row -> columns.collect{ row[it] ?: '' }.join(',') }).join('\n') + '\n'
-
-    def safe_id    = meta.id.toString().replaceAll(/[^A-Za-z0-9._-]/, '_')
-    def fastq_list = file("${workflow.workDir}/fastq_lists/${workflow.sessionId}/${safe_id}_fastq_list.csv")
-    fastq_list.parent.mkdirs()
-    if (!fastq_list.exists() || fastq_list.text != content) {
-        fastq_list.text = content
-    }
-
-    return fastq_list
 }
 
 // Parse FastQ or BAM/CRAM list

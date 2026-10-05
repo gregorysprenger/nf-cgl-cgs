@@ -5,6 +5,7 @@
 */
 
 include { CREATE_DEMULTIPLEX_SAMPLESHEET   } from '../../modules/local/create_demultiplex_samplesheet'
+include { CREATE_DEMUX_FASTQ_LIST          } from '../../modules/local/create_demux_fastq_list'
 include { DRAGEN_DEMULTIPLEX               } from '../../modules/local/dragen_demultiplex'
 include { INPUT_CHECK as VERIFY_FASTQ_LIST } from '../../subworkflows/local/input_check'
 
@@ -163,33 +164,15 @@ workflow DEMULTIPLEX {
     )
     ch_versions = ch_versions.mix(VERIFY_FASTQ_LIST.out.versions)
 
-    // Use 'params.demux_outdir' path for paths in 'fastq_list.csv' and save
+    //
+    // MODULE: Create 'fastq_list.csv' report with 'params.demux_outdir' paths
+    //
     if (params.demux_outdir) {
-        def batch_name = params.batch_name ?: new java.util.Date().format('yyyyMMdd') + '_CGS'
-
-        ch_fastq_list = DRAGEN_DEMULTIPLEX.out.fastq_list
-            .splitCsv( header: true )
-            .map{
-                row ->
-                    def read1_parts = row['Read1File'].split('/')
-                    def read1 = read1_parts.size() > 1 ? read1_parts[-2..-1].join('/') : read1_parts[-1]
-
-                    def read2_parts = row['Read2File'].split('/')
-                    def read2 = read2_parts.size() > 1 ? read2_parts[-2..-1].join('/') : read2_parts[-1]
-
-                    // Get absolute path of 'params.demux_outdir'
-                    def demux_outdir = file(params.demux_outdir).toAbsolutePath().toString()
-
-                    row['Read1File'] = "${demux_outdir}/${read1}"
-                    row['Read2File'] = "${demux_outdir}/${read2}"
-
-                    return "${row.keySet().join(',')}\n${row.values().join(',')}\n"
-            }
-            .collectFile(
-                name      : "fastq_list.csv",
-                keepHeader: true,
-                storeDir  : "${params.demux_outdir}/${batch_name}/Reports/"
-            )
+        CREATE_DEMUX_FASTQ_LIST (
+            DRAGEN_DEMULTIPLEX.out.fastq_list.collect(),
+            params.demux_outdir
+        )
+        ch_versions = ch_versions.mix(CREATE_DEMUX_FASTQ_LIST.out.versions)
     }
 
     emit:
