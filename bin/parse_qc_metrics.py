@@ -279,9 +279,11 @@ def load_worksheets(files: list[str]) -> pd.DataFrame:
     worksheet = pd.concat(map(read_worksheet, files), ignore_index=True)
     key_cols = [c for c in WORKSHEET_COLUMNS if c != "RUN ID"]
 
-    return worksheet.groupby(key_cols, dropna=False, sort=False, as_index=False).agg({"RUN ID": collapse_run_ids})[
-        WORKSHEET_COLUMNS
-    ]
+    return pd.DataFrame(
+        worksheet.groupby(key_cols, dropna=False, sort=False, as_index=False).agg({"RUN ID": collapse_run_ids})[
+            WORKSHEET_COLUMNS
+        ]
+    )
 
 
 def align_sample_ids(qc_dfs: dict[str, pd.DataFrame], worksheet: pd.DataFrame) -> None:
@@ -348,7 +350,9 @@ def genoox_metrics(worksheet: pd.DataFrame, mapping_metrics: pd.DataFrame) -> pd
         worksheet = mapping_metrics[["SAMPLE ID"]].reindex(columns=WORKSHEET_COLUMNS)
 
     sample_ids = worksheet["SAMPLE ID"]
-    return worksheet[sample_ids.str.startswith("G", na=False) | sample_ids.str.contains("WCN-", na=False, regex=False)]
+    return pd.DataFrame(
+        worksheet[sample_ids.str.startswith("G", na=False) | sample_ids.str.contains("WCN-", na=False, regex=False)]
+    )
 
 
 def main() -> None:
